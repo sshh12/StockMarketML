@@ -3,6 +3,7 @@
 
 # In[1]:
 
+
 # Setup (Imports)
 
 import numpy as np
@@ -12,6 +13,7 @@ import matplotlib.pyplot as plt
 
 
 # In[2]:
+
 
 # Functions
 
@@ -45,6 +47,7 @@ def create_chunks(data, window_size):
 
 
 # In[3]:
+
 
 # Run (Test)
 

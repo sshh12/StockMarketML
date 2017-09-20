@@ -3,7 +3,6 @@
 
 # In[1]:
 
-
 # Setup (Imports)
 
 import numpy as np
@@ -13,7 +12,6 @@ import matplotlib.pyplot as plt
 
 
 # In[2]:
-
 
 # Functions
 
@@ -34,20 +32,31 @@ def csv_as_numpy(stock):
                 
     return days, np.array(day_values)
 
-def create_chunks(data, window_size):
+def create_chunks(data, window_size, norm=False):
     
     X, Y = [], []
     
     for i in range(len(data) - window_size - 1):
         
-        X.append(data[i: i + window_size])
-        Y.append(data[i + window_size])
+        dataX = data[i: i + window_size]
+        dataY = data[i + window_size]
+
+        if norm:
+            
+            mean, std = np.mean(dataX), np.std(dataX)
+
+            X.append(dataX - mean / std)
+            Y.append(dataY - mean / std)
+            
+        else:
+            
+            X.append(dataX)
+            Y.append(dataY)
         
     return np.array(X), np.array(Y)
 
 
 # In[3]:
-
 
 # Run (Test)
 

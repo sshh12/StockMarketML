@@ -1,23 +1,21 @@
 
 # coding: utf-8
 
-# In[1]:
-
+# In[9]:
 
 # Setup (Imports)
 
 from LoadData import *
 
 from keras.models import Sequential
-from keras.layers import Dense, LSTM
+from keras.layers import Dense, LSTM, Dropout
 
 import numpy as np
 
 import matplotlib.pyplot as plt
 
 
-# In[2]:
-
+# In[10]:
 
 # Setup (Globals/Hyperz)
 
@@ -26,75 +24,88 @@ epochs      = 600
 batch_size  = 64
 
 
-# In[3]:
-
+# In[11]:
 
 # Loading and Splitting Data
 
-def get_data(stock, ratio=.80):
+def get_data(stock, ratio=.80, variation='lstm'):
     
     data = csv_as_numpy(stock)[1][:, 3] # 3 = Closing Price
     
-    # Scale
-    
-    mean = np.mean(data)
-    std = np.std(data)
-    
-    #data = data - mean
-    #data = data / std
-    
-    # Split
-    
     train_size = int(len(data) * ratio)
     
-    trainX, trainY = create_chunks(data[: train_size], window_size)
+    if variation == 'lstm':
     
-    testX, testY = create_chunks(data[train_size:], window_size)
+        trainX, trainY = create_chunks(data[: train_size], window_size, norm=True)
+
+        testX, testY = create_chunks(data[train_size:], window_size, norm=True)
+
+        trainX = np.reshape(trainX, (trainX.shape[0], 1, trainX.shape[1]))
+        testX = np.reshape(testX, (testX.shape[0], 1, testX.shape[1]))
+        
+    if variation == 'mlp':
     
-    trainX = np.reshape(trainX, (trainX.shape[0], 1, trainX.shape[1]))
-    testX = np.reshape(testX, (testX.shape[0], 1, testX.shape[1]))
+        trainX, trainY = create_chunks(data[: train_size], window_size, norm=True)
+
+        testX, testY = create_chunks(data[train_size:], window_size, norm=True)
     
-    return (trainX, trainY), (testX, testY), (mean, std)
+    return (trainX, trainY), (testX, testY)
 
 
-# In[4]:
-
+# In[12]:
 
 # Setup (Create Model)
 
-def get_model():
+def get_model(variation='lstm'):
+    
+    if variation == 'lstm':
 
-    model = Sequential()
-    
-    model.add(LSTM(20, input_shape=(1, window_size), return_sequences=True))
-    
-    model.add(LSTM(20, return_sequences=False))
-    
-    model.add(Dense(10, activation='relu'))
-    
-    model.add(Dense(1))
-    
-    model.compile(loss='mse', optimizer='adam')
+        model = Sequential()
+
+        model.add(LSTM(20, input_shape=(1, window_size), return_sequences=True))
+
+        model.add(LSTM(20, return_sequences=False))
+
+        model.add(Dense(10, activation='relu'))
+
+        model.add(Dense(1))
+
+        model.compile(loss='mse', optimizer='adam')
+        
+    elif variation == 'mlp':
+        
+        model = Sequential()
+
+        model.add(Dense(20, activation='relu'))
+        model.add(Dropout(.5))
+        
+        model.add(Dense(20, activation='relu'))
+        model.add(Dropout(.5))
+        
+        model.add(Dense(20, activation='relu'))
+        model.add(Dropout(.5))
+        
+        model.add(Dense(20, activation='relu'))
+
+        model.compile(loss='mse', optimizer='adam')
     
     return model
 
 
-# In[5]:
-
+# In[13]:
 
 # Run (Load)
 
-(trainX, trainY), (testX, testY), (mean, std) = get_data('AAPL')
+(trainX, trainY), (testX, testY) = get_data('AAPL', variation='mlp')
 
 print(trainX.shape, trainY.shape)
 
 
-# In[6]:
-
+# In[14]:
 
 # Run (Train)
 
-model = get_model()
+model = get_model(variation='mlp')
 
 history = model.fit(trainX, trainY, epochs=epochs, batch_size=batch_size, validation_data=(testX, testY), verbose=0)
 
@@ -104,8 +115,7 @@ plt.legend(['TrainLoss', 'TestLoss'])
 plt.show()
 
 
-# In[7]:
-
+# In[ ]:
 
 # Test
 
@@ -125,9 +135,13 @@ for i in range(len(data) - window_size - 1):
     
     X = np.array([X])
     
+    mean, std = np.mean(X), np.std(X) 
+    
+    X = X - mean / std
+    
     prediction = model.predict(np.reshape(X, (X.shape[0], 1, X.shape[1])))
     
-    prediction = prediction
+    prediction = prediction * std + mean
     
     prices_predicted.append(np.squeeze(prediction))
 

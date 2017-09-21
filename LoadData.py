@@ -32,26 +32,26 @@ def csv_as_numpy(stock):
                 
     return days, np.array(day_values)
 
-def create_chunks(data, window_size, norm=False):
+def create_timeframe_regression_data(data, window_size, norm=False):
     
     X, Y = [], []
     
     for i in range(len(data) - window_size - 1):
         
-        dataX = data[i: i + window_size]
-        dataY = data[i + window_size]
+        time_frame = data[i: i + window_size + 1]
 
         if norm:
             
-            mean, std = np.mean(dataX), np.std(dataX)
-
-            X.append(dataX - mean / std)
-            Y.append(dataY - mean / std)
+            mean = np.mean(time_frame)
             
-        else:
+            time_frame -= mean
             
-            X.append(dataX)
-            Y.append(dataY)
+            std = np.std(time_frame)
+            
+            time_frame /= std
+            
+        X.append(time_frame[:-1])
+        Y.append(time_frame[-1])
         
     return np.array(X), np.array(Y)
 

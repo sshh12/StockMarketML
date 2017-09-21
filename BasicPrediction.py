@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[9]:
+# In[1]:
 
 # Setup (Imports)
 
@@ -15,16 +15,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-# In[10]:
+# In[2]:
 
 # Setup (Globals/Hyperz)
 
-window_size = 30
+window_size = 20
 epochs      = 600
-batch_size  = 64
+batch_size  = 128
 
 
-# In[11]:
+# In[3]:
 
 # Loading and Splitting Data
 
@@ -36,23 +36,23 @@ def get_data(stock, ratio=.80, variation='lstm'):
     
     if variation == 'lstm':
     
-        trainX, trainY = create_chunks(data[: train_size], window_size, norm=True)
+        trainX, trainY = create_timeframe_regression_data(data[: train_size], window_size, norm=True)
 
-        testX, testY = create_chunks(data[train_size:], window_size, norm=True)
+        testX, testY = create_timeframe_regression_data(data[train_size:], window_size, norm=True)
 
         trainX = np.reshape(trainX, (trainX.shape[0], 1, trainX.shape[1]))
         testX = np.reshape(testX, (testX.shape[0], 1, testX.shape[1]))
         
-    if variation == 'mlp':
+    elif variation == 'mlp':
     
-        trainX, trainY = create_chunks(data[: train_size], window_size, norm=True)
+        trainX, trainY = create_timeframe_regression_data(data[: train_size], window_size, norm=True)
 
-        testX, testY = create_chunks(data[train_size:], window_size, norm=True)
+        testX, testY = create_timeframe_regression_data(data[train_size:], window_size, norm=True)
     
     return (trainX, trainY), (testX, testY)
 
 
-# In[12]:
+# In[4]:
 
 # Setup (Create Model)
 
@@ -62,13 +62,13 @@ def get_model(variation='lstm'):
 
         model = Sequential()
 
-        model.add(LSTM(20, input_shape=(1, window_size), return_sequences=True))
+        model.add(LSTM(16, input_shape=(1, window_size), return_sequences=True))
 
-        model.add(LSTM(20, return_sequences=False))
+        model.add(LSTM(16, return_sequences=False))
 
         model.add(Dense(10, activation='relu'))
 
-        model.add(Dense(1))
+        model.add(Dense(1, activation='linear'))
 
         model.compile(loss='mse', optimizer='adam')
         
@@ -76,23 +76,19 @@ def get_model(variation='lstm'):
         
         model = Sequential()
 
-        model.add(Dense(20, activation='relu'))
-        model.add(Dropout(.5))
+        model.add(Dense(200, input_dim=window_size, activation='relu'))
+        model.add(Dropout(.25))
         
-        model.add(Dense(20, activation='relu'))
-        model.add(Dropout(.5))
+        model.add(Dense(150, activation='relu'))
         
-        model.add(Dense(20, activation='relu'))
-        model.add(Dropout(.5))
-        
-        model.add(Dense(20, activation='relu'))
+        model.add(Dense(1, activation='linear'))
 
         model.compile(loss='mse', optimizer='adam')
     
     return model
 
 
-# In[13]:
+# In[5]:
 
 # Run (Load)
 
@@ -101,13 +97,13 @@ def get_model(variation='lstm'):
 print(trainX.shape, trainY.shape)
 
 
-# In[14]:
+# In[ ]:
 
 # Run (Train)
 
 model = get_model(variation='mlp')
 
-history = model.fit(trainX, trainY, epochs=epochs, batch_size=batch_size, validation_data=(testX, testY), verbose=0)
+history = model.fit(trainX, trainY, epochs=epochs, batch_size=batch_size, validation_data=(testX, testY), verbose=0, shuffle=True)
 
 plt.plot(history.history['loss'])
 plt.plot(history.history['val_loss'])
@@ -121,7 +117,7 @@ plt.show()
 
 data = csv_as_numpy('AAPL')[1][:, 3]
 
-data = data[:]
+data = data[-200:]
 
 prices_actual = []
 prices_predicted = []
@@ -131,21 +127,26 @@ for i in range(len(data) - window_size - 1):
     X = data[i: i + window_size]
     Y = data[i + window_size]
     
-    prices_actual.append(Y)
-    
     X = np.array([X])
     
-    mean, std = np.mean(X), np.std(X) 
+    mean = np.mean(X)
     
-    X = X - mean / std
+    X = X - mean
     
-    prediction = model.predict(np.reshape(X, (X.shape[0], 1, X.shape[1])))
+    std = np.std(X)
+    
+    X = X / std
+    
+    prediction = model.predict(X)
+    # prediction = model.predict(np.reshape(X, (X.shape[0], 1, X.shape[1])))
     
     prediction = prediction * std + mean
     
+    prices_actual.append(Y)
     prices_predicted.append(np.squeeze(prediction))
 
 plt.plot(prices_actual)
 plt.plot(prices_predicted)
+plt.legend(['Actual', 'Predicted'])
 plt.show()
 

@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 
 # Setup (Globals/Hyperz)
 
-window_size = 20
+window_size = 30
 epochs      = 600
 batch_size  = 128
 
@@ -28,26 +28,24 @@ batch_size  = 128
 
 # Loading and Splitting Data
 
-def get_data(stock, ratio=.80, variation='lstm'):
+def get_data(stock, variation='lstm'):
     
     data = csv_as_numpy(stock)[1][:, 3] # 3 = Closing Price
     
-    train_size = int(len(data) * ratio)
+    if variation == 'lstm-regression':
+        
+        AllX, AllY = create_timeframed_close_regression_data('AAPL', window_size, norm=True)
     
-    if variation == 'lstm':
-    
-        trainX, trainY = create_timeframe_regression_data(data[: train_size], window_size, norm=True)
-
-        testX, testY = create_timeframe_regression_data(data[train_size:], window_size, norm=True)
+        trainX, trainY, testX, testY = split_data(AllX, AllY, ratio=.6)
 
         trainX = np.reshape(trainX, (trainX.shape[0], 1, trainX.shape[1]))
         testX = np.reshape(testX, (testX.shape[0], 1, testX.shape[1]))
         
-    elif variation == 'mlp':
+    elif variation == 'mlp-regression':
+        
+        AllX, AllY = create_timeframed_close_regression_data('AAPL', window_size, norm=True)
     
-        trainX, trainY = create_timeframe_regression_data(data[: train_size], window_size, norm=True)
-
-        testX, testY = create_timeframe_regression_data(data[train_size:], window_size, norm=True)
+        trainX, trainY, testX, testY = split_data(AllX, AllY, ratio=.6)
     
     return (trainX, trainY), (testX, testY)
 
@@ -58,7 +56,7 @@ def get_data(stock, ratio=.80, variation='lstm'):
 
 def get_model(variation='lstm'):
     
-    if variation == 'lstm':
+    if variation == 'lstm-regression':
 
         model = Sequential()
 
@@ -72,14 +70,14 @@ def get_model(variation='lstm'):
 
         model.compile(loss='mse', optimizer='adam')
         
-    elif variation == 'mlp':
+    elif variation == 'mlp-regression':
         
         model = Sequential()
 
-        model.add(Dense(200, input_dim=window_size, activation='relu'))
+        model.add(Dense(500, input_dim=window_size, activation='relu'))
         model.add(Dropout(.25))
         
-        model.add(Dense(150, activation='relu'))
+        model.add(Dense(250, activation='relu'))
         
         model.add(Dense(1, activation='linear'))
 
@@ -92,26 +90,26 @@ def get_model(variation='lstm'):
 
 # Run (Load)
 
-(trainX, trainY), (testX, testY) = get_data('AAPL', variation='mlp')
+(trainX, trainY), (testX, testY) = get_data('AAPL', variation='mlp-regression')
 
 print(trainX.shape, trainY.shape)
 
 
-# In[ ]:
+# In[6]:
 
 # Run (Train)
 
-model = get_model(variation='mlp')
+model = get_model(variation='mlp-regression')
 
 history = model.fit(trainX, trainY, epochs=epochs, batch_size=batch_size, validation_data=(testX, testY), verbose=0, shuffle=True)
 
-plt.plot(history.history['loss'])
-plt.plot(history.history['val_loss'])
+plt.plot(np.log(history.history['loss']))
+plt.plot(np.log(history.history['val_loss']))
 plt.legend(['TrainLoss', 'TestLoss'])
 plt.show()
 
 
-# In[ ]:
+# In[7]:
 
 # Test
 

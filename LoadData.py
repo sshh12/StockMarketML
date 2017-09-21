@@ -5,6 +5,8 @@
 
 # Setup (Imports)
 
+from sklearn.utils import shuffle
+
 import numpy as np
 import os
 
@@ -13,7 +15,7 @@ import matplotlib.pyplot as plt
 
 # In[2]:
 
-# Functions
+# Load CSV
 
 def csv_as_numpy(stock):
     
@@ -32,7 +34,14 @@ def csv_as_numpy(stock):
                 
     return days, np.array(day_values)
 
-def create_timeframe_regression_data(data, window_size, norm=False):
+
+# In[3]:
+
+# Make Data
+
+def create_timeframed_close_regression_data(stock, window_size, norm=False):
+    
+    data = csv_as_numpy(stock)[1][:, 3]
     
     X, Y = [], []
     
@@ -56,7 +65,25 @@ def create_timeframe_regression_data(data, window_size, norm=False):
     return np.array(X), np.array(Y)
 
 
-# In[3]:
+# In[4]:
+
+# Split Data
+
+def split_data(X, Y, ratio=.8, mix=True):
+    
+    train_size = int(len(X) * ratio)
+    
+    trainX, testX = X[:train_size], X[train_size:]
+    trainY, testY = Y[:train_size], Y[train_size:]
+    
+    if mix:
+        
+        trainX, trainY = shuffle(trainX, trainY, random_state=0)
+    
+    return trainX, trainY, testX, testY
+
+
+# In[5]:
 
 # Run (Test)
 

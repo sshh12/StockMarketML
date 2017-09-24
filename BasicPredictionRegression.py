@@ -30,8 +30,6 @@ batch_size  = 128
 
 def get_data(stock, variation='lstm'):
     
-    data = csv_as_numpy(stock)[1][:, 3] # 3 = Closing Price
-    
     if variation == 'lstm-regression':
         
         AllX, AllY = create_timeframed_close_regression_data(stock, window_size, norm=True)
@@ -46,15 +44,6 @@ def get_data(stock, variation='lstm'):
         AllX, AllY = create_timeframed_close_regression_data(stock, window_size, norm=True)
     
         trainX, trainY, testX, testY = split_data(AllX, AllY, ratio=.9)
-        
-    elif variation == 'lstm-regression-all':
-        
-        AllX, AllY = create_timeframed_alldata_regression_data(stock, window_size, norm=True)
-    
-        trainX, trainY, testX, testY = split_data(AllX, AllY, ratio=.9)
-
-        trainX = np.reshape(trainX, (trainX.shape[0], 5, trainX.shape[1]))
-        testX = np.reshape(testX, (testX.shape[0], 5, testX.shape[1]))
     
     return (trainX, trainY), (testX, testY)
 
@@ -95,20 +84,6 @@ def get_model(variation='lstm'):
 
         model.compile(loss='mse', optimizer='adam')
         
-    elif variation == 'lstm-regression-all':
-
-        model = Sequential()
-
-        model.add(LSTM(30, input_shape=(5, window_size), return_sequences=True))
-
-        model.add(LSTM(30, return_sequences=False))
-
-        model.add(Dense(10, activation='relu'))
-
-        model.add(Dense(1, activation='linear'))
-
-        model.compile(loss='mse', optimizer='adam')
-    
     return model
 
 

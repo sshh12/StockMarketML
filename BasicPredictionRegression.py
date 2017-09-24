@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 # Setup (Globals/Hyperz)
 
 window_size = 30
-epochs      = 600
+epochs      = 300
 batch_size  = 128
 
 
@@ -34,18 +34,27 @@ def get_data(stock, variation='lstm'):
     
     if variation == 'lstm-regression':
         
-        AllX, AllY = create_timeframed_close_regression_data('AAPL', window_size, norm=True)
+        AllX, AllY = create_timeframed_close_regression_data(stock, window_size, norm=True)
     
-        trainX, trainY, testX, testY = split_data(AllX, AllY, ratio=.6)
+        trainX, trainY, testX, testY = split_data(AllX, AllY, ratio=.9)
 
         trainX = np.reshape(trainX, (trainX.shape[0], 1, trainX.shape[1]))
         testX = np.reshape(testX, (testX.shape[0], 1, testX.shape[1]))
         
     elif variation == 'mlp-regression':
         
-        AllX, AllY = create_timeframed_close_regression_data('AAPL', window_size, norm=True)
+        AllX, AllY = create_timeframed_close_regression_data(stock, window_size, norm=True)
     
-        trainX, trainY, testX, testY = split_data(AllX, AllY, ratio=.6)
+        trainX, trainY, testX, testY = split_data(AllX, AllY, ratio=.9)
+        
+    elif variation == 'lstm-regression-all':
+        
+        AllX, AllY = create_timeframed_alldata_regression_data(stock, window_size, norm=True)
+    
+        trainX, trainY, testX, testY = split_data(AllX, AllY, ratio=.9)
+
+        trainX = np.reshape(trainX, (trainX.shape[0], 5, trainX.shape[1]))
+        testX = np.reshape(testX, (testX.shape[0], 5, testX.shape[1]))
     
     return (trainX, trainY), (testX, testY)
 
@@ -74,11 +83,28 @@ def get_model(variation='lstm'):
         
         model = Sequential()
 
-        model.add(Dense(500, input_dim=window_size, activation='relu'))
+        model.add(Dense(30, input_dim=window_size, activation='relu'))
         model.add(Dropout(.25))
         
-        model.add(Dense(250, activation='relu'))
+        model.add(Dense(20, activation='relu'))
+        model.add(Dropout(.25))
         
+        model.add(Dense(10, activation='relu'))
+        
+        model.add(Dense(1, activation='linear'))
+
+        model.compile(loss='mse', optimizer='adam')
+        
+    elif variation == 'lstm-regression-all':
+
+        model = Sequential()
+
+        model.add(LSTM(30, input_shape=(5, window_size), return_sequences=True))
+
+        model.add(LSTM(30, return_sequences=False))
+
+        model.add(Dense(10, activation='relu'))
+
         model.add(Dense(1, activation='linear'))
 
         model.compile(loss='mse', optimizer='adam')
@@ -90,7 +116,7 @@ def get_model(variation='lstm'):
 
 # Run (Load)
 
-(trainX, trainY), (testX, testY) = get_data('AAPL', variation='mlp-regression')
+(trainX, trainY), (testX, testY) = get_data('GSPC', variation='mlp-regression')
 
 print(trainX.shape, trainY.shape)
 
@@ -101,7 +127,7 @@ print(trainX.shape, trainY.shape)
 
 model = get_model(variation='mlp-regression')
 
-history = model.fit(trainX, trainY, epochs=epochs, batch_size=batch_size, validation_data=(testX, testY), verbose=0, shuffle=True)
+history = model.fit(trainX, trainY, epochs=epochs, batch_size=batch_size, validation_data=(testX, testY), verbose=0)
 
 plt.plot(np.log(history.history['loss']))
 plt.plot(np.log(history.history['val_loss']))
@@ -113,7 +139,7 @@ plt.show()
 
 # Test
 
-data = csv_as_numpy('AAPL')[1][:, 3]
+data = csv_as_numpy('GSPC')[1][:, 3]
 
 data = data[-200:]
 
@@ -136,6 +162,7 @@ for i in range(len(data) - window_size - 1):
     X = X / std
     
     prediction = model.predict(X)
+    
     # prediction = model.predict(np.reshape(X, (X.shape[0], 1, X.shape[1])))
     
     prediction = prediction * std + mean

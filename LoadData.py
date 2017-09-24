@@ -51,7 +51,7 @@ def create_timeframed_close_regression_data(stock, window_size, norm=False):
 
         if norm:
             
-            mean = np.mean(time_frame)
+            mean = np.mean(time_frame[:-1])
             
             time_frame -= mean
             
@@ -61,6 +61,31 @@ def create_timeframed_close_regression_data(stock, window_size, norm=False):
             
         X.append(time_frame[:-1])
         Y.append(time_frame[-1])
+        
+    return np.array(X), np.array(Y)
+
+def create_timeframed_alldata_regression_data(stock, window_size, norm=False):
+    
+    data = csv_as_numpy(stock)[1][:, (0,1,2,3,5)]
+    
+    X, Y = [], []
+    
+    for i in range(len(data) - window_size - 1):
+        
+        time_frame = data[i: i + window_size + 1]
+
+        if norm:
+            
+            mean = np.mean(time_frame[:-1])
+            
+            time_frame -= mean
+            
+            std = np.std(time_frame)
+            
+            time_frame /= std
+            
+        X.append(time_frame[:-1])
+        Y.append(time_frame[-1, 3])
         
     return np.array(X), np.array(Y)
 

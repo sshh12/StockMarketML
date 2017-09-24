@@ -101,5 +101,5 @@ ENV/
 .mypy_cache/
 
 # Other
-.csv
+*.csv
 makepython.bat

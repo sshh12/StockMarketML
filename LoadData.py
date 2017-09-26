@@ -47,7 +47,7 @@ def create_timeframed_close_regression_data(stock, window_size, norm=False):
     
     for i in range(len(data) - window_size - 1):
         
-        time_frame = data[i: i + window_size + 1]
+        time_frame = np.copy(data[i: i + window_size + 1])
 
         if norm:
             
@@ -64,17 +64,18 @@ def create_timeframed_close_regression_data(stock, window_size, norm=False):
         
     return np.array(X), np.array(Y)
 
-def create_timeframed_alldata_classification_data(stock, window_size, norm=False, output='up/down'):
+def create_timeframed_alldata_classification_data(stock, window_size, norm=True, output='up/down'):
     
-    data = csv_as_numpy(stock)[1][:, (0,1,2,3,5)]
+    data = csv_as_numpy(stock)[1][:, (0,1,2,4,5)] # OPEN HIGH LOW close ADJ_CLOSE VOLUME
     
     X, Y = [], []
     
-    last_close = data[0, 3]
-    
     for i in range(1, len(data) - window_size - 1):
         
-        time_frame = data[i: i + window_size + 1]
+        time_frame = np.copy(data[i: i + window_size + 1])
+        
+        current_close = time_frame[-1, 3]
+        last_close = time_frame[-2, 3]
 
         if norm:
             
@@ -88,11 +89,9 @@ def create_timeframed_alldata_classification_data(stock, window_size, norm=False
             
         X.append(time_frame[:-1])
         
-        cur_close = time_frame[-1, 3]
-        
         if output == 'up/down':
             
-            if last_close < cur_close:
+            if last_close < current_close:
             
                 Y.append([1., 0.])
                 
@@ -102,15 +101,13 @@ def create_timeframed_alldata_classification_data(stock, window_size, norm=False
                 
         elif output == '+-1':
 
-            if last_close < cur_close:
+            if last_close < current_close:
             
                 Y.append(+1.)
                 
             else:
                 
                 Y.append(-1.)
-                
-        last_close = cur_close
         
     return np.array(X), np.array(Y)
 

@@ -8,7 +8,8 @@
 from LoadData import *
 
 from keras.models import Sequential
-from keras.layers import Dense, LSTM, Dropout
+from keras.callbacks import ReduceLROnPlateau, EarlyStopping
+from keras.layers import Dense, LSTM, Dropout, BatchNormalization, Activation
 
 import numpy as np
 
@@ -20,7 +21,7 @@ import matplotlib.pyplot as plt
 # Setup (Globals/Hyperz)
 
 window_size = 30
-epochs      = 300
+epochs      = 1000
 batch_size  = 128
 
 
@@ -28,7 +29,7 @@ batch_size  = 128
 
 # Loading and Splitting Data
 
-def get_data(stock, variation='lstm'):
+def get_data(stock, variation='mlp-regression'):
     
     if variation == 'lstm-regression':
         
@@ -52,7 +53,7 @@ def get_data(stock, variation='lstm'):
 
 # Setup (Create Model)
 
-def get_model(variation='lstm'):
+def get_model(variation='mlp-regression'):
     
     if variation == 'lstm-regression':
 
@@ -72,13 +73,24 @@ def get_model(variation='lstm'):
         
         model = Sequential()
 
-        model.add(Dense(30, input_dim=window_size, activation='relu'))
+        model.add(Dense(40, input_dim=window_size))
+        model.add(BatchNormalization())
+        model.add(Activation('relu'))
         model.add(Dropout(.25))
         
-        model.add(Dense(20, activation='relu'))
+        model.add(Dense(30))
+        model.add(BatchNormalization())
+        model.add(Activation('relu'))
         model.add(Dropout(.25))
         
-        model.add(Dense(10, activation='relu'))
+        model.add(Dense(30))
+        model.add(BatchNormalization())
+        model.add(Activation('relu'))
+        model.add(Dropout(.25))
+        
+        model.add(Dense(10))
+        model.add(BatchNormalization())
+        model.add(Activation('relu'))
         
         model.add(Dense(1, activation='linear'))
 
@@ -102,7 +114,7 @@ print(trainX.shape, trainY.shape)
 
 model = get_model(variation='mlp-regression')
 
-history = model.fit(trainX, trainY, epochs=epochs, batch_size=batch_size, validation_data=(testX, testY), verbose=0)
+history = model.fit(trainX, trainY, epochs=epochs, batch_size=batch_size, validation_data=(testX, testY), verbose=0, callbacks=[EarlyStopping(patience=30)])
 
 plt.plot(np.log(history.history['loss']))
 plt.plot(np.log(history.history['val_loss']))
@@ -116,7 +128,7 @@ plt.show()
 
 data = csv_as_numpy('GSPC')[1][:, 3]
 
-data = data[-200:]
+data = data[-100:]
 
 prices_actual = []
 prices_predicted = []

@@ -20,7 +20,8 @@ import matplotlib.pyplot as plt
 
 # Setup (Globals/Hyperz)
 
-window_size = 30
+window_size = 33
+window_skip = 3
 epochs      = 1000
 batch_size  = 128
 
@@ -33,7 +34,7 @@ def get_data(stock, variation='mlp-regression'):
     
     if variation == 'lstm-regression':
         
-        AllX, AllY = create_timeframed_close_regression_data(stock, window_size, norm=True)
+        AllX, AllY = create_timeframed_close_regression_data(stock, window_size, window_skip, norm=True)
     
         trainX, trainY, testX, testY = split_data(AllX, AllY, ratio=.9)
 
@@ -42,7 +43,7 @@ def get_data(stock, variation='mlp-regression'):
         
     elif variation == 'mlp-regression':
         
-        AllX, AllY = create_timeframed_close_regression_data(stock, window_size, norm=True)
+        AllX, AllY = create_timeframed_close_regression_data(stock, window_size, window_skip, norm=True)
     
         trainX, trainY, testX, testY = split_data(AllX, AllY, ratio=.9)
     

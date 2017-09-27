@@ -39,7 +39,7 @@ def csv_as_numpy(stock):
 
 # Make Data
 
-def create_timeframed_close_regression_data(stock, window_size, norm=False):
+def create_timeframed_close_regression_data(stock, window_size, window_skip=0, norm=False):
     
     data = csv_as_numpy(stock)[1][:, 3]
     
@@ -59,7 +59,7 @@ def create_timeframed_close_regression_data(stock, window_size, norm=False):
             
             time_frame /= std
             
-        X.append(time_frame[:-1])
+        X.append(time_frame[:-1 - window_skip])
         Y.append(time_frame[-1])
         
     return np.array(X), np.array(Y)

@@ -18,7 +18,11 @@ import matplotlib.pyplot as plt
 # Load CSV
 
 def csv_as_numpy(stock):
+    """
+    Loads csv file as a np array
     
+    CSV -> 2d array where rows are days and cols are high,low,close,etc
+    """
     days, day_values = [], []
     
     with open(os.path.join('data', stock + '.csv'), 'r') as data:
@@ -32,7 +36,7 @@ def csv_as_numpy(stock):
                 days.append(items[0])
                 day_values.append( np.array( list(map(float, items[1:])) ) )
                 
-    return days, np.array(day_values)
+    return days, np.array(day_values) # dates, 2d array
 
 
 # In[3]:
@@ -40,7 +44,11 @@ def csv_as_numpy(stock):
 # Make Data
 
 def create_timeframed_close_regression_data(stock, window_size, window_skip=0, norm=False):
+    """
+    Timeframe Close Regression
     
+    Creates data for a close-only based price regression from last `window_size` days
+    """
     data = csv_as_numpy(stock)[1][:, 3]
     
     X, Y = [], []
@@ -51,13 +59,8 @@ def create_timeframed_close_regression_data(stock, window_size, window_skip=0, n
 
         if norm:
             
-            mean = np.mean(time_frame[:-1])
-            
-            time_frame -= mean
-            
-            std = np.std(time_frame)
-            
-            time_frame /= std
+            time_frame -= np.mean(time_frame[:-1])
+            time_frame /= np.std(time_frame)
             
         X.append(time_frame[:-1 - window_skip])
         Y.append(time_frame[-1])
@@ -65,7 +68,11 @@ def create_timeframed_close_regression_data(stock, window_size, window_skip=0, n
     return np.array(X), np.array(Y)
 
 def create_timeframed_alldata_classification_data(stock, window_size, norm=True, output='up/down'):
+    """
+    Timeframe Alldata Classification
     
+    Creates data for prediction of stock up/down from all stock features for given `window_size`
+    """
     data = csv_as_numpy(stock)[1][:, (0,1,2,4,5)] # OPEN HIGH LOW close ADJ_CLOSE VOLUME
     
     X, Y = [], []
@@ -79,13 +86,8 @@ def create_timeframed_alldata_classification_data(stock, window_size, norm=True,
 
         if norm:
             
-            mean = np.mean(time_frame[:-1], axis=0)
-            
-            time_frame -= mean
-            
-            std = np.std(time_frame, axis=0)
-            
-            time_frame /= std
+            time_frame -= np.mean(time_frame[:-1], axis=0)
+            time_frame /= np.std(time_frame, axis=0)
             
         X.append(time_frame[:-1])
         
@@ -111,13 +113,19 @@ def create_timeframed_alldata_classification_data(stock, window_size, norm=True,
         
     return np.array(X), np.array(Y)
 
+def create_timeframed_allpricetext_classification_data(stock, window_size, norm=True):
+    
+    pass
+
 
 # In[4]:
 
 # Split Data
 
 def split_data(X, Y, ratio=.8, mix=True):
-    
+    """
+    Splits X/Y to Train/Test
+    """
     train_size = int(len(X) * ratio)
     
     trainX, testX = X[:train_size], X[train_size:]

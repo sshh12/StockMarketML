@@ -8,7 +8,7 @@
 from LoadData import *
 
 from keras.models import Sequential
-from keras.callbacks import ReduceLROnPlateau, EarlyStopping
+from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint
 from keras.layers import Dense, LSTM, Dropout, BatchNormalization, Activation
 
 import numpy as np
@@ -31,7 +31,9 @@ batch_size  = 128
 # Loading and Splitting Data
 
 def get_data(stock, variation='mlp-regression'):
-    
+    """
+    Gets data from `stock` for specific `variation` model
+    """
     if variation == 'lstm-regression':
         
         AllX, AllY = create_timeframed_close_regression_data(stock, window_size, window_skip, norm=True)
@@ -55,12 +57,14 @@ def get_data(stock, variation='mlp-regression'):
 # Setup (Create Model)
 
 def get_model(variation='mlp-regression'):
-    
+    """
+    Gets the model for specific `variation`
+    """
     if variation == 'lstm-regression':
 
         model = Sequential()
 
-        model.add(LSTM(16, input_shape=(1, window_size), return_sequences=True))
+        model.add(LSTM(16, input_shape=(1, window_size - window_skip), return_sequences=True))
 
         model.add(LSTM(16, return_sequences=False))
 
@@ -74,7 +78,12 @@ def get_model(variation='mlp-regression'):
         
         model = Sequential()
 
-        model.add(Dense(40, input_dim=window_size))
+        model.add(Dense(100, input_dim=window_size - window_skip))
+        model.add(BatchNormalization())
+        model.add(Activation('relu'))
+        model.add(Dropout(.25))
+        
+        model.add(Dense(100))
         model.add(BatchNormalization())
         model.add(Activation('relu'))
         model.add(Dropout(.25))
@@ -83,15 +92,6 @@ def get_model(variation='mlp-regression'):
         model.add(BatchNormalization())
         model.add(Activation('relu'))
         model.add(Dropout(.25))
-        
-        model.add(Dense(30))
-        model.add(BatchNormalization())
-        model.add(Activation('relu'))
-        model.add(Dropout(.25))
-        
-        model.add(Dense(10))
-        model.add(BatchNormalization())
-        model.add(Activation('relu'))
         
         model.add(Dense(1, activation='linear'))
 
@@ -104,62 +104,77 @@ def get_model(variation='mlp-regression'):
 
 # Run (Load)
 
-(trainX, trainY), (testX, testY) = get_data('GSPC', variation='mlp-regression')
+if __name__ == "__main__":
 
-print(trainX.shape, trainY.shape)
+    (trainX, trainY), (testX, testY) = get_data('AAPL', variation='mlp-regression')
+
+    print(trainX.shape, trainY.shape)
 
 
 # In[6]:
 
 # Run (Train)
 
-model = get_model(variation='mlp-regression')
+if __name__ == "__main__":
 
-history = model.fit(trainX, trainY, epochs=epochs, batch_size=batch_size, validation_data=(testX, testY), verbose=0, callbacks=[EarlyStopping(patience=30)])
+    model = get_model(variation='mlp-regression')
+    
+    e_stopping = EarlyStopping(patience=30)
+    checkpoint = ModelCheckpoint(os.path.join('models', 'basic-regression.h5'), 
+                                 monitor='val_loss', 
+                                 verbose=0, 
+                                 save_best_only=True)
 
-plt.plot(np.log(history.history['loss']))
-plt.plot(np.log(history.history['val_loss']))
-plt.legend(['TrainLoss', 'TestLoss'])
-plt.show()
+    history = model.fit(trainX, trainY, epochs=epochs, 
+                                        batch_size=batch_size, 
+                                        validation_data=(testX, testY), 
+                                        verbose=0, 
+                                        callbacks=[e_stopping, checkpoint])
+
+    plt.plot(np.log(history.history['loss']))
+    plt.plot(np.log(history.history['val_loss']))
+    plt.legend(['TrainLoss', 'TestLoss'])
+    plt.show()
 
 
 # In[7]:
 
 # Test
 
-data = csv_as_numpy('GSPC')[1][:, 3]
+if __name__ == "__main__":
 
-data = data[-100:]
+    data = csv_as_numpy('AAPL')[1][:, 3]
 
-prices_actual = []
-prices_predicted = []
+    data = data[-100:]
 
-for i in range(len(data) - window_size - 1):
+    prices_actual = []
+    prices_predicted = []
+
+    for i in range(len(data) - window_size - 1):
         
-    X = data[i: i + window_size]
-    Y = data[i + window_size]
+        time_frame = np.copy(data[i: i + window_size + 1])
+            
+        mean = np.mean(time_frame[:-1])
+            
+        time_frame -= mean
+            
+        std = np.std(time_frame)
+            
+        time_frame /= std
     
-    X = np.array([X])
+        X = np.array([time_frame[:-1 - window_skip]])
     
-    mean = np.mean(X)
+        prediction = model.predict(X)
     
-    X = X - mean
+        # prediction = model.predict(np.reshape(X, (X.shape[0], 1, X.shape[1])))
     
-    std = np.std(X)
+        prediction = np.squeeze(prediction) * std + mean
     
-    X = X / std
-    
-    prediction = model.predict(X)
-    
-    # prediction = model.predict(np.reshape(X, (X.shape[0], 1, X.shape[1])))
-    
-    prediction = prediction * std + mean
-    
-    prices_actual.append(Y)
-    prices_predicted.append(np.squeeze(prediction))
+        prices_actual.append(data[i + window_size])
+        prices_predicted.append(prediction)
 
-plt.plot(prices_actual)
-plt.plot(prices_predicted)
-plt.legend(['Actual', 'Predicted'])
-plt.show()
+    plt.plot(prices_actual)
+    plt.plot(prices_predicted)
+    plt.legend(['Actual', 'Predicted'])
+    plt.show()
 

@@ -1,14 +1,15 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 # Setup (Imports)
-
 
 from nltk.stem.porter import PorterStemmer
 from nltk.tokenize import RegexpTokenizer
 from nltk.corpus import stopwords
+
+from gensim.models import Word2Vec
 
 from collections import defaultdict
 from datetime import datetime
@@ -18,7 +19,7 @@ import requests
 import os
 
 
-# In[2]:
+# In[ ]:
 
 
 def process_raw_text(text):
@@ -34,17 +35,39 @@ def process_raw_text(text):
 
     return " ".join(text_processed)
 
+def convert_sentences_to_vector(sentences):
+    
+    sentences = list(map(process_raw_text, sentences))
+    
+    dictionary = []
+    
+    for sentence in sentences:
+        
+        dictionary.append(sentence.split(' '))
+        
+    word_model = Word2Vec(dictionary, size=100, window=5, min_count=1, workers=4)
+    word_model.save(os.path.join('models', 'word2vec.model'))
+    
+    vector = [[word_model.wv[word] for word in sentence.split(' ')] for sentence in sentences]
+    
+    return vector
 
-# In[3]:
+
+# In[ ]:
 
 
 reddit = Reddit('StockMarketML')
 
 articles = defaultdict(list)
+sentences = []
 
 for submission in reddit.subreddit('news+apple+ios+AAPL').search('apple', limit=None):
     
     articles[datetime.fromtimestamp(submission.created).strftime('%Y-%m-%d')].append(submission.title)
+    
+    sentences.append(submission.title)
+    
+print(convert_sentences_to_vector(sentences)[0])
     
 with open(os.path.join('data', 'reddit.csv'), 'w') as redditfile:
     

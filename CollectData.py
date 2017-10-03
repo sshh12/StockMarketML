@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 # Setup (Imports)
 
@@ -11,15 +11,15 @@ from nltk.corpus import stopwords
 
 from gensim.models import Word2Vec
 
+from datetime import datetime, timedelta
 from collections import defaultdict
-from datetime import datetime
-from praw import Reddit
 
 import requests
 import os
+import re
 
 
-# In[ ]:
+# In[2]:
 
 
 def process_raw_text(text):
@@ -53,28 +53,70 @@ def convert_sentences_to_vector(sentences):
     return vector
 
 
-# In[ ]:
+# In[3]:
 
 
-reddit = Reddit('StockMarketML')
+def get_reddit_news(subs, search_term, limit=None, praw_config='StockMarketML'):
+    
+    from praw import Reddit
+    
+    reddit = Reddit(praw_config)
 
-articles = defaultdict(list)
-sentences = []
+    articles = defaultdict(list)
 
-for submission in reddit.subreddit('news+apple+ios+AAPL').search('apple', limit=None):
+    for submission in reddit.subreddit('+'.join(subs)).search(search_term, limit=limit):
     
-    articles[datetime.fromtimestamp(submission.created).strftime('%Y-%m-%d')].append(submission.title)
-    
-    sentences.append(submission.title)
-    
-print(convert_sentences_to_vector(sentences)[0])
-    
-with open(os.path.join('data', 'reddit.csv'), 'w') as redditfile:
-    
-    for date, sents in articles.items():
+        articles[datetime.fromtimestamp(submission.created).strftime('%m/%d/%Y')].append(submission.title)
         
-        data = str(sents).encode("utf-8")
+    return articles
+
+def get_reuters_news(stock, limit=200):
     
-        redditfile.write(date + ", " + str(data)[1:] + "\n")
+    articles = defaultdict(list)
     
+    pattern_headline = re.compile('<h2>\s*(<a [\S]*\s*>)?(.+?)(<\/a>)?\s*<\/h2>')
+    
+    date_current = datetime.now()
+    
+    while limit > 0:
+        
+        text = requests.get('http://www.reuters.com/finance/stocks/company-news/{}?date={}'.format(stock, date_current.strftime('%m%d%Y'))).text
+        
+        for match in pattern_headline.finditer(text):
+            
+            headline = match.group(2)
+            
+            articles[date_current.strftime('%m/%d/%Y')].append(headline)
+        
+            limit -= 1
+        
+        date_current -= timedelta(days=1)
+        
+    return articles
+
+def get_yahoo_finance_news(suburl="", limit=1): # TODO FIX
+    
+    pattern_headline = re.compile('<u class="StretchedBox" data-reactid="\d+"><\/u><!-- react-text: \d+ -->(.+?)<!-- \/react-text --><\/a><\/h3>')
+    
+    url = "https://finance.yahoo.com/" + suburl 
+    
+    while limit > 0:
+        
+        text = requests.get(url).text
+        
+        for match in pattern_headline.finditer(text):
+            
+            headline = match.group(1)
+            
+            print(headline)
+        
+        limit -= 1
+
+
+# In[4]:
+
+
+# get_reddit_news(['news', 'apple', 'ios', 'AAPL'], 'apple')
+# get_reuters_news('AAPL.O')
+# get_yahoo_finance_news('tech/apple')
 

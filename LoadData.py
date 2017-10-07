@@ -29,12 +29,38 @@ def csv_as_numpy(stock):
 
         for line in data:
 
-            if line.startswith('20'):
+            if len(line) > 6 and "Date" not in line and "null" not in line:
 
                 items = line.split(",")
                 
                 days.append(items[0])
                 day_values.append( np.array( list(map(float, items[1:])) ) )
+                
+    return days, np.array(day_values) # dates, 2d array
+
+def headline_csv_as_numpy(stock, emb_size=100, sentence_length=12):
+    """
+    Loads csv file as a np array
+    
+    CSV -> 2d array where rows are days and cols are high,low,close,etc
+    """
+    days, day_values = [], []
+    
+    with open(os.path.join('data', stock + '-headlines-vectors.csv'), 'r') as data:
+
+        for line in data:
+
+            if len(line) > 6:
+
+                day, uneven_vector = line[:10], line[11:]
+                
+                uneven_vector = np.array(eval(uneven_vector))
+                
+                even_vector = np.zeros((sentence_length, emb_size))
+                even_vector[:uneven_vector.shape[0], :] = uneven_vector[:sentence_length, :]
+                
+                days.append(day)
+                day_values.append(even_vector)
                 
     return days, np.array(day_values) # dates, 2d array
 
@@ -87,7 +113,7 @@ def create_timeframed_alldata_classification_data(stock, window_size, norm=True,
         if norm:
             
             time_frame -= np.mean(time_frame[:-1], axis=0)
-            time_frame /= np.std(time_frame, axis=0)
+            time_frame /= np.std(time_frame[:-1], axis=0)
             
         X.append(time_frame[:-1])
         
@@ -113,9 +139,41 @@ def create_timeframed_alldata_classification_data(stock, window_size, norm=True,
         
     return np.array(X), np.array(Y)
 
-def create_timeframed_allpricetext_classification_data(stock, window_size, norm=True):
+def create_timeframed_headline_classification_data(stock, window_size):
     
-    pass
+    days1, histstock_data = csv_as_numpy(stock)
+    days2, headlines_data = headline_csv_as_numpy(stock)
+    
+    histstock_data = histstock_data[:, 4]
+    
+    X, Y = [], []
+    
+    for i in range(1, len(headlines_data) - window_size - 1):
+    
+        headline_timeframe = np.copy(headlines_data[i: i + window_size + 1])
+        
+        X.append(headline_timeframe)
+        
+        window_end_date = days2[i + window_size]
+        
+        try:
+        
+            last_close = histstock_data[days1.index(window_end_date)]
+            current_close = histstock_data[days1.index(window_end_date) + 1]
+        
+            if last_close < current_close:
+            
+                Y.append([1., 0.])
+                
+            else:
+                
+                Y.append([0., 1.])
+                
+        except (ValueError, IndexError):
+            
+            pass
+            
+    return np.array(X), np.array(Y)
 
 
 # In[4]:

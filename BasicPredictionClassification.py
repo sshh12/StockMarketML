@@ -79,7 +79,7 @@ def get_model_random():
     ### Random params
     
     activations_dict = {
-        'Lrelu':   LeakyReLU,
+        'Lrelu':   lambda: LeakyReLU(),
         'relu':    lambda: Activation('relu'),
         'sigmoid': lambda: Activation('sigmoid'),
         'tanh':    lambda: Activation('tanh'),

@@ -21,7 +21,7 @@ def csv_as_numpy(stock):
     """
     Loads csv file as a np array
     
-    CSV -> 2d array where rows are days and cols are high,low,close,etc
+    CSV -> 2d [samples, features]
     """
     days, day_values = [], []
     
@@ -38,11 +38,11 @@ def csv_as_numpy(stock):
                 
     return days, np.array(day_values) # dates, 2d array
 
-def headline_csv_as_numpy(stock, emb_size=100, sentence_length=12):
+def headline_word2vec_csv_as_numpy(stock, emb_size=100, sentence_length=12):
     """
     Loads csv file as a np array
     
-    CSV -> 2d array where rows are days and cols are high,low,close,etc
+    CSV -> 3d [samples, wordlen, wordvec]
     """
     days, day_values = [], []
     
@@ -62,7 +62,30 @@ def headline_csv_as_numpy(stock, emb_size=100, sentence_length=12):
                 days.append(day)
                 day_values.append(even_vector)
                 
-    return days, np.array(day_values) # dates, 2d array
+    return days, np.array(day_values)
+
+def headline_doc2vec_csv_as_numpy(stock):
+    """
+    Loads csv file as a np array
+    
+    CSV -> 2d [samples, doc2vec]
+    """
+    days, day_values = [], []
+    
+    with open(os.path.join('data', stock + '-headlines-vectors.csv'), 'r') as data:
+
+        for line in data:
+
+            if len(line) > 6:
+
+                day, vector = line[:10], line[11:]
+                
+                vector = np.array(eval(vector))
+                
+                days.append(day)
+                day_values.append(vector)
+                
+    return days, np.array(day_values)
 
 
 # In[3]:
@@ -139,27 +162,27 @@ def create_timeframed_alldata_classification_data(stock, window_size, norm=True,
         
     return np.array(X), np.array(Y)
 
-def create_timeframed_headline_classification_data(stock, window_size):
+def create_timeframed_word2vec_classification_data(stock, window_size):
     
     days1, histstock_data = csv_as_numpy(stock)
-    days2, headlines_data = headline_csv_as_numpy(stock)
+    days2, headlines_data = headline_word2vec_csv_as_numpy(stock)
     
-    histstock_data = histstock_data[:, 4]
+    histstock_data = histstock_data[:, 4] # Close
     
     X, Y = [], []
     
     for i in range(1, len(headlines_data) - window_size - 1):
     
-        headline_timeframe = np.copy(headlines_data[i: i + window_size + 1])
-        
-        X.append(headline_timeframe)
+        headline_timeframe = np.copy(headlines_data[i: i + window_size])
         
         window_end_date = days2[i + window_size]
         
         try:
+            
+            histstock_index = days1.index(window_end_date)
         
-            last_close = histstock_data[days1.index(window_end_date)]
-            current_close = histstock_data[days1.index(window_end_date) + 1]
+            last_close = histstock_data[histstock_index]
+            current_close = histstock_data[histstock_index + 1]
         
             if last_close < current_close:
             
@@ -168,6 +191,46 @@ def create_timeframed_headline_classification_data(stock, window_size):
             else:
                 
                 Y.append([0., 1.])
+                
+            X.append(headline_timeframe)
+                
+        except (ValueError, IndexError):
+            
+            pass
+            
+    return np.array(X), np.array(Y)
+
+def create_timeframed_doc2vec_classification_data(stock, window_size):
+    
+    days1, histstock_data = csv_as_numpy(stock)
+    days2, headlines_data = headline_doc2vec_csv_as_numpy(stock)
+    
+    histstock_data = histstock_data[:, 4] # Close
+    
+    X, Y = [], []
+    
+    for i in range(1, len(headlines_data) - window_size - 1):
+    
+        headline_timeframe = np.copy(headlines_data[i: i + window_size])
+        
+        window_end_date = days2[i + window_size]
+        
+        try:
+            
+            histstock_index = days1.index(window_end_date)
+        
+            last_close = histstock_data[histstock_index]
+            current_close = histstock_data[histstock_index + 1]
+        
+            if last_close < current_close:
+            
+                Y.append([1., 0.])
+                
+            else:
+                
+                Y.append([0., 1.])
+                
+            X.append(headline_timeframe)
                 
         except (ValueError, IndexError):
             

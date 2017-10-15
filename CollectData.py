@@ -9,7 +9,8 @@ from nltk.stem.porter import PorterStemmer
 from nltk.tokenize import RegexpTokenizer
 from nltk.corpus import stopwords
 
-from gensim.models import Word2Vec
+from gensim.models.doc2vec import LabeledSentence
+from gensim.models import Doc2Vec
 
 from datetime import datetime, timedelta
 from collections import defaultdict
@@ -82,6 +83,14 @@ def save_headlines(stock, sources):
 # In[3]:
 
 
+if __name__ == "__main__":
+
+    save_headlines('AAPL', [get_reddit_news(['news', 'apple', 'ios', 'AAPL'], 'apple'), get_reuters_news('AAPL.O')])
+
+
+# In[4]:
+
+
 def process_raw_text(text):
 
     text_processed = RegexpTokenizer(r'\w+').tokenize(text)
@@ -109,39 +118,41 @@ def convert_headlines_to_vectors(stock, create_model=True):
                     yield date, headlines.split("@@")
     
     if create_model:
-    
-        dictionary = []
-    
-        for date, headlines in read_headline_file():
         
+        i = 0
+        
+        headlines_corpus = []
+        
+        for date, headlines in read_headline_file():
+            
             for headline in headlines:
                 
-                dictionary.append(process_raw_text(headline).split(' '))
+                headlines_corpus.append(LabeledSentence(headline, tags=['headline_' + str(i)]))
+                
+                i += 1
         
-        word_model = Word2Vec(dictionary, size=100, window=5, min_count=3, workers=4)
-        word_model.save(os.path.join('models', stock + '-headlines-word2vec.model'))
+        doc_model = Doc2Vec(headlines_corpus, size=100, window=5, min_count=3, workers=4)
+        doc_model.save(os.path.join('models', stock + '-headlines-doc2vec.model'))
     
-    word_model = Word2Vec.load(os.path.join('models', stock + '-headlines-word2vec.model'))
+    doc_model = Doc2Vec.load(os.path.join('models', stock + '-headlines-doc2vec.model'))
     
     with open(os.path.join('data', stock + '-headlines-vectors.csv'), 'w', encoding="utf-8") as headline_vectors:
         
+        i = 0
+        
         for date, headlines in read_headline_file():
         
             for headline in headlines:
                 
-                vector = [list(word_model.wv[w]) for w in process_raw_text(headline).split(' ') if w in word_model.wv]
+                vector = doc_model.docvecs[i]
+                
+                vector = str(list(vector))
                 
                 headline_vectors.write("{},{}\n".format(date, vector))
+                
+                i += 1
     
-    return word_model
-
-
-# In[4]:
-
-
-if __name__ == "__main__":
-
-    save_headlines('AAPL', [get_reddit_news(['news', 'apple', 'ios', 'AAPL'], 'apple'), get_reuters_news('AAPL.O')])
+    return doc_model
 
 
 # In[5]:

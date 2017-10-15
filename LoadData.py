@@ -7,6 +7,7 @@
 
 from sklearn.utils import shuffle
 
+from datetime import datetime, timedelta
 import numpy as np
 import os
 
@@ -215,9 +216,27 @@ def create_timeframed_doc2vec_classification_data(stock, window_size):
         
         window_end_date = days2[i + window_size]
         
+        end_date = datetime(int(window_end_date[:4]), int(window_end_date[5:7]), int(window_end_date[8:]))
+        
         try:
             
-            histstock_index = days1.index(window_end_date)
+            delta = 0
+            
+            while not end_date.strftime('%Y-%m-%d') in days1 and delta < 5:
+                
+                end_date = end_date + timedelta(days=1)
+                
+                delta += 1
+                
+            if delta >= 5:
+                
+                continue
+            
+            histstock_index = days1.index(end_date.strftime('%Y-%m-%d'))
+            
+            if histstock_index + 1 >= len(histstock_data):
+                
+                continue
         
             last_close = histstock_data[histstock_index]
             current_close = histstock_data[histstock_index + 1]

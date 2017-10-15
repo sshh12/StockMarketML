@@ -37,7 +37,7 @@ def get_reddit_news(subs, search_term, limit=None, praw_config='StockMarketML'):
         
     return articles
 
-def get_reuters_news(stock, limit=200):
+def get_reuters_news(stock, limit=300):
     
     articles = defaultdict(list)
     

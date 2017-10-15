@@ -17,7 +17,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-# In[7]:
+# In[2]:
 
 # Setup (Globals/Hyperz)
 
@@ -29,7 +29,7 @@ emb_size     = 100
 
 # In[3]:
 
-# Loading and Splitting Data
+# Loading and Splittihttp://localhost:8888/notebooks/HeadlinePredictionClassification.ipynb#ng Data
 
 def get_data(stock):
     
@@ -40,7 +40,7 @@ def get_data(stock):
     return (trainX, trainY), (testX, testY)
 
 
-# In[8]:
+# In[4]:
 
 def get_model():
     
@@ -55,7 +55,7 @@ def get_model():
     model.add(LSTM(100))
     model.add(Dropout(0.5))
     
-    mode.add(Dense(20))
+    model.add(Dense(20))
     model.add(Dropout(0.5))
 
     model.add(Dense(2, activation='softmax'))
@@ -76,7 +76,7 @@ if __name__ == "__main__":
     print(trainX.shape, trainY.shape)
 
 
-# In[9]:
+# In[6]:
 
 # Run (Train)
 
@@ -88,14 +88,14 @@ if __name__ == "__main__":
     e_stopping = EarlyStopping(patience=120)
     checkpoint = ModelCheckpoint(os.path.join('models', 'headline-classification.h5'), 
                                  monitor='val_acc', 
-                                 verbose=1, 
+                                 verbose=0, 
                                  save_best_only=True)
 
     history = model.fit(trainX, trainY, epochs=epochs, 
                                         batch_size=batch_size, 
                                         validation_data=(testX, testY), 
                                         verbose=0, 
-                                        callbacks=[])
+                                        callbacks=[e_stopping, checkpoint])
 
     plt.plot(history.history['loss'])
     plt.plot(history.history['val_loss'])

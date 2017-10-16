@@ -5,10 +5,6 @@
 
 # Setup (Imports)
 
-from nltk.stem.porter import PorterStemmer
-from nltk.tokenize import RegexpTokenizer
-from nltk.corpus import stopwords
-
 from gensim.models.doc2vec import LabeledSentence
 from gensim.models import Doc2Vec
 
@@ -37,7 +33,7 @@ def get_reddit_news(subs, search_term, limit=None, praw_config='StockMarketML'):
         
     return articles
 
-def get_reuters_news(stock, limit=300):
+def get_reuters_news(stock, limit=400):
     
     articles = defaultdict(list)
     
@@ -93,15 +89,11 @@ if __name__ == "__main__":
 
 def process_raw_text(text):
 
-    text_processed = RegexpTokenizer(r'\w+').tokenize(text)
+    words = re.findall(r'\b\w+\b', "I like to eat pie - said the man. He was really cool!!")
     
-    text_processed = [word.lower() for word in text_processed if word.lower() not in stopwords.words('english')]
+    cleaned = list(map(lambda w: w.lower(), words))
 
-    porter_stemmer = PorterStemmer()
-
-    text_processed = [porter_stemmer.stem(word) for word in text_processed]
-
-    return " ".join(text_processed)
+    return " ".join(cleaned)
 
 def convert_headlines_to_vectors(stock, create_model=True):
     
@@ -115,7 +107,7 @@ def convert_headlines_to_vectors(stock, create_model=True):
                 
                     date, headlines = line.split(',')
                 
-                    yield date, headlines.split("@@")
+                    yield date, map(lambda x: x.strip(), headlines.split("@@"))
     
     if create_model:
         
@@ -127,9 +119,11 @@ def convert_headlines_to_vectors(stock, create_model=True):
             
             for headline in headlines:
                 
-                headlines_corpus.append(LabeledSentence(headline, tags=['headline_' + str(i)]))
+                if headline not in headlines_corpus:
                 
-                i += 1
+                    headlines_corpus.append(LabeledSentence(headline, tags=['headline_' + str(i)]))
+                
+                    i += 1
         
         doc_model = Doc2Vec(headlines_corpus, size=100, window=5, min_count=3, workers=4)
         doc_model.save(os.path.join('models', stock + '-headlines-doc2vec.model'))
@@ -140,15 +134,21 @@ def convert_headlines_to_vectors(stock, create_model=True):
         
         i = 0
         
+        used = []
+        
         for date, headlines in read_headline_file():
         
             for headline in headlines:
                 
-                vector = doc_model.docvecs[i]
+                if headline not in used:
+                    
+                    used.append(headline)
                 
-                vector = str(list(vector))
+                    vector = doc_model.docvecs[i]
                 
-                headline_vectors.write("{},{}\n".format(date, vector))
+                    vector = str(list(vector))
+                
+                    headline_vectors.write("{},{}\n".format(date, vector))
                 
                 i += 1
     

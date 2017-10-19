@@ -21,9 +21,9 @@ import matplotlib.pyplot as plt
 
 # Setup (Globals/Hyperz)
 
-window_size  = 30
-epochs       = 100
-batch_size   = 64
+window_size  = 5
+epochs       = 500
+batch_size   = 16
 emb_size     = 100
 
 
@@ -35,7 +35,7 @@ def get_data(stock):
     
     AllX, AllY = create_timeframed_doc2vec_classification_data(stock, window_size)
     
-    trainX, trainY, testX, testY = split_data(AllX, AllY, ratio=.85)
+    trainX, trainY, testX, testY = split_data(AllX, AllY, ratio=.88)
     
     return (trainX, trainY), (testX, testY)
 
@@ -46,18 +46,12 @@ def get_model():
     
     model = Sequential()
     
-    model.add(LSTM(80, input_shape=(window_size, emb_size)))
-    model.add(Dropout(0.5))
-    
-    model.add(Dense(20))
-    model.add(BatchNormalization())
-    model.add(Activation('relu'))
+    model.add(LSTM(100, input_shape=(window_size, emb_size)))
     model.add(Dropout(0.5))
     
     model.add(Dense(10))
     model.add(BatchNormalization())
     model.add(Activation('relu'))
-    model.add(Dropout(0.5))
 
     model.add(Dense(2, activation='softmax'))
     
@@ -86,7 +80,7 @@ if __name__ == "__main__":
     model = get_model()
 
     reduce_LR = ReduceLROnPlateau(monitor='val_acc', factor=0.9, patience=30, min_lr=1e-6, verbose=0)
-    e_stopping = EarlyStopping(patience=120)
+    e_stopping = EarlyStopping(patience=100)
     checkpoint = ModelCheckpoint(os.path.join('models', 'headline-classification.h5'), 
                                  monitor='val_acc', 
                                  verbose=0, 

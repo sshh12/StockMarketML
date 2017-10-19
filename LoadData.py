@@ -201,7 +201,7 @@ def create_timeframed_word2vec_classification_data(stock, window_size):
             
     return np.array(X), np.array(Y)
 
-def create_timeframed_doc2vec_classification_data(stock, window_size):
+def create_timeframed_doc2vec_classification_data(stock, window_size, norm=True):
     
     days1, histstock_data = csv_as_numpy(stock)
     days2, headlines_data = headline_doc2vec_csv_as_numpy(stock)
@@ -248,6 +248,11 @@ def create_timeframed_doc2vec_classification_data(stock, window_size):
             else:
                 
                 Y.append([0., 1.])
+                
+            if norm:
+                
+                headline_timeframe -= np.mean(headline_timeframe)
+                headline_timeframe /= np.std(headline_timeframe)
                 
             X.append(headline_timeframe)
                 

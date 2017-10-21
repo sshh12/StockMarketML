@@ -19,17 +19,25 @@ import re
 # In[2]:
 
 
-def get_reddit_news(subs, search_term, limit=None, praw_config='StockMarketML'):
+def get_reddit_news(subs, search_terms, limit=None, praw_config='StockMarketML'):
     
     from praw import Reddit
     
     reddit = Reddit(praw_config)
 
     articles = defaultdict(list)
-
-    for submission in reddit.subreddit('+'.join(subs)).search(search_term, limit=limit):
     
-        articles[datetime.fromtimestamp(submission.created).strftime('%Y-%m-%d')].append(submission.title)
+    used = []
+    
+    for term in search_terms:
+
+        for submission in reddit.subreddit('+'.join(subs)).search(term, limit=limit):
+            
+            if submission.title not in used:
+                
+                used.append(submission.title)
+
+                articles[datetime.fromtimestamp(submission.created).strftime('%Y-%m-%d')].append(submission.title)
         
     return articles
 
@@ -81,7 +89,8 @@ def save_headlines(stock, sources):
 
 if __name__ == "__main__":
 
-    save_headlines('AAPL', [get_reddit_news(['news', 'apple', 'ios', 'AAPL'], 'apple'), get_reuters_news('AAPL.O')])
+    save_headlines('AAPL', [get_reddit_news(['apple', 'ios', 'AAPL', 'news'], ['apple', 'iphone', 'ipad', 'ios']), 
+                            get_reuters_news('AAPL.O')])
 
 
 # In[4]:
@@ -89,7 +98,7 @@ if __name__ == "__main__":
 
 def process_raw_text(text):
 
-    words = re.findall(r'\b\w+\b', "I like to eat pie - said the man. He was really cool!!")
+    words = re.findall(r'\b\w+\b', text)
     
     cleaned = list(map(lambda w: w.lower(), words))
 
@@ -121,7 +130,7 @@ def convert_headlines_to_vectors(stock, create_model=True):
                 
                 if headline not in headlines_corpus:
                 
-                    headlines_corpus.append(LabeledSentence(headline, tags=['headline_' + str(i)]))
+                    headlines_corpus.append(LabeledSentence(process_raw_text(headline), tags=['headline_' + str(i)]))
                 
                     i += 1
         
@@ -136,7 +145,7 @@ def convert_headlines_to_vectors(stock, create_model=True):
         
         used = []
         
-        for date, headlines in read_headline_file():
+        for date, headlines in read_headline_file(): #TODO file read not needed
         
             for headline in headlines:
                 

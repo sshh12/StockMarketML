@@ -21,9 +21,9 @@ import matplotlib.pyplot as plt
 
 # Setup (Globals/Hyperz)
 
-window_size  = 5
+window_size  = 2
 epochs       = 500
-batch_size   = 16
+batch_size   = 32
 emb_size     = 100
 
 

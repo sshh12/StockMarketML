@@ -31,9 +31,12 @@ emb_size    = 5
 
 # Loading and Splitting Data
 
-def get_data(stock, output='up/down'):
+def get_data(stock, output='up/down', use_window_size=None):
     
-    AllX, AllY = create_timeframed_alldata_classification_data(stock, window_size, norm=True, output=output)
+    if not use_window_size: 
+        use_window_size = window_size
+    
+    AllX, AllY = create_timeframed_alldata_classification_data(stock, use_window_size, norm=True, output=output)
     
     trainX, trainY, testX, testY = split_data(AllX, AllY, ratio=.9)
     
@@ -74,7 +77,7 @@ def get_model():
         
     return model
 
-def get_model_random():
+def get_model_random(win_size):
     
     ### Random params
     
@@ -111,7 +114,7 @@ def get_model_random():
         
         if i == 0:
     
-            model.add(Conv1D(input_shape=(window_size, emb_size),
+            model.add(Conv1D(input_shape=(win_size, emb_size),
                              filters=num_filters,
                              kernel_size=kernel_size,
                              padding='same'))
@@ -153,9 +156,7 @@ def get_model_random():
 
 # Setup (Hyperz Search)
 
-def try_a_bunch_of_models_randomly(stock, num_attempts=10):
-    
-    (trainX, trainY), (testX, testY) = get_data(stock)
+def try_a_bunch_of_models_at_random(stock, num_attempts=10):
     
     models = []
     model_names = []
@@ -163,8 +164,13 @@ def try_a_bunch_of_models_randomly(stock, num_attempts=10):
     for i in range(num_attempts):
         
         print('Testing model...' + str(i))
+        
+        batch_size = 2**np.random.randint(5, 10)
+        window_size = np.random.randint(4, 45)
+        
+        (trainX, trainY), (testX, testY) = get_data(stock, use_window_size=window_size)
 
-        model, params = get_model_random()
+        model, params = get_model_random(window_size)
 
         reduce_LR = ReduceLROnPlateau(monitor='val_acc', factor=0.9, patience=30, min_lr=0.000001, verbose=0)
         e_stopping = EarlyStopping(patience=100)
@@ -179,7 +185,7 @@ def try_a_bunch_of_models_randomly(stock, num_attempts=10):
         
         print(np.mean(history.history['val_acc'][-40:]))
         
-        models.append((models, params))
+        models.append((models, params, (window_size, batch_size)))
         model_names.append(str(i))
 
     plt.legend(model_names)

@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 
 # Setup (Globals/Hyperz)
 
-window_size  = 2
+window_size  = 10
 epochs       = 500
 batch_size   = 32
 emb_size     = 100
@@ -35,7 +35,7 @@ def get_data(stock):
     
     AllX, AllY = create_timeframed_doc2vec_classification_data(stock, window_size)
     
-    trainX, trainY, testX, testY = split_data(AllX, AllY, ratio=.88)
+    trainX, trainY, testX, testY = split_data(AllX, AllY, ratio=.9)
     
     return (trainX, trainY), (testX, testY)
 
@@ -46,12 +46,17 @@ def get_model():
     
     model = Sequential()
     
-    model.add(LSTM(100, input_shape=(window_size, emb_size)))
+    model.add(Conv1D(filters=16, kernel_size=3, padding='same', input_shape=(window_size, emb_size)))
+    #model.add(BatchNormalization())
+    #model.add(LSTM(80, input_shape=(window_size, emb_size)))
+    model.add(Activation('relu'))
+    model.add(Flatten())
     model.add(Dropout(0.5))
     
-    model.add(Dense(10))
+    model.add(Dense(12))
     model.add(BatchNormalization())
     model.add(Activation('relu'))
+    model.add(Dropout(0.5))
 
     model.add(Dense(2, activation='softmax'))
     

@@ -1,4 +1,4 @@
-# StockMarketML
+# StockMarketML (Not Done)
 
 Using the magic of machine learning to predict the trends of the stock market.
 

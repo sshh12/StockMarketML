@@ -205,7 +205,7 @@ if __name__ == "__main__":
     print(trainX.shape, trainY.shape)
 
 
-# In[7]:
+# In[ ]:
 
 # Run (Train)
 
@@ -235,4 +235,9 @@ if __name__ == "__main__":
     plt.plot(history.history['val_acc'])
     plt.legend(['TrainAcc', 'TestAcc'])
     plt.show()
+
+
+# In[ ]:
+
+x = try_a_bunch_of_models_at_random('AAPL', 50)
 

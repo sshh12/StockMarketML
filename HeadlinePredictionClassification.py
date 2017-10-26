@@ -21,9 +21,9 @@ import matplotlib.pyplot as plt
 
 # Setup (Globals/Hyperz)
 
-window_size  = 10
+window_size  = 12
 epochs       = 500
-batch_size   = 32
+batch_size   = 64
 emb_size     = 100
 
 
@@ -46,21 +46,21 @@ def get_model():
     
     model = Sequential()
     
-    model.add(Conv1D(filters=16, kernel_size=3, padding='same', input_shape=(window_size, emb_size)))
+    #model.add(Conv1D(filters=16, kernel_size=3, padding='same', input_shape=(window_size, emb_size)))
     #model.add(BatchNormalization())
-    #model.add(LSTM(80, input_shape=(window_size, emb_size)))
+    model.add(LSTM(16, input_shape=(window_size, emb_size)))
     model.add(Activation('relu'))
-    model.add(Flatten())
+    #model.add(Flatten())
     model.add(Dropout(0.5))
     
-    model.add(Dense(12))
+    model.add(Dense(10))
     model.add(BatchNormalization())
     model.add(Activation('relu'))
     model.add(Dropout(0.5))
 
     model.add(Dense(2, activation='softmax'))
     
-    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+    model.compile(loss='categorical_crossentropy', optimizer='rmsprop', metrics=['accuracy'])
         
     return model
 

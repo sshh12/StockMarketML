@@ -201,7 +201,11 @@ def create_timeframed_word2vec_classification_data(stock, window_size):
             
     return np.array(X), np.array(Y)
 
-def create_timeframed_doc2vec_classification_data(stock, window_size, norm=True):
+def create_timeframed_doc2vec_classification_data(stock, window_size, min_time_disparity=3, norm=True):
+    
+    def parse_date(date):
+        
+        return datetime(int(date[:4]), int(date[5:7]), int(date[8:]))
     
     days1, histstock_data = csv_as_numpy(stock)
     days2, headlines_data = headline_doc2vec_csv_as_numpy(stock)
@@ -213,12 +217,35 @@ def create_timeframed_doc2vec_classification_data(stock, window_size, norm=True)
     for i in range(1, len(headlines_data) - window_size - 1):
     
         headline_timeframe = np.copy(headlines_data[i: i + window_size])
-        
+
         window_end_date = days2[i + window_size]
         
-        end_date = datetime(int(window_end_date[:4]), int(window_end_date[5:7]), int(window_end_date[8:]))
+        ## Check timeframe disparity ##
+        
+        valid = True
+        
+        days_timeframe = list(days2[i: i + window_size])
+        
+        max_diff = timedelta(days=min_time_disparity)
+        
+        for a, b in zip(days_timeframe, days_timeframe[1:]):
+            
+            if parse_date(b) - parse_date(a) > max_diff:
+                
+                valid = False
+                break
+                
+                
+        if not valid: 
+            continue
+                
+        ###############################
         
         try:
+            
+            ## Find close price ##
+        
+            end_date = parse_date(window_end_date)
             
             delta = 0
             
@@ -240,6 +267,8 @@ def create_timeframed_doc2vec_classification_data(stock, window_size, norm=True)
         
             last_close = histstock_data[histstock_index]
             current_close = histstock_data[histstock_index + 1]
+            
+            ######################
         
             if last_close < current_close:
             
@@ -251,8 +280,8 @@ def create_timeframed_doc2vec_classification_data(stock, window_size, norm=True)
                 
             if norm:
                 
-                headline_timeframe -= np.mean(headline_timeframe)
-                headline_timeframe /= np.std(headline_timeframe)
+                headline_timeframe /= 0.015 # Hardcoded stddev
+                
                 
             X.append(headline_timeframe)
                 

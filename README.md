@@ -6,12 +6,12 @@ Using the magic of machine learning to predict the trends of the stock market.
 
 ### Tools/libs
 
-* Keras
-* NLTK
-* Word2Vec
-* Numpy
-* Praw
-* Requests
+* [Keras](https://keras.io/)
+* [NLTK](http://www.nltk.org/)
+* [Gensim](https://radimrehurek.com/gensim/)
+* [Numpy](http://www.numpy.org/)
+* [Praw](https://praw.readthedocs.io/en/latest/)
+* [Requests](http://docs.python-requests.org/en/master/)
 
 ### Code
 

@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 
 import requests
+import random
 import os
 import re
 
@@ -67,7 +68,7 @@ def get_reuters_news(stock, limit=400):
         
     return articles
 
-def save_headlines(stock, sources):
+def save_headlines(stock, sources, force_one_per_day=False):
     
     articles = defaultdict(list)
     
@@ -80,8 +81,14 @@ def save_headlines(stock, sources):
     with open(os.path.join('data', stock + '-headlines.csv'), 'w', encoding="utf-8") as headline_file:
         
         for date in sorted(articles):
+            
+            current_articles = articles[date]
+            
+            if force_one_per_day:
+                
+                current_articles = [random.choice(current_articles)]
         
-            headline_file.write("{},{}\n".format(date, "@@".join(articles[date]).replace(',', '')))
+            headline_file.write("{},{}\n".format(date, "@@".join(current_articles).replace(',', '')))
 
 
 # In[3]:
@@ -89,8 +96,10 @@ def save_headlines(stock, sources):
 
 if __name__ == "__main__":
 
-    save_headlines('AAPL', [get_reddit_news(['apple', 'ios', 'AAPL', 'news'], ['apple', 'iphone', 'ipad', 'ios']), 
-                            get_reuters_news('AAPL.O')])
+    save_headlines('AAPL', 
+                   [get_reddit_news(['apple', 'ios', 'AAPL', 'news'], ['apple', 'iphone', 'ipad', 'ios']), 
+                    get_reuters_news('AAPL.O')], 
+                   force_one_per_day=True)
 
 
 # In[4]:

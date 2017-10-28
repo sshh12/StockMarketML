@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 
 # Setup (Globals/Hyperz)
 
-window_size  = 12
+window_size  = 5
 epochs       = 500
 batch_size   = 64
 emb_size     = 100
@@ -48,15 +48,20 @@ def get_model():
     
     #model.add(Conv1D(filters=16, kernel_size=3, padding='same', input_shape=(window_size, emb_size)))
     #model.add(BatchNormalization())
-    model.add(LSTM(16, input_shape=(window_size, emb_size)))
+    model.add(LSTM(80, input_shape=(window_size, emb_size)))
     model.add(Activation('relu'))
     #model.add(Flatten())
-    model.add(Dropout(0.5))
+    model.add(Dropout(0.3))
     
     model.add(Dense(10))
     model.add(BatchNormalization())
     model.add(Activation('relu'))
-    model.add(Dropout(0.5))
+    model.add(Dropout(0.3))
+    
+    model.add(Dense(10))
+    model.add(BatchNormalization())
+    model.add(Activation('relu'))
+    model.add(Dropout(0.3))
 
     model.add(Dense(2, activation='softmax'))
     
@@ -76,7 +81,7 @@ if __name__ == "__main__":
     print(trainX.shape, trainY.shape)
 
 
-# In[6]:
+# In[8]:
 
 # Run (Train)
 
@@ -85,7 +90,7 @@ if __name__ == "__main__":
     model = get_model()
 
     reduce_LR = ReduceLROnPlateau(monitor='val_acc', factor=0.9, patience=30, min_lr=1e-6, verbose=0)
-    e_stopping = EarlyStopping(patience=100)
+    e_stopping = EarlyStopping(patience=30)
     checkpoint = ModelCheckpoint(os.path.join('models', 'headline-classification.h5'), 
                                  monitor='val_acc', 
                                  verbose=0, 

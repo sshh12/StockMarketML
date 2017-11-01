@@ -34,3 +34,7 @@ This uses a window of the last n stock prices to predict the next close price.
 ##### HeadlinePredictionClassification
 
 This uses headlines processed through doc2vec to predict changes in close price.
+
+##### HeadlineAndTickerClassification
+
+Using historic stock prices and headlines to predict close price.

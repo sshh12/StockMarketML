@@ -42,6 +42,8 @@ def get_data(stock):
 
 # In[4]:
 
+# Make Model
+
 def get_model():
     
     model = Sequential()

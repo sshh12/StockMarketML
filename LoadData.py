@@ -210,6 +210,8 @@ def create_timeframed_doc2vec_classification_data(stock, window_size, min_time_d
     days1, histstock_data = csv_as_numpy(stock)
     days2, headlines_data = headline_doc2vec_csv_as_numpy(stock)
     
+    stock_data = csv_as_numpy(stock)[1][:, (0,1,2,4,5)]
+    
     histstock_data = histstock_data[:, 4] # Close
     
     X, Y = [], []
@@ -290,6 +292,100 @@ def create_timeframed_doc2vec_classification_data(stock, window_size, min_time_d
             pass
             
     return np.array(X), np.array(Y)
+
+def create_timeframed_doc2vec_ticker_classification_data(stock, window_size, min_time_disparity=3, norm=True):
+    
+    def parse_date(date):
+        
+        return datetime(int(date[:4]), int(date[5:7]), int(date[8:]))
+    
+    days1, histstock_data = csv_as_numpy(stock)
+    days2, headlines_data = headline_doc2vec_csv_as_numpy(stock)
+    
+    ticker_data = histstock_data[:, (0,1,2,4,5)] # OPEN HIGH LOW close ADJ_CLOSE VOLUME
+    
+    X, X2, Y = [], [], []
+    
+    for i in range(1, len(headlines_data) - window_size - 1):
+    
+        headline_timeframe = np.copy(headlines_data[i: i + window_size])
+
+        window_end_date = days2[i + window_size]
+        
+        ## Check timeframe disparity ##
+        
+        valid = True
+        
+        days_timeframe = list(days2[i: i + window_size])
+        
+        max_diff = timedelta(days=min_time_disparity)
+        
+        for a, b in zip(days_timeframe, days_timeframe[1:]):
+            
+            if parse_date(b) - parse_date(a) > max_diff:
+                
+                valid = False
+                break
+                
+                
+        if not valid: 
+            continue
+                
+        ###############################
+        
+        try:
+            
+            ## Find close price ##
+        
+            end_date = parse_date(window_end_date)
+            
+            delta = 0
+            
+            while not end_date.strftime('%Y-%m-%d') in days1 and delta < 5:
+                
+                end_date = end_date + timedelta(days=1)
+                
+                delta += 1
+                
+            if delta >= 5:
+                
+                continue
+            
+            histstock_index = days1.index(end_date.strftime('%Y-%m-%d'))
+            
+            if histstock_index + 1 >= len(histstock_data):
+                
+                continue
+        
+            last_close = histstock_data[histstock_index, 4]
+            current_close = histstock_data[histstock_index + 1, 4]
+            
+            ######################
+        
+            if last_close < current_close:
+            
+                Y.append([1., 0.])
+                
+            else:
+                
+                Y.append([0., 1.])
+                
+            stock_timeframe = np.copy(ticker_data[histstock_index - window_size:histstock_index])
+                
+            if norm:
+                
+                headline_timeframe /= 0.015 # Hardcoded stddev
+                stock_timeframe -= np.mean(stock_timeframe[:-1], axis=0)
+                stock_timeframe /= np.std(stock_timeframe[:-1], axis=0)
+            
+            X.append(headline_timeframe)
+            X2.append(stock_timeframe)
+                
+        except (ValueError, IndexError):
+            
+            pass
+            
+    return np.array(X), np.array(X2), np.array(Y)
 
 
 # In[4]:

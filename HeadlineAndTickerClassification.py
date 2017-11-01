@@ -7,18 +7,21 @@
 
 from LoadData import *
 
-from keras.layers import concatenate, Concatenate
-from keras.models import load_model
+from keras.layers import Dense, BatchNormalization, Activation, Dropout, Merge
+from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint
+from keras.models import load_model, Sequential
 
 import numpy as np
 import os
+
+import matplotlib.pyplot as plt
 
 
 # In[2]:
 
 # Setup (Globals/Hyperz)
 
-window_size  = 6
+window_size  = 18 # Must match both input models
 epochs       = 750
 batch_size   = 128
 emb_size     = 100
@@ -26,9 +29,24 @@ emb_size     = 100
 
 # In[3]:
 
+# Loading and Splitting Data
+
+def get_data(stock):
+    
+    AllX, AllX2, AllY = create_timeframed_doc2vec_ticker_classification_data(stock, window_size, min_time_disparity=4)
+    
+    trainX, trainX2, trainY, testX, testX2, testY = split_data2(AllX, AllX2, AllY, ratio=.85)
+    
+    return (trainX, trainX2, trainY), (testX, testX2, testY)
+
+
+# In[4]:
+
 # Make Model
 
 def get_model():
+    
+    ## Load
     
     ticker_model = load_model(os.path.join('models', 'basic-classification.h5'))
     headline_model = load_model(os.path.join('models', 'headline-classification.h5'))
@@ -36,18 +54,61 @@ def get_model():
     ticker_model.pop()
     headline_model.pop()
     
-    combined = concatenate([ticker_model.outputs, headline_model.outputs])
+    ## Merge
     
-    combined.add(Dense(16))
-    combined.add(BatchNormalization())
-    combined.add(Activation('relu'))
-    combined.add(Dropout(0.25))
+    combined = Sequential()
+    
+    combined.add(Merge([headline_model, ticker_model], mode='concat'))
+    
+    combined.add(Dense(16,          name="combined_d1"))
+    combined.add(BatchNormalization(name="combined_bn1"))
+    combined.add(Activation('relu', name="combined_a1"))
+    combined.add(Dropout(0.5,       name="combined_do1"))
 
-    combined.add(Dense(2, activation='softmax'))
+    combined.add(Dense(2, activation='softmax', name="combined_d2"))
     
-    print(combined.summary())
+    combined.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
     
-    # TODO: How to combine models
+    return combined
 
-get_model()
+
+# In[5]:
+
+# Run (Load)
+
+if __name__ == "__main__":
+
+    (trainX, trainX2, trainY), (testX, testX2, testY) = get_data('AAPL')
+
+    print(trainX.shape, trainX2.shape, trainY.shape)
+
+
+# In[6]:
+
+# Run (Train)
+
+if __name__ == "__main__":
+
+    model = get_model()
+    
+    checkpoint = ModelCheckpoint(os.path.join('models', 'headlineticker-classification.h5'), 
+                                 monitor='val_acc', 
+                                 verbose=0, 
+                                 save_best_only=True)
+    
+    history = model.fit([trainX, trainX2], trainY, epochs=epochs, 
+                                           batch_size=batch_size, 
+                                           validation_data=([testX, testX2], testY),
+                                           verbose=0, 
+                                           callbacks=[checkpoint])
+
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.legend(['TrainLoss', 'TestLoss'])
+    plt.show()
+
+    plt.plot(history.history['acc'])
+    plt.plot(history.history['val_acc'])
+    plt.legend(['TrainAcc', 'TestAcc'])
+    plt.show()
 

@@ -407,6 +407,27 @@ def split_data(X, Y, ratio=.8, mix=True):
     
     return trainX, trainY, testX, testY
 
+def split_data2(X, X2, Y, ratio=.8, mix=True):
+    """
+    Splits X/Y to Train/Test
+    """
+    train_size = int(len(X) * ratio)
+    
+    trainX,  testX  = X[:train_size],  X[train_size:]
+    trainX2, testX2 = X2[:train_size], X2[train_size:]
+    trainY,  testY  = Y[:train_size],  Y[train_size:]
+    
+    if mix:
+        
+        indexes = np.arange(trainX.shape[0])
+        np.random.shuffle(indexes)
+        
+        trainX  = trainX[indexes]
+        trainX2 = trainX2[indexes]
+        trainY  = trainY[indexes]
+    
+    return trainX, trainX2, trainY, testX, testX2, testY
+
 
 # In[5]:
 

@@ -293,7 +293,7 @@ def create_timeframed_doc2vec_classification_data(stock, window_size, min_time_d
             
     return np.array(X), np.array(Y)
 
-def create_timeframed_doc2vec_ticker_classification_data(stock, window_size, min_time_disparity=3, norm=True):
+def create_timeframed_doc2vec_ticker_classification_data(stock, window_size_ticker, window_size_headlines, min_time_disparity=3, norm=True):
     
     def parse_date(date):
         
@@ -306,17 +306,17 @@ def create_timeframed_doc2vec_ticker_classification_data(stock, window_size, min
     
     X, X2, Y = [], [], []
     
-    for i in range(1, len(headlines_data) - window_size - 1):
+    for i in range(1, len(headlines_data) - window_size_headlines - 1):
     
-        headline_timeframe = np.copy(headlines_data[i: i + window_size])
+        headline_timeframe = np.copy(headlines_data[i: i + window_size_headlines])
 
-        window_end_date = days2[i + window_size]
+        window_end_date = days2[i + window_size_headlines]
         
         ## Check timeframe disparity ##
         
         valid = True
         
-        days_timeframe = list(days2[i: i + window_size])
+        days_timeframe = list(days2[i: i + window_size_headlines])
         
         max_diff = timedelta(days=min_time_disparity)
         
@@ -370,7 +370,7 @@ def create_timeframed_doc2vec_ticker_classification_data(stock, window_size, min
                 
                 Y.append([0., 1.])
                 
-            stock_timeframe = np.copy(ticker_data[histstock_index - window_size:histstock_index])
+            stock_timeframe = np.copy(ticker_data[histstock_index - window_size_ticker:histstock_index])
                 
             if norm:
                 

@@ -21,8 +21,8 @@ import matplotlib.pyplot as plt
 
 # Setup (Globals/Hyperz)
 
-window_size = 9
-epochs      = 2000
+window_size = 14
+epochs      = 1000
 batch_size  = 128
 emb_size    = 5
 
@@ -51,23 +51,24 @@ def get_model():
     
     model = Sequential()
     
-    model.add(Conv1D(filters=32, kernel_size=4, padding='same', input_shape=(window_size, emb_size)))
+    model.add(Conv1D(filters=32, kernel_size=2, padding='same', input_shape=(window_size, emb_size)))
     model.add(GlobalMaxPooling1D())
+    #model.add(Flatten())
     
-    model.add(Dense(80))
+    model.add(Dense(30))
     model.add(BatchNormalization())
-    model.add(Activation('selu'))
+    model.add(Activation('relu'))
     model.add(Dropout(0.5))
     
-    model.add(Dense(80))
+    model.add(Dense(12))
     model.add(BatchNormalization())
     model.add(Activation('selu'))
-    model.add(Dropout(0.5))
+    model.add(Dropout(0.2))
     
-    model.add(Dense(10))
-    model.add(BatchNormalization())
-    model.add(Activation('selu'))
-    model.add(Dropout(0.1))
+    #model.add(Dense(10))
+    #model.add(BatchNormalization())
+    #model.add(Activation('selu'))
+    #model.add(Dropout(0.2))
 
     model.add(Dense(2, activation='softmax'))
     
@@ -212,7 +213,7 @@ if __name__ == "__main__":
     model = get_model()
 
     reduce_LR = ReduceLROnPlateau(monitor='val_acc', factor=0.9, patience=30, min_lr=1e-6, verbose=0)
-    e_stopping = EarlyStopping(patience=120)
+    e_stopping = EarlyStopping(patience=300)
     checkpoint = ModelCheckpoint(os.path.join('models', 'basic-classification.h5'), 
                                  monitor='val_acc', 
                                  verbose=0, 
@@ -222,7 +223,7 @@ if __name__ == "__main__":
                                         batch_size=batch_size, 
                                         validation_data=(testX, testY), 
                                         verbose=0, 
-                                        callbacks=[reduce_LR, e_stopping, checkpoint])
+                                        callbacks=[checkpoint])
 
     plt.plot(history.history['loss'])
     plt.plot(history.history['val_loss'])

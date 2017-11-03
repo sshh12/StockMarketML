@@ -21,7 +21,8 @@ import matplotlib.pyplot as plt
 
 # Setup (Globals/Hyperz)
 
-window_size  = 9 # Must match both input models
+window_size_ticker     = 14
+window_size_headlines  = 9
 epochs       = 750
 batch_size   = 128
 emb_size     = 100
@@ -33,7 +34,7 @@ emb_size     = 100
 
 def get_data(stock):
     
-    AllX, AllX2, AllY = create_timeframed_doc2vec_ticker_classification_data(stock, window_size, min_time_disparity=4)
+    AllX, AllX2, AllY = create_timeframed_doc2vec_ticker_classification_data(stock, window_size_ticker, window_size_headlines, min_time_disparity=4)
     
     trainX, trainX2, trainY, testX, testX2, testY = split_data2(AllX, AllX2, AllY, ratio=.85)
     
@@ -63,7 +64,7 @@ def get_model():
     combined.add(Dense(16,          name="combined_d1"))
     combined.add(BatchNormalization(name="combined_bn1"))
     combined.add(Activation('relu', name="combined_a1"))
-    combined.add(Dropout(0.5,       name="combined_do1"))
+    combined.add(Dropout(0.3,       name="combined_do1"))
 
     # combined.add(Dense(1, activation='sigmoid', name="combined_d2"))
     combined.add(Dense(2, activation='softmax', name="combined_d2"))

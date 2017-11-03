@@ -10,7 +10,7 @@ from LoadData import *
 from keras.models import Sequential
 from keras.layers.advanced_activations import LeakyReLU
 from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint
-from keras.layers import Dense, LSTM, Dropout, Flatten, Conv1D, BatchNormalization, Activation
+from keras.layers import Dense, LSTM, Dropout, Flatten, Conv1D, BatchNormalization, Activation, GlobalMaxPooling1D
 
 import numpy as np
 
@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 
 # Setup (Globals/Hyperz)
 
-window_size = 18
+window_size = 9
 epochs      = 2000
 batch_size  = 128
 emb_size    = 5
@@ -38,7 +38,7 @@ def get_data(stock, output='up/down', use_window_size=None):
     
     AllX, AllY = create_timeframed_alldata_classification_data(stock, use_window_size, norm=True, output=output)
     
-    trainX, trainY, testX, testY = split_data(AllX, AllY, ratio=.9)
+    trainX, trainY, testX, testY = split_data(AllX, AllY, ratio=.85)
     
     return (trainX, trainY), (testX, testY)
 
@@ -51,22 +51,15 @@ def get_model():
     
     model = Sequential()
     
-    model.add(Conv1D(input_shape=(window_size, emb_size),
-                     filters=16,
-                     kernel_size=8,
-                     padding='same'))
-    model.add(BatchNormalization())
-    model.add(Activation('selu'))
-    model.add(Dropout(0.50))
- 
-    model.add(Flatten())
+    model.add(Conv1D(filters=32, kernel_size=4, padding='same', input_shape=(window_size, emb_size)))
+    model.add(GlobalMaxPooling1D())
     
-    model.add(Dense(128))
+    model.add(Dense(80))
     model.add(BatchNormalization())
     model.add(Activation('selu'))
     model.add(Dropout(0.5))
     
-    model.add(Dense(128))
+    model.add(Dense(80))
     model.add(BatchNormalization())
     model.add(Activation('selu'))
     model.add(Dropout(0.5))
@@ -74,7 +67,7 @@ def get_model():
     model.add(Dense(10))
     model.add(BatchNormalization())
     model.add(Activation('selu'))
-    model.add(Dropout(0.25))
+    model.add(Dropout(0.1))
 
     model.add(Dense(2, activation='softmax'))
     

@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 
 # Setup (Globals/Hyperz)
 
-window_size  = 18 # Must match both input models
+window_size  = 9 # Must match both input models
 epochs       = 750
 batch_size   = 128
 emb_size     = 100
@@ -65,8 +65,10 @@ def get_model():
     combined.add(Activation('relu', name="combined_a1"))
     combined.add(Dropout(0.5,       name="combined_do1"))
 
+    # combined.add(Dense(1, activation='sigmoid', name="combined_d2"))
     combined.add(Dense(2, activation='softmax', name="combined_d2"))
     
+    # combined.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     combined.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
     
     return combined
@@ -79,6 +81,9 @@ def get_model():
 if __name__ == "__main__":
 
     (trainX, trainX2, trainY), (testX, testX2, testY) = get_data('AAPL')
+    
+    # trainY = trainY[:, 0] == 1
+    # testY = testY[:, 0] == 1
 
     print(trainX.shape, trainX2.shape, trainY.shape)
 

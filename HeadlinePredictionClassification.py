@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 
 # Setup (Globals/Hyperz)
 
-window_size  = 18
+window_size  = 9
 epochs       = 750
 batch_size   = 128
 emb_size     = 100
@@ -64,7 +64,7 @@ def get_model():
     model.add(Dense(10,          name="hl_d3"))
     model.add(BatchNormalization(name="hl_bn3"))
     model.add(Activation('selu', name="hl_a3"))
-    model.add(Dropout(0.5,       name="hl_do3"))
+    model.add(Dropout(0.1,       name="hl_do3"))
 
     model.add(Dense(2, activation='softmax', name="hl_d4"))
     

@@ -23,8 +23,8 @@ import matplotlib.pyplot as plt
 
 window_size_ticker     = 14
 window_size_headlines  = 9
-epochs       = 750
-batch_size   = 128
+epochs       = 500
+batch_size   = 64
 emb_size     = 100
 
 

@@ -7,6 +7,8 @@
 
 from LoadData import *
 
+from keras import regularizers
+from keras import optimizers
 from keras.models import Sequential
 from keras.layers.advanced_activations import LeakyReLU
 from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint
@@ -21,9 +23,9 @@ import matplotlib.pyplot as plt
 
 # Setup (Globals/Hyperz)
 
-window_size = 14
+window_size = 12
 epochs      = 1000
-batch_size  = 128
+batch_size  = 64
 emb_size    = 5
 
 
@@ -55,12 +57,12 @@ def get_model():
     model.add(GlobalMaxPooling1D())
     #model.add(Flatten())
     
-    model.add(Dense(30))
+    model.add(Dense(30, kernel_regularizer=regularizers.l2(0.03)))
     model.add(BatchNormalization())
     model.add(Activation('relu'))
-    model.add(Dropout(0.5))
+    model.add(Dropout(0.3))
     
-    model.add(Dense(12))
+    model.add(Dense(12, kernel_regularizer=regularizers.l2(0.03)))
     model.add(BatchNormalization())
     model.add(Activation('selu'))
     model.add(Dropout(0.2))
@@ -72,7 +74,7 @@ def get_model():
 
     model.add(Dense(2, activation='softmax'))
     
-    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+    model.compile(loss='categorical_crossentropy', optimizer=optimizers.rmsprop(lr=0.0001), metrics=['accuracy'])
         
     return model
 

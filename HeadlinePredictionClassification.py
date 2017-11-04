@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 
 # Setup (Globals/Hyperz)
 
-window_size  = 9
+window_size  = 4
 epochs       = 750
 batch_size   = 128
 emb_size     = 100
@@ -48,20 +48,20 @@ def get_model():
     
     model = Sequential()
     
-    model.add(Conv1D(filters=32, kernel_size=3, padding='valid', input_shape=(window_size, emb_size), name="hl_conv1d"))
+    model.add(Conv1D(filters=8, kernel_size=3, padding='same', input_shape=(window_size, emb_size), name="hl_conv1d"))
     model.add(GlobalMaxPooling1D(name="hl_gpool"))
     
-    model.add(Dense(30,          name="hl_d1"))
-    model.add(BatchNormalization(name="hl_bn1"))
-    model.add(Activation('selu', name="hl_a1"))
-    model.add(Dropout(0.5,       name="hl_do1"))
+    #model.add(Dense(30,          name="hl_d1"))
+    #model.add(BatchNormalization(name="hl_bn1"))
+    #model.add(Activation('selu', name="hl_a1"))
+    #model.add(Dropout(0.5,       name="hl_do1"))
     
-    model.add(Dense(20,          name="hl_d2"))
+    model.add(Dense(10,          name="hl_d2"))
     model.add(BatchNormalization(name="hl_bn2"))
     model.add(Activation('selu', name="hl_a2"))
-    model.add(Dropout(0.5,       name="hl_do2"))
+    model.add(Dropout(0.2,       name="hl_do2"))
     
-    model.add(Dense(10,          name="hl_d3"))
+    model.add(Dense(8,          name="hl_d3"))
     model.add(BatchNormalization(name="hl_bn3"))
     model.add(Activation('selu', name="hl_a3"))
     model.add(Dropout(0.1,       name="hl_do3"))

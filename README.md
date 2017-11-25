@@ -41,4 +41,8 @@ Using historic stock prices and headlines to predict close price.
 
 ## Variation 2
 
+##### CollectData
+
+This script gathers data by scraping websites and does basic word processing.
+
 ...

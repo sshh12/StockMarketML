@@ -47,7 +47,7 @@ def headline_word2vec_csv_as_numpy(stock, emb_size=100, sentence_length=12):
     """
     days, day_values = [], []
     
-    with open(os.path.join('data', stock + '-headlines-vectors.csv'), 'r') as data:
+    with open(os.path.join('..', 'data', stock + '-headlines-vectors.csv'), 'r') as data:
 
         for line in data:
 
@@ -73,7 +73,7 @@ def headline_doc2vec_csv_as_numpy(stock):
     """
     days, day_values = [], []
     
-    with open(os.path.join('data', stock + '-headlines-vectors.csv'), 'r') as data:
+    with open(os.path.join('..', 'data', stock + '-headlines-vectors.csv'), 'r') as data:
 
         for line in data:
 

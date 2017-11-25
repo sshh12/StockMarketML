@@ -97,7 +97,7 @@ if __name__ == "__main__":
 
     model = get_model()
     
-    checkpoint = ModelCheckpoint(os.path.join('models', 'headlineticker-classification.h5'), 
+    checkpoint = ModelCheckpoint(os.path.join('..', 'models', 'headlineticker-classification.h5'), 
                                  monitor='val_acc', 
                                  verbose=0, 
                                  save_best_only=True)

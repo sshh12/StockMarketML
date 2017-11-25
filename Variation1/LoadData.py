@@ -26,7 +26,7 @@ def csv_as_numpy(stock):
     """
     days, day_values = [], []
     
-    with open(os.path.join('data', stock + '.csv'), 'r') as data:
+    with open(os.path.join('..', 'data', stock + '.csv'), 'r') as data:
 
         for line in data:
 

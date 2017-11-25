@@ -2,9 +2,9 @@
 
 Using the magic of machine learning to predict the trends of the stock market.
 
-## How
+## With
 
-### Tools/libs
+### Tools/libs Used
 
 * [Keras](https://keras.io/)
 * [NLTK](http://www.nltk.org/)
@@ -13,7 +13,7 @@ Using the magic of machine learning to predict the trends of the stock market.
 * [Praw](https://praw.readthedocs.io/en/latest/)
 * [Requests](http://docs.python-requests.org/en/master/)
 
-### Code
+## Variation 1
 
 ##### CollectData
 
@@ -38,3 +38,7 @@ This uses headlines processed through doc2vec to predict changes in close price.
 ##### HeadlineAndTickerClassification
 
 Using historic stock prices and headlines to predict close price.
+
+## Variation 2
+
+...

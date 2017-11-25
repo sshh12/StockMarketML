@@ -12,7 +12,7 @@ from keras import optimizers
 from keras.models import Sequential
 from keras.layers.advanced_activations import LeakyReLU
 from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint
-from keras.layers import Dense, LSTM, Dropout, Flatten, Conv1D, BatchNormalization, Activation, GlobalMaxPooling1D
+from keras.layers import Dense, LSTM, Dropout, Flatten, Conv1D, BatchNormalization, Activation, GlobalMaxPooling1D, MaxPooling1D
 
 import numpy as np
 
@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt
 
 # Setup (Globals/Hyperz)
 
-window_size = 12
+window_size = 10
 epochs      = 1000
 batch_size  = 64
 emb_size    = 5
@@ -38,9 +38,16 @@ def get_data(stock, output='up/down', use_window_size=None):
     if not use_window_size: 
         use_window_size = window_size
     
-    AllX, AllY = create_timeframed_alldata_classification_data(stock, use_window_size, norm=True, output=output)
+    AllX, AllY = create_timeframed_alldata_classification_data(stock[0], use_window_size, norm=True, output=output)
     
-    trainX, trainY, testX, testY = split_data(AllX, AllY, ratio=.85)
+    for i in range(1, len(stock)):
+        
+        MoreX, MoreY = create_timeframed_alldata_classification_data(stock[i], use_window_size, norm=True, output=output)
+        
+        AllX = np.concatenate([AllX, MoreX], axis=0)
+        AllY = np.concatenate([AllY, MoreY], axis=0)
+    
+    trainX, trainY, testX, testY = split_data(AllX, AllY, ratio=.90)
     
     return (trainX, trainY), (testX, testY)
 
@@ -53,18 +60,39 @@ def get_model():
     
     model = Sequential()
     
-    model.add(Conv1D(filters=32, kernel_size=2, padding='same', input_shape=(window_size, emb_size)))
-    model.add(GlobalMaxPooling1D())
-    #model.add(Flatten())
+    #model.add(Conv1D(filters=64, kernel_size=5, padding='same', input_shape=(window_size, emb_size)))
+    #model.add(BatchNormalization())
+    #model.add(Activation('relu'))
     
-    model.add(Dense(30, kernel_regularizer=regularizers.l2(0.03)))
+    #model.add(Conv1D(filters=16, kernel_size=4, padding='same', input_shape=(window_size, emb_size)))
+    #model.add(BatchNormalization())
+    #model.add(Activation('relu'))
+    
+    #model.add(GlobalMaxPooling1D())
+    #model.add(Flatten(input_shape=(window_size, emb_size)))
+    
+    model.add(Conv1D(filters=64, kernel_size=5, padding='same', activation='relu', input_shape=(window_size, emb_size)))
+    #model.add(MaxPooling1D(pool_size=2))
+    model.add(LSTM(100))
+    
+    model.add(Dense(100))
     model.add(BatchNormalization())
     model.add(Activation('relu'))
     model.add(Dropout(0.3))
     
-    model.add(Dense(12, kernel_regularizer=regularizers.l2(0.03)))
+    model.add(Dense(100))
     model.add(BatchNormalization())
-    model.add(Activation('selu'))
+    model.add(Activation('relu'))
+    model.add(Dropout(0.3))
+    
+    model.add(Dense(100))
+    model.add(BatchNormalization())
+    model.add(Activation('relu'))
+    model.add(Dropout(0.3))
+    
+    model.add(Dense(50))
+    model.add(BatchNormalization())
+    model.add(Activation('relu'))
     model.add(Dropout(0.2))
     
     #model.add(Dense(10))
@@ -74,7 +102,7 @@ def get_model():
 
     model.add(Dense(2, activation='softmax'))
     
-    model.compile(loss='categorical_crossentropy', optimizer=optimizers.rmsprop(lr=0.0001), metrics=['accuracy'])
+    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
         
     return model
 
@@ -201,7 +229,7 @@ def try_a_bunch_of_models_at_random(stock, num_attempts=10):
 
 if __name__ == "__main__":
 
-    (trainX, trainY), (testX, testY) = get_data('AAPL')
+    (trainX, trainY), (testX, testY) = get_data(['AAPL', 'GOOG', 'MSFT', 'ORCL', 'INTC', 'IBM', 'NVDA', 'AMD'])
 
     print(trainX.shape, trainY.shape)
 
@@ -215,8 +243,8 @@ if __name__ == "__main__":
     model = get_model()
 
     reduce_LR = ReduceLROnPlateau(monitor='val_acc', factor=0.9, patience=30, min_lr=1e-6, verbose=0)
-    e_stopping = EarlyStopping(patience=300)
-    checkpoint = ModelCheckpoint(os.path.join('models', 'basic-classification.h5'), 
+    e_stopping = EarlyStopping(patience=50)
+    checkpoint = ModelCheckpoint(os.path.join('..', 'models', 'basic-classification.h5'), 
                                  monitor='val_acc', 
                                  verbose=0, 
                                  save_best_only=True)
@@ -225,7 +253,7 @@ if __name__ == "__main__":
                                         batch_size=batch_size, 
                                         validation_data=(testX, testY), 
                                         verbose=0, 
-                                        callbacks=[checkpoint])
+                                        callbacks=[checkpoint, e_stopping])
 
     plt.plot(history.history['loss'])
     plt.plot(history.history['val_loss'])

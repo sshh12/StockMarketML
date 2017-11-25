@@ -148,7 +148,7 @@ def convert_headlines_to_vectors(stock, create_model=True):
     
     doc_model = Doc2Vec.load(os.path.join('models', stock + '-headlines-doc2vec.model'))
     
-    with open(os.path.join('data', stock + '-headlines-vectors.csv'), 'w', encoding="utf-8") as headline_vectors:
+    with open(os.path.join(data', stock + '-headlines-vectors.csv'), 'w', encoding="utf-8") as headline_vectors:
         
         i = 0
         

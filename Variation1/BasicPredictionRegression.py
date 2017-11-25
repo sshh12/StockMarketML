@@ -120,7 +120,7 @@ if __name__ == "__main__":
     model = get_model(variation='mlp-regression')
     
     e_stopping = EarlyStopping(patience=30)
-    checkpoint = ModelCheckpoint(os.path.join('models', 'basic-regression.h5'), 
+    checkpoint = ModelCheckpoint(os.path.join('..', 'models', 'basic-regression.h5'), 
                                  monitor='val_loss', 
                                  verbose=0, 
                                  save_best_only=True)

@@ -22,18 +22,20 @@ from keras import optimizers
 from keras.models import Sequential
 from keras.layers.advanced_activations import LeakyReLU
 from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint
-from keras.layers import Dense, LSTM, Dropout, Flatten, Conv1D, BatchNormalization, Activation, GlobalMaxPooling1D, MaxPooling1D
+from keras.layers import Dense, LSTM, Dropout, Flatten, Conv1D, BatchNormalization, Activation, GlobalMaxPooling1D, MaxPooling1D, TimeDistributed
 
 
 # In[3]:
 
 # Hyperz
 
-epochs           = 200
-batch_size       = 32
-window_size      = 20
+epochs           = 500
+batch_size       = 64
+
+window_size      = 30
 skip_window_size = 5
-train_split      = .8
+
+train_split      = .9
 emb_size         = 5
 
 
@@ -62,7 +64,7 @@ def create_timeframed_alldata_data(stocks, window_size=10, skip_window_size=2):
                     items = line.split(",")
                     items = np.array(list(map(float, items[1:])))
 
-                    raw_data.append(np.take(items, [0, 1, 2, 4, 5])) # OPEN HIGH LOW close ADJ_CLOSE VOLUME
+                    raw_data.append(np.take(items, [0, 1, 2, 4, 5])) # OPEN HIGH LOW ADJ_CLOSE VOLUME
         
         data = np.array(raw_data)
         
@@ -72,23 +74,25 @@ def create_timeframed_alldata_data(stocks, window_size=10, skip_window_size=2):
 
             time_frame = np.copy(data[i: i + window_size + 1])
             
-            trainable_frame = time_frame[:-skip_window_size]
+            trainable_frame = time_frame[:-skip_window_size-1]
 
             target_close = time_frame[-1, 3]
             last_close = trainable_frame[-1, 3]
 
             time_frame -= np.mean(trainable_frame, axis=0)
-            time_frame /= np.std(trainable_frame, axis=0)
+            time_frame /= (np.std(trainable_frame, axis=0) + 1e-7)
 
             X.append(trainable_frame)
 
             if last_close < target_close:
 
-                Y.append([1., time_frame[-1, 3]])
+                Y.append([1.])
 
             else:
 
-                Y.append([0., time_frame[-1, 3]])
+                Y.append([0.])
+                
+            Y[-1].append(time_frame[-1, 3])
         
     return np.array(X), np.array(Y)
 
@@ -119,7 +123,7 @@ def get_data(stocks):
     return split_data(X, Y, ratio=train_split)
 
 
-# In[20]:
+# In[6]:
 
 # Model
 
@@ -127,26 +131,31 @@ def get_model():
     
     model = Sequential()
 
-    model.add(LSTM(200, input_shape=(window_size - skip_window_size + 1, emb_size)))
+    model.add(LSTM(200, input_shape=(window_size - skip_window_size, emb_size)))
     
     model.add(Dense(200))
     model.add(BatchNormalization())
-    model.add(Activation('relu'))
+    model.add(LeakyReLU())
     model.add(Dropout(0.3))
     
     model.add(Dense(100))
     model.add(BatchNormalization())
-    model.add(Activation('relu'))
+    model.add(LeakyReLU())
+    model.add(Dropout(0.3))
+    
+    model.add(Dense(100))
+    model.add(BatchNormalization())
+    model.add(LeakyReLU())
     model.add(Dropout(0.3))
     
     model.add(Dense(80))
     model.add(BatchNormalization())
-    model.add(Activation('relu'))
+    model.add(LeakyReLU())
     model.add(Dropout(0.3))
 
     model.add(Dense(2))
     
-    model.compile(loss='mse', optimizer='adam', metrics=['accuracy'])
+    model.compile(loss='mse', optimizer='adam')
         
     return model
 
@@ -157,7 +166,9 @@ def get_model():
 
 if __name__ == "__main__":
     
-    trainX, trainY, testX, testY = get_data(['AAPL'])
+    trainX, trainY, testX, testY = get_data(['AAPL', 'GOOG', 'MSFT'])
+    
+    print(trainX.shape, trainY.shape)
 
 
 # In[ ]:
@@ -170,8 +181,8 @@ if __name__ == "__main__":
 
     reduce_LR = ReduceLROnPlateau(monitor='val_acc', factor=0.9, patience=30, min_lr=1e-6, verbose=0)
     e_stopping = EarlyStopping(patience=50)
-    checkpoint = ModelCheckpoint(os.path.join('..', 'models', 'basic-classification.h5'), 
-                                 monitor='val_acc', 
+    checkpoint = ModelCheckpoint(os.path.join('..', 'models', 'trend-pred.h5'), 
+                                 monitor='val_loss', 
                                  verbose=0, 
                                  save_best_only=True)
 
@@ -179,15 +190,15 @@ if __name__ == "__main__":
                                         batch_size=batch_size, 
                                         validation_data=(testX, testY), 
                                         verbose=0, 
-                                        callbacks=[])
+                                        callbacks=[e_stopping])
 
     plt.plot(history.history['loss'])
     plt.plot(history.history['val_loss'])
     plt.legend(['TrainLoss', 'TestLoss'])
     plt.show()
 
-    plt.plot(history.history['acc'])
-    plt.plot(history.history['val_acc'])
-    plt.legend(['TrainAcc', 'TestAcc'])
-    plt.show()
+    # plt.plot(history.history['acc'])
+    # plt.plot(history.history['val_acc'])
+    # plt.legend(['TrainAcc', 'TestAcc'])
+    # plt.show()
 

@@ -33,14 +33,14 @@ from keras.layers import Dense, LSTM, Dropout, Flatten, Conv1D, BatchNormalizati
 epochs           = 500
 batch_size       = 64
 
-window_size      = 60
+window_size      = 45
 skip_window_size = 5
 
 train_split      = .9
 emb_size         = 5
 
 
-# In[16]:
+# In[4]:
 
 # Load Data
 
@@ -91,7 +91,7 @@ def create_timeframed_alldata_data(stocks, window_size=10, skip_window_size=2):
             last_close = trainable_frame[-1, 3]
 
             time_frame -= np.mean(trainable_frame, axis=0)
-            time_frame /= (np.std(trainable_frame, axis=0) + 1e-7)
+            time_frame /= np.std(trainable_frame, axis=0)
 
             X.append(trainable_frame)
             
@@ -103,7 +103,7 @@ def create_timeframed_alldata_data(stocks, window_size=10, skip_window_size=2):
     return np.array(X), np.array(Y)
 
 
-# In[17]:
+# In[5]:
 
 # Split
 
@@ -126,12 +126,12 @@ def get_data(stocks):
     
     X, Y = create_timeframed_alldata_data(stocks, window_size=window_size, skip_window_size=skip_window_size)
     
-    Y[:, 0] /= np.std(Y[:, 0])
+    Y[:, 1] /= 4. # Norm Change
     
     return split_data(X, Y, ratio=train_split)
 
 
-# In[18]:
+# In[6]:
 
 # Model
 
@@ -141,29 +141,31 @@ def binacc(y_true, y_pred):
     
     Keras metric to compute the %accuracy given predicted vs actual
     """
-    return K.mean(K.equal(y_true[:, 0] >= 0, y_pred[:, 0] >= 0), axis=-1)
+    return K.mean(K.equal(y_true[:, 1] > 0, y_pred[:, 1] > 0), axis=-1)
 
 def get_model():
     
     model = Sequential()
 
-    model.add(LSTM(200, input_shape=(window_size - skip_window_size, emb_size)))
-    model.add(Dropout(0.3))
-    
-    model.add(Dense(200))
+    model.add(LSTM(300, input_shape=(window_size - skip_window_size, emb_size)))
     model.add(BatchNormalization())
     model.add(LeakyReLU())
-    model.add(Dropout(0.3))
+    model.add(Dropout(0.2))
+    
+    model.add(Dense(300))
+    model.add(BatchNormalization())
+    model.add(LeakyReLU())
+    model.add(Dropout(0.2))
+    
+    model.add(Dense(300))
+    model.add(BatchNormalization())
+    model.add(LeakyReLU())
+    model.add(Dropout(0.2))
     
     model.add(Dense(100))
     model.add(BatchNormalization())
     model.add(LeakyReLU())
-    model.add(Dropout(0.3))
-    
-    model.add(Dense(80))
-    model.add(BatchNormalization())
-    model.add(LeakyReLU())
-    model.add(Dropout(0.3))
+    model.add(Dropout(0.2))
 
     model.add(Dense(2))
     
@@ -172,18 +174,18 @@ def get_model():
     return model
 
 
-# In[19]:
+# In[7]:
 
 # Load Data
 
 if __name__ == "__main__":
     
-    trainX, trainY, testX, testY = get_data(['AAPL', 'GOOG'])
+    trainX, trainY, testX, testY = get_data(['AAPL', 'GOOG', 'MSFT'])
     
-    print(trainX.shape, trainY.shape)
+    print(trainX.shape, testY.shape)
 
 
-# In[ ]:
+# In[8]:
 
 # Train
 
@@ -191,8 +193,8 @@ if __name__ == "__main__":
 
     model = get_model()
 
-    reduce_LR = ReduceLROnPlateau(monitor='val_acc', factor=0.9, patience=30, min_lr=1e-6, verbose=0)
-    e_stopping = EarlyStopping(monitor='val_binacc', patience=50)
+    reduce_LR = ReduceLROnPlateau(monitor='val_binacc', factor=0.9, patience=30, min_lr=1e-6, verbose=0)
+    e_stopping = EarlyStopping(monitor='val_binacc', patience=52)
     checkpoint = ModelCheckpoint(os.path.join('..', 'models', 'trend-pred.h5'), 
                                  monitor='val_binacc', 
                                  verbose=0,
@@ -202,7 +204,7 @@ if __name__ == "__main__":
                                         batch_size=batch_size, 
                                         validation_data=(testX, testY), 
                                         verbose=0, 
-                                        callbacks=[e_stopping, checkpoint])
+                                        callbacks=[e_stopping, checkpoint, reduce_LR])
 
     plt.plot(history.history['loss'])
     plt.plot(history.history['val_loss'])
@@ -213,9 +215,4 @@ if __name__ == "__main__":
     plt.plot(history.history['val_binacc'])
     plt.legend(['TrainAcc', 'TestAcc'])
     plt.show()
-
-
-# In[ ]:
-
-
 

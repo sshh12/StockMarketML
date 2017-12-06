@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 
 import keras.backend as K
 from keras import regularizers
-from keras.optimizers import adam
+from keras.optimizers import adam, Nadam
 from keras.models import Sequential
 from keras.layers.advanced_activations import LeakyReLU
 from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint
@@ -33,8 +33,8 @@ from keras.layers import Dense, LSTM, Dropout, Flatten, Conv1D, BatchNormalizati
 epochs           = 600
 batch_size       = 32
 
-window_size      = 45
-skip_window_size = 5
+window_size      = 32
+skip_window_size = 4
 
 train_split      = .9
 emb_size         = 5
@@ -165,7 +165,7 @@ def get_model():
 
     model.add(Dense(2))
     
-    model.compile(loss='mse', optimizer=adam(), metrics=[binacc])
+    model.compile(loss='mse', optimizer=Nadam(), metrics=[binacc])
         
     return model
 
@@ -200,7 +200,7 @@ if __name__ == "__main__":
                                         batch_size=batch_size, 
                                         validation_data=(testX, testY), 
                                         verbose=0, 
-                                        callbacks=[e_stopping, checkpoint])
+                                        callbacks=[checkpoint])
 
     plt.plot(history.history['loss'])
     plt.plot(history.history['val_loss'])

@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 
 import keras.backend as K
 from keras import regularizers
-from keras import optimizers
+from keras.optimizers import adam
 from keras.models import Sequential
 from keras.layers.advanced_activations import LeakyReLU
 from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint
@@ -30,8 +30,8 @@ from keras.layers import Dense, LSTM, Dropout, Flatten, Conv1D, BatchNormalizati
 
 # Hyperz
 
-epochs           = 500
-batch_size       = 64
+epochs           = 600
+batch_size       = 32
 
 window_size      = 45
 skip_window_size = 5
@@ -126,7 +126,7 @@ def get_data(stocks):
     
     X, Y = create_timeframed_alldata_data(stocks, window_size=window_size, skip_window_size=skip_window_size)
     
-    Y[:, 1] /= 4. # Norm Change
+    Y[:, 1] /= 5. # Norm Change
     
     return split_data(X, Y, ratio=train_split)
 
@@ -150,26 +150,22 @@ def get_model():
     model.add(LSTM(300, input_shape=(window_size - skip_window_size, emb_size)))
     model.add(BatchNormalization())
     model.add(LeakyReLU())
-    model.add(Dropout(0.2))
     
     model.add(Dense(300))
     model.add(BatchNormalization())
     model.add(LeakyReLU())
-    model.add(Dropout(0.2))
     
     model.add(Dense(300))
     model.add(BatchNormalization())
     model.add(LeakyReLU())
-    model.add(Dropout(0.2))
     
-    model.add(Dense(100))
+    model.add(Dense(300))
     model.add(BatchNormalization())
     model.add(LeakyReLU())
-    model.add(Dropout(0.2))
 
     model.add(Dense(2))
     
-    model.compile(loss='mse', optimizer='adam', metrics=[binacc])
+    model.compile(loss='mse', optimizer=adam(), metrics=[binacc])
         
     return model
 
@@ -193,8 +189,8 @@ if __name__ == "__main__":
 
     model = get_model()
 
-    reduce_LR = ReduceLROnPlateau(monitor='val_binacc', factor=0.9, patience=30, min_lr=1e-6, verbose=0)
-    e_stopping = EarlyStopping(monitor='val_binacc', patience=52)
+    reduce_LR = ReduceLROnPlateau(monitor='val_loss', factor=0.9, patience=30, min_lr=1e-7, verbose=0)
+    e_stopping = EarlyStopping(monitor='val_binacc', patience=50)
     checkpoint = ModelCheckpoint(os.path.join('..', 'models', 'trend-pred.h5'), 
                                  monitor='val_binacc', 
                                  verbose=0,
@@ -204,7 +200,7 @@ if __name__ == "__main__":
                                         batch_size=batch_size, 
                                         validation_data=(testX, testY), 
                                         verbose=0, 
-                                        callbacks=[e_stopping, checkpoint, reduce_LR])
+                                        callbacks=[e_stopping, checkpoint])
 
     plt.plot(history.history['loss'])
     plt.plot(history.history['val_loss'])

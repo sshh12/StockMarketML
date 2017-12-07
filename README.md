@@ -45,4 +45,6 @@ Using historic stock prices and headlines to predict close price.
 
 This script gathers data by scraping websites and does basic word processing.
 
-...
+##### TrendPrediction
+
+This script takes window of stock prices and predicts next close price.

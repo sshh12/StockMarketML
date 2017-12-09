@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 # Processing/Misc
 
@@ -13,7 +13,7 @@ import os
 import matplotlib.pyplot as plt
 
 
-# In[ ]:
+# In[2]:
 
 # Keras
 
@@ -26,21 +26,21 @@ from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint
 from keras.layers import Dense, LSTM, Dropout, Flatten, Conv1D, BatchNormalization, Activation, GlobalMaxPooling1D, MaxPooling1D, TimeDistributed
 
 
-# In[ ]:
+# In[3]:
 
 # Hyperz
 
 epochs           = 600
 batch_size       = 64
 
-window_size      = 42
-skip_window_size = 7
+window_size      = 40
+skip_window_size = 5
 
 train_split      = .9
 emb_size         = 5
 
 
-# In[ ]:
+# In[4]:
 
 # Load Data
 
@@ -83,28 +83,30 @@ def create_timeframed_alldata_data(stocks, window_size=10, skip_window_size=2):
         
         for i in range(1, len(data) - window_size - 1):
 
-            time_frame = np.copy(data[i: i + window_size + 1])
+            time_frame = np.copy(data[i: i + window_size + 1]) # .copy so data[] not modified
             
             trainable_frame = time_frame[:-skip_window_size-1]
 
-            time_frame -= np.mean(trainable_frame, axis=0)
-            time_frame /= np.std(trainable_frame, axis=0)
+            time_frame -= np.mean(trainable_frame, axis=0) # Only normalized via trainable frame b/c thats all
+            time_frame /= np.std(trainable_frame, axis=0)  #    you get at test time
             
             target_close = time_frame[-1, 3]
             last_close = trainable_frame[-1, 3]
-            dclose = (target_close - last_close)**2
+            
+            dclose = target_close - last_close
+            dclose = (dclose**2) * np.sign(dclose)
 
             X.append(trainable_frame)
             
             if last_close < target_close:
-                Y.append([1., dclose])
+                Y.append([1., dclose]) # Predict: P(Stock Increased) and +/-AmtChanged^2
             else:
                 Y.append([0., dclose])
             
     return np.array(X), np.array(Y)
 
 
-# In[ ]:
+# In[5]:
 
 # Split
 
@@ -127,46 +129,57 @@ def get_data(stocks):
     
     X, Y = create_timeframed_alldata_data(stocks, window_size=window_size, skip_window_size=skip_window_size)
     
-    Y[:, 1] /= 10. # Normalize stock changes
+    Y[:, 1] /= 10. # Normalize stock changes (precomputed constant stddev)
     
     return split_data(X, Y, ratio=train_split)
 
 
-# In[ ]:
+# In[10]:
 
 # Model
 
 def binacc(y_true, y_pred):
     """
-    Binary Accuracy
+    Accuracy
     
-    Keras metric to compute the %accuracy given predicted vs actual
+    Keras metric to compute the %accuracy of prediction price going up vs down
     """
-    return K.mean(K.equal(y_true[:, 1] > 0, y_pred[:, 1] > 0), axis=-1)
+    return K.mean(K.equal(y_true[:, 1] > 0, y_pred[:, 1] > 0), axis=-1) # Verify the signs aka up/downs are the same
 
 def get_model():
     
     model = Sequential()
 
-    model.add(LSTM(300, input_shape=(window_size - skip_window_size, emb_size)))
+    model.add(LSTM(800, input_shape=(window_size - skip_window_size, emb_size)))
     model.add(BatchNormalization())
-    model.add(Dropout(0.2))
+    model.add(Dropout(0.3))
+    model.add(PReLU())
+    
+    model.add(Dense(700))
+    model.add(BatchNormalization())
+    model.add(Dropout(0.3))
+    model.add(PReLU())
+    
+    model.add(Dense(600))
+    model.add(BatchNormalization())
+    model.add(Dropout(0.3))
+    model.add(PReLU())
+    
+    model.add(Dense(500))
+    model.add(BatchNormalization())
+    model.add(Dropout(0.3))
     model.add(PReLU())
     
     model.add(Dense(300))
     model.add(BatchNormalization())
-    model.add(Dropout(0.2))
+    model.add(Dropout(0.3))
     model.add(PReLU())
     
     model.add(Dense(200))
     model.add(BatchNormalization())
-    model.add(Dropout(0.2))
+    model.add(Dropout(0.3))
     model.add(PReLU())
-    
-    model.add(Dense(100))
-    model.add(BatchNormalization())
-    model.add(Dropout(0.2))
-    model.add(PReLU())
+
 
     model.add(Dense(2))
     
@@ -175,18 +188,18 @@ def get_model():
     return model
 
 
-# In[ ]:
+# In[7]:
 
 # Load Data
 
 if __name__ == "__main__":
     
-    trainX, trainY, testX, testY = get_data(['AAPL', 'GOOG', 'MSFT'])
+    trainX, trainY, testX, testY = get_data(['GOOG', 'MSFT'])
     
-    print(trainX.shape, testY.shape)
+    print(trainX.shape, testY.shape) # Manually Verify (train size, general input dim) and (test size, general output dim)
 
 
-# In[ ]:
+# In[11]:
 
 # Train
 
@@ -194,7 +207,7 @@ if __name__ == "__main__":
 
     model = get_model()
 
-    reduce_LR = ReduceLROnPlateau(monitor='val_loss', factor=0.9, patience=30, min_lr=1e-7, verbose=0)
+    reduce_LR = ReduceLROnPlateau(monitor='val_loss', factor=0.95, patience=20, min_lr=1e-7, verbose=0)
     e_stopping = EarlyStopping(monitor='val_binacc', patience=50)
     checkpoint = ModelCheckpoint(os.path.join('..', 'models', 'trend-pred.h5'), 
                                  monitor='val_binacc', 
@@ -205,15 +218,17 @@ if __name__ == "__main__":
                                         batch_size=batch_size, 
                                         validation_data=(testX, testY), 
                                         verbose=0, 
-                                        callbacks=[e_stopping, checkpoint])
+                                        callbacks=[e_stopping, checkpoint, reduce_LR])
 
-    plt.plot(history.history['loss'])
-    plt.plot(history.history['val_loss'])
-    plt.legend(['TrainLoss', 'TestLoss'])
+    plt.plot(np.log(history.history['loss']))
+    plt.plot(np.log(history.history['val_loss']))
+    plt.legend(['LogTrainLoss', 'LogTestLoss'])
     plt.show()
 
     plt.plot(history.history['binacc'])
     plt.plot(history.history['val_binacc'])
+    plt.axhline(y=1, color='g')
+    plt.axhline(y=0.5, color='r')
     plt.legend(['TrainAcc', 'TestAcc'])
     plt.show()
 

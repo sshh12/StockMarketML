@@ -33,8 +33,8 @@ from keras.layers import Dense, LSTM, Dropout, Flatten, Conv1D, BatchNormalizati
 epochs           = 600
 batch_size       = 64
 
-window_size      = 40
-skip_window_size = 5
+window_size      = 60
+skip_window_size = 7
 
 train_split      = .9
 emb_size         = 5
@@ -94,7 +94,7 @@ def create_timeframed_alldata_data(stocks, window_size=10, skip_window_size=2):
             last_close = trainable_frame[-1, 3]
             
             dclose = target_close - last_close
-            dclose = (dclose**2) * np.sign(dclose)
+            dclose = dclose**2
 
             X.append(trainable_frame)
             
@@ -110,18 +110,18 @@ def create_timeframed_alldata_data(stocks, window_size=10, skip_window_size=2):
 
 # Split
 
-def split_data(X, Y, ratio=.8, mix=True):
+def split_data(X, Y, ratio, mix=True):
     """
     Splits X/Y to Train/Test
     """
-    train_size = int(len(X) * ratio)
-    
-    trainX, testX = X[:train_size], X[train_size:]
-    trainY, testY = Y[:train_size], Y[train_size:]
     
     if mix:
         
-        trainX, trainY = shuffle(trainX, trainY, random_state=0)
+        X, Y = shuffle(X, Y, random_state=1)
+        
+    train_size = int(len(X) * ratio)
+    trainX, testX = X[:train_size], X[train_size:]
+    trainY, testY = Y[:train_size], Y[train_size:]
     
     return trainX, trainY, testX, testY
 
@@ -129,12 +129,12 @@ def get_data(stocks):
     
     X, Y = create_timeframed_alldata_data(stocks, window_size=window_size, skip_window_size=skip_window_size)
     
-    Y[:, 1] /= 10. # Normalize stock changes (precomputed constant stddev)
+    Y[:, 1] /= 9. # Normalize stock changes (precomputed constant stddev)
     
-    return split_data(X, Y, ratio=train_split)
+    return split_data(X, Y, train_split)
 
 
-# In[10]:
+# In[6]:
 
 # Model
 
@@ -144,28 +144,13 @@ def binacc(y_true, y_pred):
     
     Keras metric to compute the %accuracy of prediction price going up vs down
     """
-    return K.mean(K.equal(y_true[:, 1] > 0, y_pred[:, 1] > 0), axis=-1) # Verify the signs aka up/downs are the same
+    return K.mean(K.equal(y_true[:, 0] >= 0.5, y_pred[:, 0] >= .5), axis=-1) # Verify the signs aka up/downs are the same
 
 def get_model():
     
     model = Sequential()
 
-    model.add(LSTM(800, input_shape=(window_size - skip_window_size, emb_size)))
-    model.add(BatchNormalization())
-    model.add(Dropout(0.3))
-    model.add(PReLU())
-    
-    model.add(Dense(700))
-    model.add(BatchNormalization())
-    model.add(Dropout(0.3))
-    model.add(PReLU())
-    
-    model.add(Dense(600))
-    model.add(BatchNormalization())
-    model.add(Dropout(0.3))
-    model.add(PReLU())
-    
-    model.add(Dense(500))
+    model.add(LSTM(300, input_shape=(window_size - skip_window_size, emb_size)))
     model.add(BatchNormalization())
     model.add(Dropout(0.3))
     model.add(PReLU())
@@ -175,15 +160,19 @@ def get_model():
     model.add(Dropout(0.3))
     model.add(PReLU())
     
-    model.add(Dense(200))
+    model.add(Dense(300))
+    model.add(BatchNormalization())
+    model.add(Dropout(0.3))
+    model.add(PReLU())
+    
+    model.add(Dense(300))
     model.add(BatchNormalization())
     model.add(Dropout(0.3))
     model.add(PReLU())
 
-
     model.add(Dense(2))
     
-    model.compile(loss='mse', optimizer=Nadam(lr=0.002), metrics=[binacc])
+    model.compile(loss='mse', optimizer=adam(lr=0.002), metrics=[binacc])
         
     return model
 
@@ -199,7 +188,7 @@ if __name__ == "__main__":
     print(trainX.shape, testY.shape) # Manually Verify (train size, general input dim) and (test size, general output dim)
 
 
-# In[11]:
+# In[8]:
 
 # Train
 
@@ -208,7 +197,7 @@ if __name__ == "__main__":
     model = get_model()
 
     reduce_LR = ReduceLROnPlateau(monitor='val_loss', factor=0.95, patience=20, min_lr=1e-7, verbose=0)
-    e_stopping = EarlyStopping(monitor='val_binacc', patience=50)
+    e_stopping = EarlyStopping(monitor='val_binacc', patience=60)
     checkpoint = ModelCheckpoint(os.path.join('..', 'models', 'trend-pred.h5'), 
                                  monitor='val_binacc', 
                                  verbose=0,

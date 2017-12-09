@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 # Processing/Misc
 
@@ -13,7 +13,7 @@ import os
 import matplotlib.pyplot as plt
 
 
-# In[2]:
+# In[ ]:
 
 # Keras
 
@@ -21,26 +21,26 @@ import keras.backend as K
 from keras import regularizers
 from keras.optimizers import adam, Nadam
 from keras.models import Sequential
-from keras.layers.advanced_activations import LeakyReLU
+from keras.layers.advanced_activations import LeakyReLU, PReLU
 from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint
 from keras.layers import Dense, LSTM, Dropout, Flatten, Conv1D, BatchNormalization, Activation, GlobalMaxPooling1D, MaxPooling1D, TimeDistributed
 
 
-# In[3]:
+# In[ ]:
 
 # Hyperz
 
 epochs           = 600
-batch_size       = 32
+batch_size       = 64
 
-window_size      = 32
-skip_window_size = 4
+window_size      = 42
+skip_window_size = 7
 
 train_split      = .9
 emb_size         = 5
 
 
-# In[4]:
+# In[ ]:
 
 # Load Data
 
@@ -87,23 +87,24 @@ def create_timeframed_alldata_data(stocks, window_size=10, skip_window_size=2):
             
             trainable_frame = time_frame[:-skip_window_size-1]
 
-            target_close = time_frame[-1, 3]
-            last_close = trainable_frame[-1, 3]
-
             time_frame -= np.mean(trainable_frame, axis=0)
             time_frame /= np.std(trainable_frame, axis=0)
+            
+            target_close = time_frame[-1, 3]
+            last_close = trainable_frame[-1, 3]
+            dclose = (target_close - last_close)**2
 
             X.append(trainable_frame)
             
             if last_close < target_close:
-                Y.append([1., target_close - last_close])
+                Y.append([1., dclose])
             else:
-                Y.append([0., target_close - last_close])
+                Y.append([0., dclose])
             
     return np.array(X), np.array(Y)
 
 
-# In[5]:
+# In[ ]:
 
 # Split
 
@@ -126,12 +127,12 @@ def get_data(stocks):
     
     X, Y = create_timeframed_alldata_data(stocks, window_size=window_size, skip_window_size=skip_window_size)
     
-    Y[:, 1] /= 5. # Norm Change
+    Y[:, 1] /= 10. # Normalize stock changes
     
     return split_data(X, Y, ratio=train_split)
 
 
-# In[6]:
+# In[ ]:
 
 # Model
 
@@ -149,28 +150,32 @@ def get_model():
 
     model.add(LSTM(300, input_shape=(window_size - skip_window_size, emb_size)))
     model.add(BatchNormalization())
-    model.add(LeakyReLU())
+    model.add(Dropout(0.2))
+    model.add(PReLU())
     
     model.add(Dense(300))
     model.add(BatchNormalization())
-    model.add(LeakyReLU())
+    model.add(Dropout(0.2))
+    model.add(PReLU())
     
-    model.add(Dense(300))
+    model.add(Dense(200))
     model.add(BatchNormalization())
-    model.add(LeakyReLU())
+    model.add(Dropout(0.2))
+    model.add(PReLU())
     
-    model.add(Dense(300))
+    model.add(Dense(100))
     model.add(BatchNormalization())
-    model.add(LeakyReLU())
+    model.add(Dropout(0.2))
+    model.add(PReLU())
 
     model.add(Dense(2))
     
-    model.compile(loss='mse', optimizer=Nadam(), metrics=[binacc])
+    model.compile(loss='mse', optimizer=Nadam(lr=0.002), metrics=[binacc])
         
     return model
 
 
-# In[7]:
+# In[ ]:
 
 # Load Data
 
@@ -181,7 +186,7 @@ if __name__ == "__main__":
     print(trainX.shape, testY.shape)
 
 
-# In[8]:
+# In[ ]:
 
 # Train
 
@@ -200,7 +205,7 @@ if __name__ == "__main__":
                                         batch_size=batch_size, 
                                         validation_data=(testX, testY), 
                                         verbose=0, 
-                                        callbacks=[checkpoint])
+                                        callbacks=[e_stopping, checkpoint])
 
     plt.plot(history.history['loss'])
     plt.plot(history.history['val_loss'])

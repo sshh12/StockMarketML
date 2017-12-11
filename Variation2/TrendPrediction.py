@@ -31,10 +31,10 @@ from keras.layers import Dense, LSTM, Dropout, Flatten, Conv1D, BatchNormalizati
 # Hyperz
 
 epochs           = 600
-batch_size       = 64
+batch_size       = 32
 
-window_size      = 60
-skip_window_size = 7
+window_size      = 50
+skip_window_size = 6
 
 train_split      = .9
 emb_size         = 5
@@ -99,9 +99,9 @@ def create_timeframed_alldata_data(stocks, window_size=10, skip_window_size=2):
             X.append(trainable_frame)
             
             if last_close < target_close:
-                Y.append([1., dclose]) # Predict: P(Stock Increased) and +/-AmtChanged^2
+                Y.append([1., 0., dclose]) # Predict: P(Stock Increased) P(Stock Decreased) +/-AmtChanged^2
             else:
-                Y.append([0., dclose])
+                Y.append([0., 1., dclose])
             
     return np.array(X), np.array(Y)
 
@@ -129,7 +129,7 @@ def get_data(stocks):
     
     X, Y = create_timeframed_alldata_data(stocks, window_size=window_size, skip_window_size=skip_window_size)
     
-    Y[:, 1] /= 9. # Normalize stock changes (precomputed constant stddev)
+    Y[:, 2] /= 9. # Normalize stock changes (precomputed constant stddev)
     
     return split_data(X, Y, train_split)
 
@@ -170,7 +170,7 @@ def get_model():
     model.add(Dropout(0.3))
     model.add(PReLU())
 
-    model.add(Dense(2))
+    model.add(Dense(3))
     
     model.compile(loss='mse', optimizer=adam(lr=0.002), metrics=[binacc])
         

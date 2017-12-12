@@ -78,7 +78,7 @@ def save_headlines(stock, sources, force_one_per_day=False):
             
             articles[date].extend(source[date])
             
-    with open(os.path.join('data', stock + '-headlines.csv'), 'w', encoding="utf-8") as headline_file:
+    with open(os.path.join('..', 'data', stock + '-headlines.csv'), 'w', encoding="utf-8") as headline_file:
         
         for date in sorted(articles):
             
@@ -117,7 +117,7 @@ def convert_headlines_to_vectors(stock, create_model=True):
     
     def read_headline_file():
         
-        with open(os.path.join('data', stock + '-headlines.csv'), 'r', encoding="utf-8") as headline_file:
+        with open(os.path.join('..','data', stock + '-headlines.csv'), 'r', encoding="utf-8") as headline_file:
         
             for line in headline_file:
             
@@ -144,11 +144,11 @@ def convert_headlines_to_vectors(stock, create_model=True):
                     i += 1
         
         doc_model = Doc2Vec(headlines_corpus, size=100, window=5, min_count=3, workers=4)
-        doc_model.save(os.path.join('models', stock + '-headlines-doc2vec.model'))
+        doc_model.save(os.path.join('..', 'models', stock + '-headlines-doc2vec.model'))
     
-    doc_model = Doc2Vec.load(os.path.join('models', stock + '-headlines-doc2vec.model'))
+    doc_model = Doc2Vec.load(os.path.join('..', 'models', stock + '-headlines-doc2vec.model'))
     
-    with open(os.path.join(data', stock + '-headlines-vectors.csv'), 'w', encoding="utf-8") as headline_vectors:
+    with open(os.path.join('..', 'data', stock + '-headlines-vectors.csv'), 'w', encoding="utf-8") as headline_vectors:
         
         i = 0
         

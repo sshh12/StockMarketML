@@ -13,7 +13,21 @@ Using the magic of machine learning to predict the trends of the stock market.
 * [Praw](https://praw.readthedocs.io/en/latest/)
 * [Requests](http://docs.python-requests.org/en/master/)
 
+## Variation 2
+
+Current (Second) Attempt
+
+##### CollectData
+
+This script gathers data by scraping websites and does basic word processing.
+
+##### TrendPrediction
+
+This script takes window of stock prices and predicts next close price.
+
 ## Variation 1
+
+First Attempt
 
 ##### CollectData
 
@@ -38,13 +52,3 @@ This uses headlines processed through doc2vec to predict changes in close price.
 ##### HeadlineAndTickerClassification
 
 Using historic stock prices and headlines to predict close price.
-
-## Variation 2
-
-##### CollectData
-
-This script gathers data by scraping websites and does basic word processing.
-
-##### TrendPrediction
-
-This script takes window of stock prices and predicts next close price.

@@ -117,11 +117,14 @@ def split_data(X, Y, ratio, mix=True):
     
     if mix:
         
-        X, Y = shuffle(X, Y, random_state=1)
+        X, Y = shuffle(X, Y, random_state=11)
         
     train_size = int(len(X) * ratio)
     trainX, testX = X[:train_size], X[train_size:]
     trainY, testY = Y[:train_size], Y[train_size:]
+    
+    # print(np.std(trainY[:, 2]))
+    # print(np.std(testY[:, 2]))
     
     return trainX, trainY, testX, testY
 
@@ -129,7 +132,7 @@ def get_data(stocks):
     
     X, Y = create_timeframed_alldata_data(stocks, window_size=window_size, skip_window_size=skip_window_size)
     
-    Y[:, 2] /= 9. # Normalize stock changes (precomputed constant stddev)
+    Y[:, 2] /= 10. # Normalize stock changes (precomputed constant stddev)
     
     return split_data(X, Y, train_split)
 
@@ -138,41 +141,45 @@ def get_data(stocks):
 
 # Model
 
-def binacc(y_true, y_pred):
+def acc_metric(y_true, y_pred):
     """
     Accuracy
     
     Keras metric to compute the %accuracy of prediction price going up vs down
     """
-    return K.mean(K.equal(y_true[:, 0] >= 0.5, y_pred[:, 0] >= .5), axis=-1) # Verify the signs aka up/downs are the same
+    return K.mean(K.equal(y_true[:, 0] > y_true[:, 1], 
+                          y_pred[:, 0] > y_pred[:, 1]), axis=-1) # Verify the signs aka up/downs are the same
+
+def mse_loss(y_true, y_pred):
+    return K.mean(K.square(y_pred - y_true), axis=-1)
 
 def get_model():
     
     model = Sequential()
 
-    model.add(LSTM(300, input_shape=(window_size - skip_window_size, emb_size)))
+    model.add(LSTM(340, input_shape=(window_size - skip_window_size, emb_size)))
     model.add(BatchNormalization())
     model.add(Dropout(0.3))
     model.add(PReLU())
     
-    model.add(Dense(300))
+    model.add(Dense(330))
     model.add(BatchNormalization())
     model.add(Dropout(0.3))
     model.add(PReLU())
     
-    model.add(Dense(300))
+    model.add(Dense(320))
     model.add(BatchNormalization())
     model.add(Dropout(0.3))
     model.add(PReLU())
     
-    model.add(Dense(300))
+    model.add(Dense(310))
     model.add(BatchNormalization())
     model.add(Dropout(0.3))
     model.add(PReLU())
 
     model.add(Dense(3))
     
-    model.compile(loss='mse', optimizer=adam(lr=0.002), metrics=[binacc])
+    model.compile(loss=mse_loss, optimizer=adam(lr=0.002), metrics=[acc_metric])
         
     return model
 
@@ -185,7 +192,7 @@ if __name__ == "__main__":
     
     trainX, trainY, testX, testY = get_data(['GOOG', 'MSFT'])
     
-    print(trainX.shape, testY.shape) # Manually Verify (train size, general input dim) and (test size, general output dim)
+    print(trainX.shape, testY.shape) # Manually Verify train size, general input dim and test size, general output dim
 
 
 # In[8]:
@@ -197,9 +204,9 @@ if __name__ == "__main__":
     model = get_model()
 
     reduce_LR = ReduceLROnPlateau(monitor='val_loss', factor=0.95, patience=20, min_lr=1e-7, verbose=0)
-    e_stopping = EarlyStopping(monitor='val_binacc', patience=60)
+    e_stopping = EarlyStopping(monitor='val_acc_metric', patience=60)
     checkpoint = ModelCheckpoint(os.path.join('..', 'models', 'trend-pred.h5'), 
-                                 monitor='val_binacc', 
+                                 monitor='val_acc_metric', 
                                  verbose=0,
                                  save_best_only=True)
 
@@ -214,8 +221,8 @@ if __name__ == "__main__":
     plt.legend(['LogTrainLoss', 'LogTestLoss'])
     plt.show()
 
-    plt.plot(history.history['binacc'])
-    plt.plot(history.history['val_binacc'])
+    plt.plot(history.history['acc_metric'])
+    plt.plot(history.history['val_acc_metric'])
     plt.axhline(y=1, color='g')
     plt.axhline(y=0.5, color='r')
     plt.legend(['TrainAcc', 'TestAcc'])

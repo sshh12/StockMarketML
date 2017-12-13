@@ -117,7 +117,7 @@ def split_data(X, Y, ratio, mix=True):
     
     if mix:
         
-        X, Y = shuffle(X, Y, random_state=11)
+        X, Y = shuffle(X, Y, random_state=9)
         
     train_size = int(len(X) * ratio)
     trainX, testX = X[:train_size], X[train_size:]
@@ -184,18 +184,18 @@ def get_model():
     return model
 
 
-# In[7]:
+# In[ ]:
 
 # Load Data
 
 if __name__ == "__main__":
     
-    trainX, trainY, testX, testY = get_data(['GOOG', 'MSFT'])
+    trainX, trainY, testX, testY = get_data(['GOOG', 'MSFT', 'AAPL'])
     
     print(trainX.shape, testY.shape) # Manually Verify train size, general input dim and test size, general output dim
 
 
-# In[8]:
+# In[ ]:
 
 # Train
 
@@ -203,7 +203,7 @@ if __name__ == "__main__":
 
     model = get_model()
 
-    reduce_LR = ReduceLROnPlateau(monitor='val_loss', factor=0.95, patience=20, min_lr=1e-7, verbose=0)
+    reduce_LR = ReduceLROnPlateau(monitor='val_loss', factor=0.9, patience=20, min_lr=1e-7, verbose=0)
     e_stopping = EarlyStopping(monitor='val_acc_metric', patience=60)
     checkpoint = ModelCheckpoint(os.path.join('..', 'models', 'trend-pred.h5'), 
                                  monitor='val_acc_metric', 

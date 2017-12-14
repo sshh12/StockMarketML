@@ -31,16 +31,23 @@ from keras.layers import Dense, LSTM, Dropout, Flatten, Conv1D, Conv2D, BatchNor
 # Hyperz
 
 epochs           = 600
-batch_size       = 32
+batch_size       = 64
 
-window_size      = 50
-skip_window_size = 6
+window_size      = 60
+skip_window_size = 5
 
 train_split      = .9
 emb_size         = 5
 
+seed = 27
+
 
 # In[4]:
+
+np.random.seed(seed)
+
+
+# In[5]:
 
 # Load Data
 
@@ -106,7 +113,7 @@ def create_timeframed_alldata_data(stocks, window_size=10, skip_window_size=2):
     return np.array(X), np.array(Y)
 
 
-# In[5]:
+# In[6]:
 
 # Split
 
@@ -117,14 +124,13 @@ def split_data(X, Y, ratio, mix=True):
     
     if mix:
         
-        X, Y = shuffle(X, Y, random_state=11)
+        X, Y = shuffle(X, Y, random_state=seed)
         
     train_size = int(len(X) * ratio)
     trainX, testX = X[:train_size], X[train_size:]
     trainY, testY = Y[:train_size], Y[train_size:]
     
-    # print(np.std(trainY[:, 2]))
-    # print(np.std(testY[:, 2]))
+    print(np.std(trainY[:, 2]), np.std(testY[:, 2]))
     
     return trainX, trainY, testX, testY
 
@@ -132,12 +138,12 @@ def get_data(stocks):
     
     X, Y = create_timeframed_alldata_data(stocks, window_size=window_size, skip_window_size=skip_window_size)
     
-    Y[:, 2] /= 10. # Normalize stock changes (precomputed constant stddev)
+    Y[:, 2] /= 6. # Normalize stock changes (precomputed constant stddev)
     
     return split_data(X, Y, train_split)
 
 
-# In[6]:
+# In[7]:
 
 # Model
 
@@ -161,9 +167,15 @@ def get_model():
 
     model.add(Conv1D(64, 5, padding='same', input_shape=input_shape))
     model.add(PReLU())
-    model.add(MaxPooling1D(pool_size=5))
+    model.add(MaxPooling1D(pool_size=2))
+    model.add(Dropout(0.25))
 
-    model.add(LSTM(300))
+    model.add(LSTM(400))
+    model.add(PReLU())
+    model.add(BatchNormalization())
+    model.add(Dropout(0.25))
+    
+    model.add(Dense(400))
     model.add(PReLU())
     model.add(BatchNormalization())
     model.add(Dropout(0.25))
@@ -173,24 +185,19 @@ def get_model():
     model.add(BatchNormalization())
     model.add(Dropout(0.25))
     
-    model.add(Dense(300))
-    model.add(PReLU())
-    model.add(BatchNormalization())
-    model.add(Dropout(0.25))
-    
-    model.add(Dense(300))
+    model.add(Dense(200))
     model.add(PReLU())
     model.add(BatchNormalization())
     model.add(Dropout(0.25))
 
     model.add(Dense(3))
     
-    model.compile(loss=mse_loss, optimizer=adam(lr=0.0012), metrics=[acc_metric])
+    model.compile(loss=mse_loss, optimizer=adam(lr=0.001), metrics=[acc_metric])
         
     return model
 
 
-# In[7]:
+# In[8]:
 
 # Load Data
 
@@ -201,7 +208,7 @@ if __name__ == "__main__":
     print(trainX.shape, testY.shape) # Manually Verify train size, general input dim and test size, general output dim
 
 
-# In[8]:
+# In[9]:
 
 # Train
 

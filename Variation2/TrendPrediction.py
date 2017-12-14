@@ -23,7 +23,7 @@ from keras.optimizers import adam, Nadam
 from keras.models import Sequential
 from keras.layers.advanced_activations import LeakyReLU, PReLU
 from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint
-from keras.layers import Dense, LSTM, Dropout, Flatten, Conv1D, BatchNormalization, Activation, GlobalMaxPooling1D, MaxPooling1D, TimeDistributed
+from keras.layers import Dense, LSTM, Dropout, Flatten, Conv1D, Conv2D, BatchNormalization, Activation, GlobalMaxPooling1D, MaxPooling1D, TimeDistributed
 
 
 # In[3]:
@@ -117,7 +117,7 @@ def split_data(X, Y, ratio, mix=True):
     
     if mix:
         
-        X, Y = shuffle(X, Y, random_state=9)
+        X, Y = shuffle(X, Y, random_state=11)
         
     train_size = int(len(X) * ratio)
     trainX, testX = X[:train_size], X[train_size:]
@@ -155,47 +155,53 @@ def mse_loss(y_true, y_pred):
 
 def get_model():
     
+    input_shape = (window_size - skip_window_size, emb_size)
+    
     model = Sequential()
 
-    model.add(LSTM(340, input_shape=(window_size - skip_window_size, emb_size)))
-    model.add(BatchNormalization())
-    model.add(Dropout(0.3))
+    model.add(Conv1D(64, 5, padding='same', input_shape=input_shape))
     model.add(PReLU())
+    model.add(MaxPooling1D(pool_size=5))
+
+    model.add(LSTM(300))
+    model.add(PReLU())
+    model.add(BatchNormalization())
+    model.add(Dropout(0.25))
     
-    model.add(Dense(330))
-    model.add(BatchNormalization())
-    model.add(Dropout(0.3))
+    model.add(Dense(300))
     model.add(PReLU())
+    model.add(BatchNormalization())
+    model.add(Dropout(0.25))
     
-    model.add(Dense(320))
-    model.add(BatchNormalization())
-    model.add(Dropout(0.3))
+    model.add(Dense(300))
     model.add(PReLU())
+    model.add(BatchNormalization())
+    model.add(Dropout(0.25))
     
-    model.add(Dense(310))
-    model.add(BatchNormalization())
-    model.add(Dropout(0.3))
+    model.add(Dense(300))
     model.add(PReLU())
+    model.add(BatchNormalization())
+    model.add(Dropout(0.25))
 
     model.add(Dense(3))
     
-    model.compile(loss=mse_loss, optimizer=adam(lr=0.002), metrics=[acc_metric])
+    model.compile(loss=mse_loss, optimizer=adam(lr=0.0012), metrics=[acc_metric])
         
     return model
 
 
-# In[ ]:
+# In[7]:
 
 # Load Data
 
 if __name__ == "__main__":
     
-    trainX, trainY, testX, testY = get_data(['GOOG', 'MSFT', 'AAPL'])
+    trainX, trainY, testX, testY = get_data(['GOOG', 'MSFT'])
     
     print(trainX.shape, testY.shape) # Manually Verify train size, general input dim and test size, general output dim
 
 
-# In[ ]:
+# In[8]:
 
 # Train
 
@@ -204,7 +210,7 @@ if __name__ == "__main__":
     model = get_model()
 
     reduce_LR = ReduceLROnPlateau(monitor='val_loss', factor=0.9, patience=20, min_lr=1e-7, verbose=0)
-    e_stopping = EarlyStopping(monitor='val_acc_metric', patience=60)
+    e_stopping = EarlyStopping(monitor='val_acc_metric', patience=80)
     checkpoint = ModelCheckpoint(os.path.join('..', 'models', 'trend-pred.h5'), 
                                  monitor='val_acc_metric', 
                                  verbose=0,
@@ -214,7 +220,7 @@ if __name__ == "__main__":
                                         batch_size=batch_size, 
                                         validation_data=(testX, testY), 
                                         verbose=0, 
-                                        callbacks=[e_stopping, checkpoint, reduce_LR])
+                                        callbacks=[e_stopping, checkpoint])
 
     plt.plot(np.log(history.history['loss']))
     plt.plot(np.log(history.history['val_loss']))

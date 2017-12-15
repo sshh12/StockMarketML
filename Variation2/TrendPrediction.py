@@ -165,39 +165,29 @@ def get_model():
     
     model = Sequential()
 
-    model.add(Conv1D(64, 5, padding='same', input_shape=input_shape))
+    model.add(Conv1D(64, 7, padding='same', input_shape=input_shape))
     model.add(PReLU())
-    model.add(MaxPooling1D(pool_size=5))
+    model.add(MaxPooling1D(pool_size=4))
     model.add(Dropout(0.25))
 
-    model.add(LSTM(300))
+    model.add(LSTM(240))
     model.add(PReLU())
     model.add(BatchNormalization())
     model.add(Dropout(0.25))
     
-    model.add(Dense(300))
+    model.add(Dense(160))
     model.add(PReLU())
     model.add(BatchNormalization())
     model.add(Dropout(0.25))
     
-    model.add(Dense(300))
-    model.add(PReLU())
-    model.add(BatchNormalization())
-    model.add(Dropout(0.25))
-    
-    model.add(Dense(300))
-    model.add(PReLU())
-    model.add(BatchNormalization())
-    model.add(Dropout(0.25))
-    
-    model.add(Dense(300))
+    model.add(Dense(80))
     model.add(PReLU())
     model.add(BatchNormalization())
     model.add(Dropout(0.25))
 
     model.add(Dense(3))
     
-    model.compile(loss=mse_loss, optimizer=adam(lr=0.0012), metrics=[acc_metric])
+    model.compile(loss=mse_loss, optimizer=adam(lr=0.001), metrics=[acc_metric])
         
     return model
 

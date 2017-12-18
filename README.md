@@ -21,6 +21,10 @@ Current (Second) Attempt
 
 This script gathers data by scraping websites and does basic word processing.
 
+##### HeadlineEmbeddings
+
+This uses a model to extract the features from headlines.
+
 ##### TrendPrediction
 
 This script takes window of stock prices and predicts next close price.

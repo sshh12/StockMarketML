@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[27]:
+# In[1]:
 
 # Imports
 
@@ -10,13 +10,28 @@ from datetime import datetime, timedelta
 import numpy as np
 import os
 
+import matplotlib.pyplot as plt
+
 from keras.models import Sequential
 from keras.layers import Dense, Flatten, Embedding
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 
 
-# In[5]:
+# In[2]:
+
+# Options
+
+stocks = ['AAPL']
+
+max_length = 20
+vocab_size = 500
+
+epochs = 100
+batch_size = 16
+
+
+# In[3]:
 
 
 def get_tick_data(stocks):
@@ -47,7 +62,7 @@ def get_tick_data(stocks):
     return history
 
 
-# In[19]:
+# In[4]:
 
 
 def get_headline_data(stocks):
@@ -58,7 +73,7 @@ def get_headline_data(stocks):
     """
     history = {}
     
-    with open(os.path.join('..', 'data', "_".join(stocks) + '-headlines.csv'), 'r') as data:
+    with open(os.path.join('..', 'data', "_".join(stocks) + '-headlines.csv'), 'r', encoding="utf8") as data:
         
         for line in data:
 
@@ -75,7 +90,7 @@ def get_headline_data(stocks):
     return history
 
 
-# In[38]:
+# In[5]:
 
 
 def make_headline_to_effect_data(tick_data, head_data):
@@ -100,33 +115,31 @@ def make_headline_to_effect_data(tick_data, head_data):
                 tick_on = tick_data[stock][date]
                 tick_after = tick_data[stock][next_date]
                 
-                if tick_after[3] < tick_on[3]:
+                if tick_after[3] >= tick_on[3]:
                     
-                    effects.append(-1)
+                    effects.append([1., 0.])
                     
                 else:
                     
-                    effects.append(1)
+                    effects.append([0., 1.])
                     
                 headlines.append(headline)
                 
-    return headlines, effects
+    return headlines, np.array(effects)
 
 
-# In[39]:
+# In[6]:
 
 
-def encode_sentences(sentences, max_length=10):
+def encode_sentences(sentences, max_length=16, vocab_size=None):
     """
     Encoder
     
     Takes a list of headlines and converts them into vectors
     """
-    toke = Tokenizer()
+    toke = Tokenizer(num_words=vocab_size)
     
     toke.fit_on_texts(sentences)
-    
-    vocab_size = len(toke.word_index) + 1
     
     encoded_headlines = toke.texts_to_sequences(sentences)
     
@@ -135,19 +148,50 @@ def encode_sentences(sentences, max_length=10):
     return padded_headlines
 
 
-# In[40]:
+# In[7]:
+
+
+def get_model():
+    
+    model = Sequential()
+    
+    model.add(Embedding(vocab_size, 80, input_length=max_length))
+    model.add(Flatten())
+    
+    model.add(Dense(2, activation='softmax'))
+    
+    model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['acc'])
+    
+    return model
+
+
+# In[8]:
 
 
 if __name__ == "__main__":
-    
-    stocks = ['AAPL']
     
     tick_data = get_tick_data(stocks)
     head_data = get_headline_data(stocks)
     
     headlines, effects = make_headline_to_effect_data(tick_data, head_data)
     
-    encoded_headlines = encode_sentences(headlines)
+    encoded_headlines = encode_sentences(headlines, max_length=max_length, vocab_size=vocab_size)
     
-    print(encoded_headlines)
+    print(encoded_headlines.shape)
+
+
+# In[9]:
+
+
+if __name__ == "__main__":
+    
+    model = get_model()
+    
+    history = model.fit(encoded_headlines, effects, epochs=epochs, batch_size=batch_size, verbose=0, validation_split=.1)
+    
+    plt.plot(np.log(history.history['loss']))
+    plt.plot(np.log(history.history['val_loss']))
+    plt.legend(['LogTrainLoss', 'LogTestLoss'])
+    plt.show()
+    
 

@@ -22,7 +22,7 @@ import re
 
 def strip_headline(headline):
     """Clean headline"""
-    return headline.replace(',', '')
+    return headline.replace(',', '').lower()
 
 
 # In[3]:
@@ -116,8 +116,8 @@ if __name__ == "__main__":
     
     headlines = {
         'AAPL': [
-            get_reddit_news(['apple', 'ios', 'AAPL', 'news'], ['apple', 'iphone', 'ipad', 'ios'], limit=10), 
-            get_reuters_news('AAPL.O', limit=10)
+            get_reddit_news(['apple', 'ios', 'AAPL', 'news'], ['apple', 'iphone', 'ipad', 'ios']), 
+            get_reuters_news('AAPL.O')
         ]
     }
 

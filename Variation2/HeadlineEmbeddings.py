@@ -7,15 +7,17 @@
 
 from datetime import datetime, timedelta
 
+from sklearn.utils import shuffle
 import numpy as np
 import os
 
 import matplotlib.pyplot as plt
 
 from keras.models import Sequential
-from keras.layers import Dense, Flatten, Embedding
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
+from keras.layers import Dense, Flatten, Embedding, LSTM, Activation
+from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint
 
 
 # In[2]:
@@ -151,21 +153,46 @@ def encode_sentences(sentences, max_length=16, vocab_size=None):
 # In[7]:
 
 
+def split_data(X, Y, ratio, mix=True):
+    """
+    Splits X/Y to Train/Test
+    """
+    
+    if mix:
+        
+        X, Y = shuffle(X, Y)
+        
+    train_size = int(len(X) * ratio)
+    trainX, testX = X[:train_size], X[train_size:]
+    trainY, testY = Y[:train_size], Y[train_size:]
+    
+    return trainX, trainY, testX, testY
+
+
+# In[8]:
+
+
 def get_model():
     
     model = Sequential()
     
-    model.add(Embedding(vocab_size, 80, input_length=max_length))
-    model.add(Flatten())
+    model.add(Embedding(vocab_size, 100, input_length=max_length))
     
-    model.add(Dense(2, activation='softmax'))
+    model.add(LSTM(20))
+    model.add(Activation('relu'))
+    
+    model.add(Dense(20))
+    model.add(Activation('relu'))
+    
+    model.add(Dense(2))
+    model.add(Activation('softmax'))
     
     model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['acc'])
     
     return model
 
 
-# In[8]:
+# In[9]:
 
 
 if __name__ == "__main__":
@@ -177,21 +204,36 @@ if __name__ == "__main__":
     
     encoded_headlines = encode_sentences(headlines, max_length=max_length, vocab_size=vocab_size)
     
-    print(encoded_headlines.shape)
+    trainX, trainY, testX, testY = split_data(encoded_headlines, effects, .8)
+    
+    print(trainX.shape, testY.shape)
 
 
-# In[9]:
+# In[10]:
 
 
 if __name__ == "__main__":
     
     model = get_model()
     
-    history = model.fit(encoded_headlines, effects, epochs=epochs, batch_size=batch_size, verbose=0, validation_split=.1)
+    e_stopping = EarlyStopping(monitor='val_loss', patience=60)
+    
+    history = model.fit(trainX, 
+                        trainY, 
+                        epochs=epochs, 
+                        batch_size=batch_size,
+                        validation_data=(testX, testY),
+                        verbose=0,
+                        callbacks=[e_stopping])
     
     plt.plot(np.log(history.history['loss']))
     plt.plot(np.log(history.history['val_loss']))
     plt.legend(['LogTrainLoss', 'LogTestLoss'])
+    plt.show()
+    
+    plt.plot(history.history['acc'])
+    plt.plot(history.history['val_acc'])
+    plt.legend(['TrainAcc', 'TestAcc'])
     plt.show()
     
 

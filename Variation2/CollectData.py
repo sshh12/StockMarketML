@@ -21,7 +21,7 @@ import re
 
 
 def strip_headline(headline):
-    
+    """Clean headline"""
     return headline.replace(',', '')
 
 
@@ -29,7 +29,7 @@ def strip_headline(headline):
 
 
 def get_reddit_news(subs, search_terms, limit=None, praw_config='StockMarketML'):
-    
+    "Get headlines from Reddit"
     from praw import Reddit
     
     reddit = Reddit(praw_config)
@@ -53,7 +53,7 @@ def get_reddit_news(subs, search_terms, limit=None, praw_config='StockMarketML')
     return articles
 
 def get_reuters_news(stock, limit=400):
-    
+    "Get headlines from Reuters"
     articles = defaultdict(list)
     
     pattern_headline = re.compile('<h2>\s*(<a [\S]*\s*>)?(.+?)(<\/a>)?\s*<\/h2>')
@@ -82,29 +82,31 @@ def get_reuters_news(stock, limit=400):
         
     return articles
 
-def save_headlines(stocks, sources, force_one_per_day=False):
+def save_headlines(headlines, force_one_per_day=False):
+    """Save headlines to file"""
+    with open(os.path.join('..', 'data', "_".join(headlines.keys()) + '-headlines.csv'), 'w', encoding="utf-8") as headline_file:
+        
+        for stock in headlines:
     
-    articles = defaultdict(list)
-    
-    for source in sources:
+            articles = defaultdict(list)
+
+            for source in headlines[stock]:
+
+                for date in source:
+
+                    articles[date].extend(source[date])
         
-        for date in source:
-            
-            articles[date].extend(source[date])
-            
-    with open(os.path.join('..', 'data', "_".join(stocks) + '-headlines.csv'), 'w', encoding="utf-8") as headline_file:
-        
-        for date in sorted(articles):
-            
-            current_articles = articles[date]
-            
-            if force_one_per_day:
-                
-                current_articles = [random.choice(current_articles)]
-                
-            for headline in current_articles:
-        
-                headline_file.write("{},{}\n".format(date, strip_headline(headline)))
+            for date in sorted(articles):
+
+                current_articles = articles[date]
+
+                if force_one_per_day:
+
+                    current_articles = [random.choice(current_articles)]
+
+                for headline in current_articles:
+
+                    headline_file.write("{},{},{}\n".format(stock, date, strip_headline(headline)))
 
 
 # In[4]:
@@ -112,10 +114,12 @@ def save_headlines(stocks, sources, force_one_per_day=False):
 
 if __name__ == "__main__":
     
-    headlines = [
-        get_reddit_news(['apple', 'ios', 'AAPL', 'news'], ['apple', 'iphone', 'ipad', 'ios']), 
-        get_reuters_news('AAPL.O', limit=10)
-    ]
+    headlines = {
+        'AAPL': [
+            get_reddit_news(['apple', 'ios', 'AAPL', 'news'], ['apple', 'iphone', 'ipad', 'ios'], limit=10), 
+            get_reuters_news('AAPL.O', limit=10)
+        ]
+    }
 
 
 # In[9]:
@@ -123,5 +127,5 @@ if __name__ == "__main__":
 
 if __name__ == "__main__":
 
-    save_headlines(['AAPL'], headlines, force_one_per_day=True)
+    save_headlines(headlines, force_one_per_day=True)
 

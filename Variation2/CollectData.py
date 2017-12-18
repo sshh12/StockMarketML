@@ -25,7 +25,7 @@ def strip_headline(headline):
     return headline.replace(',', '')
 
 
-# In[8]:
+# In[3]:
 
 
 def get_reddit_news(subs, search_terms, limit=None, praw_config='StockMarketML'):
@@ -122,7 +122,7 @@ if __name__ == "__main__":
     }
 
 
-# In[9]:
+# In[5]:
 
 
 if __name__ == "__main__":

@@ -2,18 +2,19 @@
 
 Using the magic of machine learning to predict the trends of the stock market.
 
-## With
+## App
 
-### Tools/libs Used
+Applying the Model
 
+#### Tools/libs Used
 * [Keras](https://keras.io/)
-* [NLTK](http://www.nltk.org/)
-* [Gensim](https://radimrehurek.com/gensim/)
 * [Numpy](http://www.numpy.org/)
 * [Praw](https://praw.readthedocs.io/en/latest/)
 * [Requests](http://docs.python-requests.org/en/master/)
 
-## Variation 2
+```#TODO```
+
+## Lab 2
 
 Current (Second) Attempt
 
@@ -29,7 +30,7 @@ This uses a model to extract the features from headlines.
 
 This script takes window of stock prices and predicts next close price.
 
-## Variation 1
+## Lab 1
 
 First Attempt
 

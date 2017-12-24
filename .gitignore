@@ -103,3 +103,4 @@ ENV/
 # Other
 *.csv
 makepython.bat
+twitter_creds.py

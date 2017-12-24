@@ -20,7 +20,7 @@ def strip_headline(headline):
     """Clean headline"""
     headline = headline.lower()
     headline = re.sub(r'^https?:\/\/.*[\r\n]*', '', headline, flags=re.MULTILINE)
-    headline = ''.join(c for c in headline if c not in ",.?!;'\"{}[]()*#&:\\/|")
+    headline = ''.join(c for c in headline if c not in ",.?!;'\"{}[]()*#&:\\/@|")
     return headline.strip()
 
 
@@ -101,7 +101,7 @@ def get_twitter_news(querys, limit=100):
             text = re.sub(r'\W+', '', tweet['text'])
             date = tweet['created_at']
             
-            if '\n' not in text and len(text) > len(query):
+            if '\n' not in text and len(text) > len(query) and ' ' in text:
                 
                 date_key = datetime.strptime(date, "%a %b %d %H:%M:%S %z %Y" ).strftime('%Y-%m-%d')
                 
@@ -119,6 +119,9 @@ def save_headlines(headlines):
         
         for stock in headlines:
             
+            # Converting Stock -> Source -> Date -> Headlines
+            #         to Stock -> Date -> Source -> Headline
+            
             articles = defaultdict(dict)
 
             for source, source_headlines in headlines[stock].items():
@@ -131,7 +134,7 @@ def save_headlines(headlines):
 
                 current_articles = articles[date]
 
-                headline_file.write("{},{},{}\n".format(stock, date, str(current_articles)))
+                headline_file.write("{},{},{}\n".format(stock, date, str(current_articles).replace(',', '@')))
 
 
 # In[5]:

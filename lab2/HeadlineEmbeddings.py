@@ -24,13 +24,13 @@ from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint
 
 # Options
 
-stocks = ['AAPL']
+stocks = ['GOOG', 'AAPL']
 
-max_length = 20
+max_length = 100
 vocab_size = 500
 
-epochs = 100
-batch_size = 16
+epochs = 120
+batch_size = 32
 
 
 # In[3]:
@@ -81,15 +81,19 @@ def get_headline_data(stocks):
 
             if len(line) > 6:
 
-                stock, date, headline = line.split(",")
+                stock, date, headlines = line.split(",")
                 
+                headlines = eval(headlines.strip().replace('@', ','))
+        
                 if not stock in history:
                     
                     history[stock] = {}
                 
-                history[stock][date] = headline.replace('\n', '')
+                history[stock][date] = headlines
                 
     return history
+
+get_headline_data(stocks)
 
 
 # In[5]:
@@ -103,11 +107,11 @@ def make_headline_to_effect_data(tick_data, head_data):
     when analyzing/encoding headlines. Returns a list of headlines and
     a list of corresponding 'effects' which represent a change in the stock price.
     """
-    headlines, effects = [], []
+    all_headlines, effects = [], []
     
     for stock, dates in head_data.items():
         
-        for date, headline in dates.items():
+        for date, headlines in dates.items():
             
             next_date = datetime.strptime(date, '%Y-%m-%d') + timedelta(days=1)
             next_date = next_date.strftime('%Y-%m-%d')
@@ -119,18 +123,21 @@ def make_headline_to_effect_data(tick_data, head_data):
                 
                 if tick_after[3] >= tick_on[3]:
                     
-                    effects.append([1., 0.])
+                    effect = [1., 0.]
                     
                 else:
                     
-                    effects.append([0., 1.])
+                    effect = [0., 1.]
                     
-                headlines.append(headline)
+                for source, headline in headlines.items():
+                    
+                    all_headlines.append(headline)
+                    effects.append(effect)
                 
-    return headlines, np.array(effects)
+    return all_headlines, np.array(effects)
 
 
-# In[6]:
+# In[27]:
 
 
 def encode_sentences(sentences, max_length=16, vocab_size=None):
@@ -150,7 +157,7 @@ def encode_sentences(sentences, max_length=16, vocab_size=None):
     return padded_headlines
 
 
-# In[7]:
+# In[28]:
 
 
 def split_data(X, Y, ratio, mix=True):
@@ -169,7 +176,7 @@ def split_data(X, Y, ratio, mix=True):
     return trainX, trainY, testX, testY
 
 
-# In[8]:
+# In[29]:
 
 
 def get_model():
@@ -178,10 +185,13 @@ def get_model():
     
     model.add(Embedding(vocab_size, 100, input_length=max_length))
     
-    model.add(LSTM(20))
+    model.add(LSTM(100))
     model.add(Activation('relu'))
     
-    model.add(Dense(20))
+    model.add(Dense(100))
+    model.add(Activation('relu'))
+    
+    model.add(Dense(100))
     model.add(Activation('relu'))
     
     model.add(Dense(2))
@@ -192,7 +202,7 @@ def get_model():
     return model
 
 
-# In[9]:
+# In[30]:
 
 
 if __name__ == "__main__":
@@ -209,7 +219,7 @@ if __name__ == "__main__":
     print(trainX.shape, testY.shape)
 
 
-# In[10]:
+# In[31]:
 
 
 if __name__ == "__main__":
@@ -224,7 +234,7 @@ if __name__ == "__main__":
                         batch_size=batch_size,
                         validation_data=(testX, testY),
                         verbose=0,
-                        callbacks=[e_stopping])
+                        callbacks=[])
     
     plt.plot(np.log(history.history['loss']))
     plt.plot(np.log(history.history['val_loss']))

@@ -98,7 +98,7 @@ def get_twitter_news(querys, limit=100):
         
         for tweet in tweets:
             
-            text = re.sub(r'\W+', '', tweet['text'])
+            text = re.sub(r'[^\w\s:/]+', '', tweet['text'])
             date = tweet['created_at']
             
             if '\n' not in text and len(text) > len(query) and ' ' in text:
@@ -107,6 +107,49 @@ def get_twitter_news(querys, limit=100):
                 
                 articles[date_key].append(text)
                 
+    return articles
+
+def get_seekingalpha_news(stock, pages=200):
+
+    articles = defaultdict(list)
+
+    re_headline = re.compile('<a class="market_current_title" [\s\S]+?>([\s\S]+?)<\/a>')
+    re_dates = re.compile('<span class="date pad_on_summaries">([\s\S]+?)<\/span>')
+
+    cookies = None
+
+    for i in range(1, pages + 1):
+
+        if i == 1:
+            url = 'https://seekingalpha.com/symbol/{}/news'.format(stock)
+        else:
+            url = 'https://seekingalpha.com/symbol/{}/news/more_news_all?page={}'.format(stock, i)
+
+        r = requests.get(url, headers={'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.84 Safari/537.36'}, cookies=cookies)
+
+        text = r.text.replace('\\"', '"')
+        cookies = r.cookies # SeekingAlpha wants cookies.
+
+        headlines = [match.group(1) for match in re_headline.finditer(text)]
+        dates = [match.group(1) for match in re_dates.finditer(text)]
+
+        for headline, date in zip(headlines, dates):
+            
+            headline = headline.replace('(update)', '')
+
+            if 'Today' in date:
+                date = datetime.today()
+            elif 'Yesterday' in date:
+                date = datetime.today() - timedelta(days=1)
+            else:
+                temp = date.split(',')
+                if len(temp[0]) == 3:
+                    date = datetime.strptime(temp[1], " %b. %d").replace(year=datetime.today().year)
+                else:
+                    date = datetime.strptime("".join(temp[0:2]), "%b. %d %Y")
+
+            articles[date.strftime('%Y-%m-%d')].append(headline)
+
     return articles
 
 
@@ -146,17 +189,19 @@ if __name__ == "__main__":
             'GOOG': {
                 'reddit': get_reddit_news(['google', 'Android', 'GooglePixel', 'news'], ['Google', 'pixel', 'android']), 
                 'reuters': get_reuters_news('GOOG.O'),
-                'twitter': get_twitter_news(['#Google', '#googlepixel', '#Alphabet'])
+                'twitter': get_twitter_news(['#Google', '#googlepixel', '#Alphabet']),
+                'seekingalpha': get_seekingalpha_news('GOOG')
             },
             'AAPL': {
                 'reddit': get_reddit_news(['apple', 'ios', 'AAPL', 'news'], ['apple', 'iphone', 'ipad', 'ios']), 
                 'reuters': get_reuters_news('AAPL.O'),
-                'twitter': get_twitter_news(['#Apple', '#IPhone', '#ios'])
+                'twitter': get_twitter_news(['#Apple', '#IPhone', '#ios']),
+                'seekingalpha': get_seekingalpha_news('AAPL')
             }
     }
 
 
-# In[6]:
+# In[ ]:
 
 
 if __name__ == "__main__":

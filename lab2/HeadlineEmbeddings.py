@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 from keras.models import Sequential
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
-from keras.layers import Dense, Flatten, Embedding, LSTM, Activation
+from keras.layers import Dense, Flatten, Embedding, LSTM, Activation, BatchNormalization
 from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint
 
 
@@ -24,7 +24,7 @@ from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint
 
 # Options
 
-stocks = ['GOOG', 'AAPL']
+stocks = ['AAPL', 'GOOG']
 
 max_length = 100
 vocab_size = 500
@@ -93,8 +93,6 @@ def get_headline_data(stocks):
                 
     return history
 
-get_headline_data(stocks)
-
 
 # In[5]:
 
@@ -113,15 +111,38 @@ def make_headline_to_effect_data(tick_data, head_data):
         
         for date, headlines in dates.items():
             
-            next_date = datetime.strptime(date, '%Y-%m-%d') + timedelta(days=1)
-            next_date = next_date.strftime('%Y-%m-%d')
+            ## Find Matching tick data dates for headline dates ##
             
-            if date in tick_data[stock] and next_date in tick_data[stock]:
+            event_date = datetime.strptime(date, '%Y-%m-%d') # The date `of` headline
+            effect_date = event_date + timedelta(days=1)     # The day after `affected` by headline
+            
+            for i in range(3):
+                if event_date.strftime('%Y-%m-%d') in tick_data[stock]:
+                    break
+                else:
+                    event_date -= timedelta(days=1)
+            else:
+                continue
+                    
+            for i in range(3):
+                if effect_date.strftime('%Y-%m-%d') in tick_data[stock]:
+                    break
+                else:
+                    effect_date += timedelta(days=1)
+            else:
+                continue
                 
-                tick_on = tick_data[stock][date]
-                tick_after = tick_data[stock][next_date]
+            event_date = event_date.strftime('%Y-%m-%d')
+            effect_date = effect_date.strftime('%Y-%m-%d')
+            
+            ## Determine Effect ##
+            
+            if event_date in tick_data[stock] and effect_date in tick_data[stock]:
                 
-                if tick_after[3] >= tick_on[3]:
+                tick_on = tick_data[stock][event_date]
+                tick_after = tick_data[stock][effect_date]
+                
+                if tick_after[3] >= tick_on[3]: # Compare Close Prices
                     
                     effect = [1., 0.]
                     
@@ -137,10 +158,10 @@ def make_headline_to_effect_data(tick_data, head_data):
     return all_headlines, np.array(effects)
 
 
-# In[27]:
+# In[6]:
 
 
-def encode_sentences(sentences, max_length=16, vocab_size=None):
+def encode_sentences(sentences, max_length=16, vocab_size=100):
     """
     Encoder
     
@@ -157,7 +178,7 @@ def encode_sentences(sentences, max_length=16, vocab_size=None):
     return padded_headlines
 
 
-# In[28]:
+# In[7]:
 
 
 def split_data(X, Y, ratio, mix=True):
@@ -176,23 +197,26 @@ def split_data(X, Y, ratio, mix=True):
     return trainX, trainY, testX, testY
 
 
-# In[29]:
+# In[8]:
 
 
 def get_model():
     
     model = Sequential()
     
-    model.add(Embedding(vocab_size, 100, input_length=max_length))
+    model.add(Embedding(vocab_size, 256, input_length=max_length))
     
     model.add(LSTM(100))
     model.add(Activation('relu'))
+    model.add(BatchNormalization())
     
     model.add(Dense(100))
     model.add(Activation('relu'))
+    model.add(BatchNormalization())
     
     model.add(Dense(100))
     model.add(Activation('relu'))
+    model.add(BatchNormalization())
     
     model.add(Dense(2))
     model.add(Activation('softmax'))
@@ -202,7 +226,7 @@ def get_model():
     return model
 
 
-# In[30]:
+# In[9]:
 
 
 if __name__ == "__main__":
@@ -219,14 +243,14 @@ if __name__ == "__main__":
     print(trainX.shape, testY.shape)
 
 
-# In[31]:
+# In[ ]:
 
 
 if __name__ == "__main__":
     
     model = get_model()
     
-    e_stopping = EarlyStopping(monitor='val_loss', patience=60)
+    e_stopping = EarlyStopping(monitor='val_acc', patience=60)
     
     history = model.fit(trainX, 
                         trainY, 
@@ -234,7 +258,7 @@ if __name__ == "__main__":
                         batch_size=batch_size,
                         validation_data=(testX, testY),
                         verbose=0,
-                        callbacks=[])
+                        callbacks=[e_stopping])
     
     plt.plot(np.log(history.history['loss']))
     plt.plot(np.log(history.history['val_loss']))

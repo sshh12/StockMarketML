@@ -26,11 +26,11 @@ from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint
 
 stocks = ['AAPL', 'GOOG']
 
-max_length = 100
+max_length = 75
 vocab_size = 500
 
 epochs = 120
-batch_size = 32
+batch_size = 64
 
 
 # In[3]:
@@ -243,7 +243,7 @@ if __name__ == "__main__":
     print(trainX.shape, testY.shape)
 
 
-# In[ ]:
+# In[10]:
 
 
 if __name__ == "__main__":

@@ -20,7 +20,8 @@ def strip_headline(headline):
     """Clean headline"""
     headline = headline.lower()
     headline = re.sub(r'^https?:\/\/.*[\r\n]*', '', headline, flags=re.MULTILINE)
-    headline = ''.join(c for c in headline if c not in ",.?!;'\"{}[]()*#&:\\/@|")
+    headline = ''.join(c for c in headline if c not in ",.?!;-'\‘’\"{}[]()*#&:\\/@|0123456789$%")
+    headline = re.sub('\s+', ' ', headline)
     return headline.strip()
 
 
@@ -41,7 +42,7 @@ def get_reddit_news(subs, search_terms, limit=None, praw_config='StockMarketML')
 
         for submission in reddit.subreddit('+'.join(subs)).search(term, limit=limit):
             
-            if submission.title not in used:
+            if submission.title.count(' ') > 4 and submission.title not in used:
                 
                 used.append(submission.title)
                 
@@ -153,7 +154,7 @@ def get_seekingalpha_news(stock, pages=200):
     return articles
 
 
-# In[4]:
+# In[ ]:
 
 
 def save_headlines(headlines):
@@ -180,28 +181,40 @@ def save_headlines(headlines):
                 headline_file.write("{},{},{}\n".format(stock, date, str(current_articles).replace(',', '@')))
 
 
-# In[5]:
+# In[ ]:
 
 
 if __name__ == "__main__":
     
     headlines = {
             'GOOG': {
-                'reddit': get_reddit_news(['google', 'Android', 'GooglePixel', 'news'], ['Google', 'pixel', 'android']), 
+                'reddit': get_reddit_news(['google', 'Android', 'GooglePixel', 'news'], ['Google', 'pixel', 'android', 'stock']), 
                 'reuters': get_reuters_news('GOOG.O'),
-                'twitter': get_twitter_news(['#Google', '#googlepixel', '#Alphabet']),
+                'twitter': get_twitter_news(['@Google', '#Google', '#googlepixel', '#Alphabet']),
                 'seekingalpha': get_seekingalpha_news('GOOG')
             },
             'AAPL': {
-                'reddit': get_reddit_news(['apple', 'ios', 'AAPL', 'news'], ['apple', 'iphone', 'ipad', 'ios']), 
+                'reddit': get_reddit_news(['apple', 'ios', 'AAPL', 'news'], ['apple', 'iphone', 'ipad', 'ios', 'stock']), 
                 'reuters': get_reuters_news('AAPL.O'),
-                'twitter': get_twitter_news(['#Apple', '#IPhone', '#ios']),
+                'twitter': get_twitter_news(['@Apple', '#Apple', '#IPhone', '#ios']),
                 'seekingalpha': get_seekingalpha_news('AAPL')
+            },
+            'MSFT': {
+                'reddit': get_reddit_news(['microsoft', 'windowsphone', 'windows'], ['microsoft', 'phone', 'windows', 'stock']), 
+                'reuters': get_reuters_news('MSFT.O'),
+                'twitter': get_twitter_news(['@Microsoft', '#Windows', '#Microsoft', '#windowsphone']),
+                'seekingalpha': get_seekingalpha_news('MSFT')
+            },
+            'AMD': {
+                'reddit': get_reddit_news(['Amd', 'AMD_Stock', 'pcmasterrace'], ['AMD', 'radeon', 'ryzen', 'stock']), 
+                'reuters': get_reuters_news('AMD.O'),
+                'twitter': get_twitter_news(['@AMD', '#AMD', '#Ryzen', '#radeon']),
+                'seekingalpha': get_seekingalpha_news('AMD')
             }
     }
 
 
-# In[7]:
+# In[ ]:
 
 
 if __name__ == "__main__":

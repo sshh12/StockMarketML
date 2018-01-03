@@ -170,7 +170,7 @@ def encode_sentences(sentences, tokenizer=None, max_length=100, vocab_size=100):
     """
     if not tokenizer:
         
-        tokenizer = Tokenizer(num_words=vocab_size)
+        tokenizer = Tokenizer(num_words=vocab_size, filters='', lower=False) # Preprocessed
     
         tokenizer.fit_on_texts(sentences)
     

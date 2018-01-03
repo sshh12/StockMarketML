@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[15]:
 
 # Setup (Imports)
 from datetime import datetime, timedelta
@@ -13,19 +13,26 @@ import os
 import re
 
 
-# In[2]:
+# In[16]:
 
 
-def strip_headline(headline):
-    """Clean headline"""
+def clean_headline(headline, replacements={}):
+    """
+    Clean headline
+    
+    Removes extra chars and replaces words
+    """
     headline = headline.lower()
-    headline = re.sub(r'^https?:\/\/.*[\r\n]*', '', headline, flags=re.MULTILINE)
     headline = ''.join(c for c in headline if c not in ",.?!;-'\‘’\"{}[]()*#&:\\/@|0123456789$%")
     headline = re.sub('\s+', ' ', headline)
+    
+    for original, replacement in replacements.items():
+        headline = headline.replace(original, replacement)
+    
     return headline.strip()
 
 
-# In[3]:
+# In[17]:
 
 
 def get_reddit_news(subs, search_terms, limit=None, praw_config='StockMarketML'):
@@ -105,7 +112,9 @@ def get_twitter_news(querys, limit=100):
         
         for tweet in tweets:
             
-            text = re.sub(r'[^\w\s:/]+', '', tweet['text'])
+            text = re.sub(r'https?:\/\/\S+', '', tweet['text'])
+            text = re.sub(r'[^\w\s:/]+', '', text)
+            
             date = tweet['created_at']
             
             if '\n' not in text and len(text) > len(query) and ' ' in text:
@@ -116,7 +125,7 @@ def get_twitter_news(querys, limit=100):
                 
     return articles
 
-def get_seekingalpha_news(stock, pages=200):
+def get_seekingalpha_news(stock, pages=300):
     """Get headlines from SeekingAlpha"""
     print('Downloading SeekingAlpha: ' + stock)
 
@@ -164,12 +173,12 @@ def get_seekingalpha_news(stock, pages=200):
     return articles
 
 
-# In[4]:
+# In[18]:
 
 
-def save_headlines(headlines):
+def save_headlines(headlines, kword_replacements={}):
     """Save headlines to file"""
-    with open(os.path.join('..', 'data', "_".join(headlines.keys()) + '-headlines.csv'), 'w', encoding="utf-8") as headline_file:
+    with open(os.path.join('..', 'data', "_".join(sorted(headlines.keys())) + '-headlines.csv'), 'w', encoding="utf-8") as headline_file:
         
         for stock in headlines:
             
@@ -182,7 +191,7 @@ def save_headlines(headlines):
 
                 for date in source_headlines:
                     
-                    articles[date][source] = strip_headline(random.choice(headlines[stock][source][date]))
+                    articles[date][source] = clean_headline(random.choice(headlines[stock][source][date]), kword_replacements[stock])
         
             for date in sorted(articles):
 
@@ -191,7 +200,7 @@ def save_headlines(headlines):
                 headline_file.write("{},{},{}\n".format(stock, date, str(current_articles).replace(',', '@')))
 
 
-# In[5]:
+# In[19]:
 
 
 if __name__ == "__main__":
@@ -224,10 +233,35 @@ if __name__ == "__main__":
     }
 
 
-# In[6]:
+# In[20]:
 
 
 if __name__ == "__main__":
+    
+    kword_replacements = { # To generalize headlines
+        'GOOG': {
+            'google': '**COMPANY**',
+            'alphabet': '**COMPANY**',
+            'android': '**PRODUCT**',
+            'pixel': '**PRODUCT**'
+        },
+        'AAPL': {
+            'apple': '**COMPANY**', 
+            'macbook': '**PRODUCT**',
+            'iphone': '**PRODUCT**',
+            'ipad': '**PRODUCT**'
+            'ios': '**PRODUCT**'
+        },
+        'MSFT': {
+            'microsoft': '**COMPANY**',
+            'windows': '**PRODUCT**'
+        },
+        'AMD': {
+            'amd': '**COMPANY**', 
+            'ryzen': '**PRODUCT**',
+            'radeon': '**PRODUCT**'
+        },
+    }
 
-    save_headlines(headlines)
+    save_headlines(headlines, kword_replacements)
 

@@ -13,10 +13,10 @@ import os
 
 import matplotlib.pyplot as plt
 
-from keras.models import Sequential
+from keras.models import Sequential, load_model
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
-from keras.layers import Dense, Flatten, Embedding, LSTM, Activation, BatchNormalization
+from keras.layers import Dense, Flatten, Embedding, LSTM, Activation, BatchNormalization, Dropout
 from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint
 
 
@@ -24,12 +24,13 @@ from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint
 
 # Options
 
-stocks = ['AAPL', 'GOOG']
+stocks = ['AMD', 'GOOG', 'MSFT', 'AAPL']
 
-max_length = 75
-vocab_size = 500
+max_length = 80
+vocab_size = 600
+emb_size   = 100
 
-epochs = 120
+epochs     = 120
 batch_size = 64
 
 
@@ -124,7 +125,7 @@ def make_headline_to_effect_data(tick_data, head_data):
             else:
                 continue
                     
-            for i in range(3):
+            for i in range(2):
                 if effect_date.strftime('%Y-%m-%d') in tick_data[stock]:
                     break
                 else:
@@ -161,21 +162,23 @@ def make_headline_to_effect_data(tick_data, head_data):
 # In[6]:
 
 
-def encode_sentences(sentences, max_length=16, vocab_size=100):
+def encode_sentences(sentences, tokenizer=None, max_length=100, vocab_size=100):
     """
     Encoder
     
     Takes a list of headlines and converts them into vectors
     """
-    toke = Tokenizer(num_words=vocab_size)
+    if not tokenizer:
+        
+        tokenizer = Tokenizer(num_words=vocab_size)
     
-    toke.fit_on_texts(sentences)
+        tokenizer.fit_on_texts(sentences)
     
-    encoded_headlines = toke.texts_to_sequences(sentences)
+    encoded_headlines = tokenizer.texts_to_sequences(sentences)
     
     padded_headlines = pad_sequences(encoded_headlines, maxlen=max_length, padding='post')
     
-    return padded_headlines
+    return padded_headlines, tokenizer
 
 
 # In[7]:
@@ -204,19 +207,27 @@ def get_model():
     
     model = Sequential()
     
-    model.add(Embedding(vocab_size, 256, input_length=max_length))
+    model.add(Embedding(vocab_size, emb_size, input_length=max_length))
     
-    model.add(LSTM(100))
-    model.add(Activation('relu'))
+    model.add(LSTM(200))
+    model.add(Activation('selu'))
     model.add(BatchNormalization())
+    model.add(Dropout(0.1))
+    
+    model.add(Dense(200))
+    model.add(Activation('selu'))
+    model.add(BatchNormalization())
+    model.add(Dropout(0.5))
+    
+    model.add(Dense(200))
+    model.add(Activation('selu'))
+    model.add(BatchNormalization())
+    model.add(Dropout(0.5))
     
     model.add(Dense(100))
-    model.add(Activation('relu'))
+    model.add(Activation('selu'))
     model.add(BatchNormalization())
-    
-    model.add(Dense(100))
-    model.add(Activation('relu'))
-    model.add(BatchNormalization())
+    model.add(Dropout(0.5))
     
     model.add(Dense(2))
     model.add(Activation('softmax'))
@@ -236,7 +247,7 @@ if __name__ == "__main__":
     
     headlines, effects = make_headline_to_effect_data(tick_data, head_data)
     
-    encoded_headlines = encode_sentences(headlines, max_length=max_length, vocab_size=vocab_size)
+    encoded_headlines, toke = encode_sentences(headlines, max_length=max_length, vocab_size=vocab_size)
     
     trainX, trainY, testX, testY = split_data(encoded_headlines, effects, .8)
     
@@ -250,15 +261,19 @@ if __name__ == "__main__":
     
     model = get_model()
     
-    e_stopping = EarlyStopping(monitor='val_acc', patience=60)
+    e_stopping = EarlyStopping(monitor='val_loss', patience=70)
+    checkpoint = ModelCheckpoint(os.path.join('..', 'models', 'media-headlines.h5'), 
+                                 monitor='val_acc',
+                                 verbose=0,
+                                 save_best_only=True)
     
-    history = model.fit(trainX, 
-                        trainY, 
+    history = model.fit(trainX,
+                        trainY,
                         epochs=epochs, 
                         batch_size=batch_size,
                         validation_data=(testX, testY),
                         verbose=0,
-                        callbacks=[e_stopping])
+                        callbacks=[e_stopping, checkpoint])
     
     plt.plot(np.log(history.history['loss']))
     plt.plot(np.log(history.history['val_loss']))
@@ -270,4 +285,30 @@ if __name__ == "__main__":
     plt.legend(['TrainAcc', 'TestAcc'])
     plt.show()
     
+
+
+# In[ ]:
+
+
+if __name__ == "__main__":
+    
+    model = load_model(os.path.join('..', 'models', 'media-headlines.h5'))
+    
+    test_sents = [
+        'the ceo of apple was fired after buying an android phone', 
+        'amd just released a magical gpu thats better than every other company',
+        'googles selfdriving car killed a family of ducks in a sensor malfunction',
+        'the microsoft vr team released a breakthrough in virtual cooking'
+    ]
+    
+    test_encoded, _ = encode_sentences(test_sents, tokenizer=toke, max_length=max_length, vocab_size=vocab_size)
+    
+    predictions = model.predict(test_encoded)
+    
+    for i in range(len(test_sents)):
+        
+        print("")
+        print(test_sents[i])
+        print(predictions[i])
+        print("Stock Will Go Up" if np.argmax(predictions[i]) == 0 else "Stock Will Go Down")
 

@@ -30,6 +30,8 @@ def strip_headline(headline):
 
 def get_reddit_news(subs, search_terms, limit=None, praw_config='StockMarketML'):
     "Get headlines from Reddit"
+    print('Downloading Reddit Posts: ' + ", ".join(subs))
+    
     from praw import Reddit
     
     reddit = Reddit(praw_config)
@@ -52,21 +54,23 @@ def get_reddit_news(subs, search_terms, limit=None, praw_config='StockMarketML')
         
     return articles
 
-def get_reuters_news(stock, limit=600):
-    "Get headlines from Reuters"
+def get_reuters_news(stock, pages=100):
+    """Get headlines from Reuters"""
+    print('Downloading Reuters: ' + stock)
+    
     articles = defaultdict(list)
     
-    pattern_headline = re.compile('<h2>\s*(<a [\S]*\s*>)?(.+?)(<\/a>)?\s*<\/h2>')
+    pattern_headline = re.compile('<h2><a [\s\S]+>([\s\S]+)<\/a>[\s\S]*<\/h2>')
     
     date_current = datetime.now()
     
-    while limit > 0:
+    while pages > 0:
         
-        text = requests.get('http://www.reuters.com/finance/stocks/company-news/{}?date={}'.format(stock, date_current.strftime('%m%d%Y'))).text
+        text = requests.get('http://www.reuters.com/finance/stocks/company-news/{}?date={}'.format(stock, date_current.strftime('%m%d%Y')), allow_redirects=False, timeout=3, headers={'User-Agent': 'StockMarketBot'}).text
         
         for match in pattern_headline.finditer(text):
             
-            headline = match.group(2)
+            headline = match.group(1)
             
             headline = re.sub('[A-Z][A-Z\d\s]{5,}\-', '', headline)
             
@@ -76,7 +80,7 @@ def get_reuters_news(stock, limit=600):
             
                 articles[date_key].append(headline)
         
-            limit -= 1
+        pages -= 1
         
         date_current -= timedelta(days=1)
         
@@ -84,6 +88,8 @@ def get_reuters_news(stock, limit=600):
 
 def get_twitter_news(querys, limit=100):
     """Get headlines from Twitter"""
+    print('Downloading Tweets: ' + ", ".join(querys))
+    
     from twitter import Twitter, OAuth
     import twitter_creds as c # Self-Created Python file with Creds
 
@@ -111,6 +117,8 @@ def get_twitter_news(querys, limit=100):
     return articles
 
 def get_seekingalpha_news(stock, pages=200):
+    """Get headlines from SeekingAlpha"""
+    print('Downloading SeekingAlpha: ' + stock)
 
     articles = defaultdict(list)
 
@@ -137,6 +145,8 @@ def get_seekingalpha_news(stock, pages=200):
         for headline, date in zip(headlines, dates):
             
             headline = headline.replace('(update)', '')
+            
+            date = date.replace('.', '')
 
             if 'Today' in date:
                 date = datetime.today()
@@ -145,16 +155,16 @@ def get_seekingalpha_news(stock, pages=200):
             else:
                 temp = date.split(',')
                 if len(temp[0]) == 3:
-                    date = datetime.strptime(temp[1], " %b. %d").replace(year=datetime.today().year)
+                    date = datetime.strptime(temp[1], " %b %d").replace(year=datetime.today().year)
                 else:
-                    date = datetime.strptime("".join(temp[0:2]), "%b. %d %Y")
+                    date = datetime.strptime("".join(temp[0:2]), "%b %d %Y")
 
             articles[date.strftime('%Y-%m-%d')].append(headline)
 
     return articles
 
 
-# In[ ]:
+# In[4]:
 
 
 def save_headlines(headlines):
@@ -181,7 +191,7 @@ def save_headlines(headlines):
                 headline_file.write("{},{},{}\n".format(stock, date, str(current_articles).replace(',', '@')))
 
 
-# In[ ]:
+# In[5]:
 
 
 if __name__ == "__main__":
@@ -214,7 +224,7 @@ if __name__ == "__main__":
     }
 
 
-# In[ ]:
+# In[6]:
 
 
 if __name__ == "__main__":

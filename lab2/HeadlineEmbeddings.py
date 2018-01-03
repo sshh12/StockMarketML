@@ -28,7 +28,7 @@ stocks = ['AMD', 'GOOG', 'MSFT', 'AAPL']
 
 max_length = 80
 vocab_size = 600
-emb_size   = 100
+emb_size   = 256
 
 epochs     = 120
 batch_size = 64
@@ -117,7 +117,7 @@ def make_headline_to_effect_data(tick_data, head_data):
             event_date = datetime.strptime(date, '%Y-%m-%d') # The date `of` headline
             effect_date = event_date + timedelta(days=1)     # The day after `affected` by headline
             
-            for i in range(3):
+            for i in range(4):
                 if event_date.strftime('%Y-%m-%d') in tick_data[stock]:
                     break
                 else:
@@ -125,7 +125,7 @@ def make_headline_to_effect_data(tick_data, head_data):
             else:
                 continue
                     
-            for i in range(2):
+            for i in range(3):
                 if effect_date.strftime('%Y-%m-%d') in tick_data[stock]:
                     break
                 else:
@@ -209,30 +209,30 @@ def get_model():
     
     model.add(Embedding(vocab_size, emb_size, input_length=max_length))
     
-    model.add(LSTM(200))
-    model.add(Activation('selu'))
+    model.add(LSTM(300))
+    model.add(Activation('tanh'))
     model.add(BatchNormalization())
     model.add(Dropout(0.1))
     
-    model.add(Dense(200))
-    model.add(Activation('selu'))
+    model.add(Dense(300))
+    model.add(Activation('tanh'))
     model.add(BatchNormalization())
     model.add(Dropout(0.5))
     
     model.add(Dense(200))
-    model.add(Activation('selu'))
+    model.add(Activation('tanh'))
     model.add(BatchNormalization())
     model.add(Dropout(0.5))
     
-    model.add(Dense(100))
-    model.add(Activation('selu'))
+    model.add(Dense(200))
+    model.add(Activation('tanh'))
     model.add(BatchNormalization())
     model.add(Dropout(0.5))
     
     model.add(Dense(2))
     model.add(Activation('softmax'))
     
-    model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['acc'])
+    model.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['acc'])
     
     return model
 
@@ -263,7 +263,7 @@ if __name__ == "__main__":
     
     e_stopping = EarlyStopping(monitor='val_loss', patience=70)
     checkpoint = ModelCheckpoint(os.path.join('..', 'models', 'media-headlines.h5'), 
-                                 monitor='val_acc',
+                                 monitor='val_loss',
                                  verbose=0,
                                  save_best_only=True)
     
@@ -287,7 +287,7 @@ if __name__ == "__main__":
     
 
 
-# In[ ]:
+# In[11]:
 
 
 if __name__ == "__main__":
@@ -295,10 +295,10 @@ if __name__ == "__main__":
     model = load_model(os.path.join('..', 'models', 'media-headlines.h5'))
     
     test_sents = [
-        'the ceo of apple was fired after buying an android phone', 
+        'the ceo of apple was fired after selling a rotten iphone', 
         'amd just released a magical gpu thats better than every other company',
         'googles selfdriving car killed a family of ducks in a sensor malfunction',
-        'the microsoft vr team released a breakthrough in virtual cooking'
+        'the microsoft vr team released a breakthrough in virtual gaming'
     ]
     
     test_encoded, _ = encode_sentences(test_sents, tokenizer=toke, max_length=max_length, vocab_size=vocab_size)

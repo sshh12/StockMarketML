@@ -26,12 +26,12 @@ from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint
 
 stocks = ['AAPL', 'AMD', 'AMZN', 'GOOG', 'MSFT']
 
-max_length = 80
-vocab_size = 700
+max_length = 90
+vocab_size = 600
 emb_size   = 256
 
 epochs     = 120
-batch_size = 64
+batch_size = 32
 
 
 # In[3]:
@@ -254,7 +254,7 @@ if __name__ == "__main__":
     
     encoded_headlines, toke = encode_sentences(headlines, max_length=max_length, vocab_size=vocab_size)
     
-    trainX, trainY, testX, testY = split_data(encoded_headlines, effects, .85)
+    trainX, trainY, testX, testY = split_data(encoded_headlines, effects, .6)
     
     print(trainX.shape, testY.shape)
 
@@ -292,7 +292,7 @@ if __name__ == "__main__":
     
 
 
-# In[ ]:
+# In[11]:
 
 
 if __name__ == "__main__":

@@ -24,10 +24,10 @@ from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint
 
 # Options
 
-stocks = ['AMD', 'GOOG', 'MSFT', 'AAPL']
+stocks = ['AAPL', 'AMD', 'AMZN', 'GOOG', 'MSFT']
 
 max_length = 80
-vocab_size = 600
+vocab_size = 700
 emb_size   = 256
 
 epochs     = 120
@@ -210,22 +210,27 @@ def get_model():
     model.add(Embedding(vocab_size, emb_size, input_length=max_length))
     
     model.add(LSTM(300))
-    model.add(Activation('tanh'))
+    model.add(Activation('selu'))
     model.add(BatchNormalization())
     model.add(Dropout(0.1))
     
     model.add(Dense(300))
-    model.add(Activation('tanh'))
+    model.add(Activation('selu'))
+    model.add(BatchNormalization())
+    model.add(Dropout(0.5))
+    
+    model.add(Dense(300))
+    model.add(Activation('selu'))
+    model.add(BatchNormalization())
+    model.add(Dropout(0.5))
+    
+    model.add(Dense(300))
+    model.add(Activation('selu'))
     model.add(BatchNormalization())
     model.add(Dropout(0.5))
     
     model.add(Dense(200))
-    model.add(Activation('tanh'))
-    model.add(BatchNormalization())
-    model.add(Dropout(0.5))
-    
-    model.add(Dense(200))
-    model.add(Activation('tanh'))
+    model.add(Activation('selu'))
     model.add(BatchNormalization())
     model.add(Dropout(0.5))
     
@@ -249,7 +254,7 @@ if __name__ == "__main__":
     
     encoded_headlines, toke = encode_sentences(headlines, max_length=max_length, vocab_size=vocab_size)
     
-    trainX, trainY, testX, testY = split_data(encoded_headlines, effects, .8)
+    trainX, trainY, testX, testY = split_data(encoded_headlines, effects, .85)
     
     print(trainX.shape, testY.shape)
 
@@ -287,7 +292,7 @@ if __name__ == "__main__":
     
 
 
-# In[11]:
+# In[ ]:
 
 
 if __name__ == "__main__":
@@ -295,10 +300,10 @@ if __name__ == "__main__":
     model = load_model(os.path.join('..', 'models', 'media-headlines.h5'))
     
     test_sents = [
-        'the ceo of apple was fired after selling a rotten iphone', 
-        'amd just released a magical gpu thats better than every other company',
-        'googles selfdriving car killed a family of ducks in a sensor malfunction',
-        'the microsoft vr team released a breakthrough in virtual gaming'
+        'the ceo of **COMPANY** was fired after selling a bad **PRODUCT**', 
+        '**COMPANY** just released a **PRODUCT** thats better than every other company',
+        '**COMPANY**s **PRODUCT** killed a family of ducks in a sensor malfunction',
+        'the **COMPANY** team released a breakthrough in **PRODUCT** gaming'
     ]
     
     test_encoded, _ = encode_sentences(test_sents, tokenizer=toke, max_length=max_length, vocab_size=vocab_size)

@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[15]:
+# In[1]:
 
 # Setup (Imports)
 from datetime import datetime, timedelta
@@ -13,7 +13,7 @@ import os
 import re
 
 
-# In[16]:
+# In[2]:
 
 
 def clean_headline(headline, replacements={}):
@@ -28,11 +28,13 @@ def clean_headline(headline, replacements={}):
     
     for original, replacement in replacements.items():
         headline = headline.replace(original, replacement)
+        
+    headline = headline.replace('****', '** **') # Seperate joined kwords
     
     return headline.strip()
 
 
-# In[17]:
+# In[3]:
 
 
 def get_reddit_news(subs, search_terms, limit=None, praw_config='StockMarketML'):
@@ -61,31 +63,36 @@ def get_reddit_news(subs, search_terms, limit=None, praw_config='StockMarketML')
         
     return articles
 
-def get_reuters_news(stock, pages=100):
+def get_reuters_news(stock, pages=400):
     """Get headlines from Reuters"""
     print('Downloading Reuters: ' + stock)
     
+    found_headlines = []
+    
     articles = defaultdict(list)
     
-    pattern_headline = re.compile('<h2><a [\s\S]+>([\s\S]+)<\/a>[\s\S]*<\/h2>')
+    pattern_headline = re.compile('<h2><a [\s\S]+?>([\s\S]+?)<\/a>[\s\S]*?<\/h2>')
     
     date_current = datetime.now()
     
     while pages > 0:
-        
-        text = requests.get('http://www.reuters.com/finance/stocks/company-news/{}?date={}'.format(stock, date_current.strftime('%m%d%Y')), allow_redirects=False, timeout=3, headers={'User-Agent': 'StockMarketBot'}).text
+
+        text = requests.get('http://www.reuters.com/finance/stocks/company-news/{}?date={}'.format(stock, date_current.strftime('%m%d%Y')),  headers={'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.84 Safari/537.36'}).text
         
         for match in pattern_headline.finditer(text):
             
             headline = match.group(1)
             
-            headline = re.sub('[A-Z][A-Z\d\s]{5,}\-', '', headline)
+            headline = headline.replace('\u200d', '').replace('\u200b', '')
+            
+            headline = re.sub('^[A-Z]+[A-Z\d\s]*\-', '', headline)
             
             date_key = date_current.strftime('%Y-%m-%d')
             
-            if headline not in articles[date_key]:
+            if headline not in found_headlines:
             
                 articles[date_key].append(headline)
+                found_headlines.append(headline)
         
         pages -= 1
         
@@ -125,7 +132,7 @@ def get_twitter_news(querys, limit=100):
                 
     return articles
 
-def get_seekingalpha_news(stock, pages=300):
+def get_seekingalpha_news(stock, pages=500):
     """Get headlines from SeekingAlpha"""
     print('Downloading SeekingAlpha: ' + stock)
 
@@ -143,7 +150,7 @@ def get_seekingalpha_news(stock, pages=300):
         else:
             url = 'https://seekingalpha.com/symbol/{}/news/more_news_all?page={}'.format(stock, i)
 
-        r = requests.get(url, headers={'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.84 Safari/537.36'}, cookies=cookies)
+        r = requests.get(url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.84 Safari/537.36'}, cookies=cookies)
 
         text = r.text.replace('\\"', '"')
         cookies = r.cookies # SeekingAlpha wants cookies.
@@ -173,7 +180,7 @@ def get_seekingalpha_news(stock, pages=300):
     return articles
 
 
-# In[18]:
+# In[4]:
 
 
 def save_headlines(headlines, kword_replacements={}):
@@ -200,7 +207,7 @@ def save_headlines(headlines, kword_replacements={}):
                 headline_file.write("{},{},{}\n".format(stock, date, str(current_articles).replace(',', '@')))
 
 
-# In[19]:
+# In[5]:
 
 
 if __name__ == "__main__":
@@ -229,11 +236,17 @@ if __name__ == "__main__":
                 'reuters': get_reuters_news('AMD.O'),
                 'twitter': get_twitter_news(['@AMD', '#AMD', '#Ryzen', '#radeon']),
                 'seekingalpha': get_seekingalpha_news('AMD')
+            },
+            'AMZN': {
+                'reddit': get_reddit_news(['amazon', 'amazonprime', 'amazonecho'], ['amazon', 'echo', 'prime', 'stock']), 
+                'reuters': get_reuters_news('AMZN.O'),
+                'twitter': get_twitter_news(['@amazon', '#Amazon', '#jeffbezos', '@amazonecho', '#amazonprime']),
+                'seekingalpha': get_seekingalpha_news('AMZN')
             }
     }
 
 
-# In[20]:
+# In[6]:
 
 
 if __name__ == "__main__":
@@ -249,7 +262,7 @@ if __name__ == "__main__":
             'apple': '**COMPANY**', 
             'macbook': '**PRODUCT**',
             'iphone': '**PRODUCT**',
-            'ipad': '**PRODUCT**'
+            'ipad': '**PRODUCT**',
             'ios': '**PRODUCT**'
         },
         'MSFT': {
@@ -261,6 +274,12 @@ if __name__ == "__main__":
             'ryzen': '**PRODUCT**',
             'radeon': '**PRODUCT**'
         },
+        'AMZN': {
+            'amazon': '**COMPANY**',
+            'echo': '**PRODUCT**',
+            'prime': '**PRODUCT**',
+            'alexa': '**PRODUCT**'
+        }
     }
 
     save_headlines(headlines, kword_replacements)

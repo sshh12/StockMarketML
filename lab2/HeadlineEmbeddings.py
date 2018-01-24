@@ -7,16 +7,16 @@
 
 from datetime import datetime, timedelta
 
-from sklearn.utils import shuffle
 import numpy as np
 import os
 
 import matplotlib.pyplot as plt
 
-from keras.models import Sequential, load_model
+from keras.models import Sequential, load_model, Model
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
-from keras.layers import Dense, Flatten, Embedding, LSTM, Activation, BatchNormalization, Dropout
+from keras.layers import Input, concatenate
+from keras.layers import Dense, Flatten, Embedding, LSTM, Activation, BatchNormalization, Dropout, Conv1D, MaxPooling1D
 from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint
 
 
@@ -26,9 +26,9 @@ from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint
 
 stocks = ['AAPL', 'AMD', 'AMZN', 'GOOG', 'MSFT']
 
-max_length = 90
+max_length = 40
 vocab_size = 600
-emb_size   = 256
+emb_size   = 64
 
 epochs     = 120
 batch_size = 32
@@ -106,7 +106,7 @@ def make_headline_to_effect_data(tick_data, head_data):
     when analyzing/encoding headlines. Returns a list of headlines and
     a list of corresponding 'effects' which represent a change in the stock price.
     """
-    all_headlines, effects = [], []
+    sources, all_headlines, effects = [], [], []
     
     for stock, dates in head_data.items():
         
@@ -155,19 +155,22 @@ def make_headline_to_effect_data(tick_data, head_data):
                     
                     all_headlines.append(headline)
                     effects.append(effect)
+                    sources.append(source)
                 
-    return all_headlines, np.array(effects)
+    return sources, all_headlines, np.array(effects)
 
 
 # In[6]:
 
 
-def encode_sentences(sentences, tokenizer=None, max_length=100, vocab_size=100):
+def encode_sentences(sources, sentences, tokenizer=None, max_length=100, vocab_size=100):
     """
     Encoder
     
     Takes a list of headlines and converts them into vectors
     """
+    ## Encoding Sentences
+    
     if not tokenizer:
         
         tokenizer = Tokenizer(num_words=vocab_size, filters='', lower=False) # Preprocessed
@@ -178,26 +181,42 @@ def encode_sentences(sentences, tokenizer=None, max_length=100, vocab_size=100):
     
     padded_headlines = pad_sequences(encoded_headlines, maxlen=max_length, padding='post')
     
-    return padded_headlines, tokenizer
+    ## Encoding Source
+    
+    source_set, source_mat = list(set(sources)), []
+    
+    for source in sources:
+        
+        row = [0] * len(source_set)
+        row[source_set.index(source)] = 1
+        source_mat.append(row)
+        
+    source_mat = np.array(source_mat)
+    
+    return source_mat, padded_headlines, tokenizer
 
 
 # In[7]:
 
 
-def split_data(X, Y, ratio, mix=True):
+def split_data(X, X2, Y, ratio):
     """
     Splits X/Y to Train/Test
     """
-    
-    if mix:
-        
-        X, Y = shuffle(X, Y)
-        
     train_size = int(len(X) * ratio)
-    trainX, testX = X[:train_size], X[train_size:]
-    trainY, testY = Y[:train_size], Y[train_size:]
     
-    return trainX, trainY, testX, testY
+    trainX,  testX  = X[:train_size],  X[train_size:]
+    trainX2, testX2 = X2[:train_size], X2[train_size:]
+    trainY,  testY  = Y[:train_size],  Y[train_size:]
+        
+    indexes = np.arange(trainX.shape[0])
+    np.random.shuffle(indexes)
+        
+    trainX  = trainX[indexes]
+    trainX2 = trainX2[indexes]
+    trainY  = trainY[indexes]
+    
+    return trainX, trainX2, trainY, testX, testX2, testY
 
 
 # In[8]:
@@ -205,37 +224,42 @@ def split_data(X, Y, ratio, mix=True):
 
 def get_model():
     
-    model = Sequential()
+    ## Text
     
-    model.add(Embedding(vocab_size, emb_size, input_length=max_length))
+    text_input = Input(shape=(max_length,))
     
-    model.add(LSTM(300))
-    model.add(Activation('selu'))
-    model.add(BatchNormalization())
-    model.add(Dropout(0.1))
+    emb = Embedding(vocab_size, emb_size, input_length=max_length)(text_input)
     
-    model.add(Dense(300))
-    model.add(Activation('selu'))
-    model.add(BatchNormalization())
-    model.add(Dropout(0.5))
+    conv = Conv1D(filters=32, kernel_size=3, padding='same', activation='relu')(emb)
+    conv = MaxPooling1D(pool_size=2)(conv)
     
-    model.add(Dense(300))
-    model.add(Activation('selu'))
-    model.add(BatchNormalization())
-    model.add(Dropout(0.5))
+    lstm = LSTM(300)(conv)
+    lstm = Activation('relu')(lstm)
+    lstm = BatchNormalization()(lstm)
+    lstm = Dropout(0.1)(lstm)
     
-    model.add(Dense(300))
-    model.add(Activation('selu'))
-    model.add(BatchNormalization())
-    model.add(Dropout(0.5))
+    ## Source
     
-    model.add(Dense(200))
-    model.add(Activation('selu'))
-    model.add(BatchNormalization())
-    model.add(Dropout(0.5))
+    source_input = Input(shape=(4,))
     
-    model.add(Dense(2))
-    model.add(Activation('softmax'))
+    ## Combined
+    
+    merged = concatenate([lstm, source_input])
+    
+    dense_1 = Dense(300)(merged)
+    dense_1 = Activation('relu')(dense_1)
+    dense_1 = BatchNormalization()(dense_1)
+    dense_1 = Dropout(0.5)(dense_1)
+    
+    dense_2 = Dense(300)(dense_1)
+    dense_2 = Activation('relu')(dense_2)
+    dense_2 = BatchNormalization()(dense_2)
+    dense_2 = Dropout(0.5)(dense_2)
+    
+    dense_3 = Dense(2)(dense_2)
+    out = Activation('softmax')(dense_3)
+    
+    model = Model(inputs=[text_input, source_input], outputs=out)
     
     model.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['acc'])
     
@@ -250,13 +274,16 @@ if __name__ == "__main__":
     tick_data = get_tick_data(stocks)
     head_data = get_headline_data(stocks)
     
-    headlines, effects = make_headline_to_effect_data(tick_data, head_data)
+    sources, headlines, effects = make_headline_to_effect_data(tick_data, head_data)
     
-    encoded_headlines, toke = encode_sentences(headlines, max_length=max_length, vocab_size=vocab_size)
+    encoded_sources, encoded_headlines, toke = encode_sentences(sources, 
+                                                                headlines, 
+                                                                max_length=max_length, 
+                                                                vocab_size=vocab_size)
     
-    trainX, trainY, testX, testY = split_data(encoded_headlines, effects, .6)
+    trainX, trainX2, trainY, testX, testX2, testY = split_data(encoded_headlines, encoded_sources, effects, .6)
     
-    print(trainX.shape, testY.shape)
+    print(trainX.shape, trainX2.shape, testY.shape)
 
 
 # In[10]:
@@ -272,11 +299,11 @@ if __name__ == "__main__":
                                  verbose=0,
                                  save_best_only=True)
     
-    history = model.fit(trainX,
+    history = model.fit([trainX, trainX2],
                         trainY,
                         epochs=epochs, 
                         batch_size=batch_size,
-                        validation_data=(testX, testY),
+                        validation_data=([testX, testX2], testY),
                         verbose=0,
                         callbacks=[e_stopping, checkpoint])
     
@@ -306,9 +333,13 @@ if __name__ == "__main__":
         'the **COMPANY** team released a breakthrough in **PRODUCT** gaming'
     ]
     
-    test_encoded, _ = encode_sentences(test_sents, tokenizer=toke, max_length=max_length, vocab_size=vocab_size)
+    encoded_sources, test_encoded, _ = encode_sentences(['reuters', 'twitter', 'reddit', 'seekingalpha'], 
+                                                        test_sents, 
+                                                        tokenizer=toke, 
+                                                        max_length=max_length, 
+                                                        vocab_size=vocab_size)
     
-    predictions = model.predict(test_encoded)
+    predictions = model.predict([test_encoded, encoded_sources])
     
     for i in range(len(test_sents)):
         

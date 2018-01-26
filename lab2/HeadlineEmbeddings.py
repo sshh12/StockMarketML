@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[12]:
 
 # Imports
 
@@ -20,21 +20,21 @@ from keras.layers import Dense, Flatten, Embedding, LSTM, Activation, BatchNorma
 from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint
 
 
-# In[2]:
+# In[13]:
 
 # Options
 
 stocks = ['AAPL', 'AMD', 'AMZN', 'GOOG', 'MSFT']
 
-max_length = 40
-vocab_size = 600
-emb_size   = 64
+max_length = 50
+vocab_size = 400
+emb_size   = 32
 
 epochs     = 120
-batch_size = 32
+batch_size = 128
 
 
-# In[3]:
+# In[14]:
 
 
 def get_tick_data(stocks):
@@ -65,7 +65,7 @@ def get_tick_data(stocks):
     return history
 
 
-# In[4]:
+# In[15]:
 
 
 def get_headline_data(stocks):
@@ -95,7 +95,7 @@ def get_headline_data(stocks):
     return history
 
 
-# In[5]:
+# In[16]:
 
 
 def make_headline_to_effect_data(tick_data, head_data):
@@ -160,7 +160,7 @@ def make_headline_to_effect_data(tick_data, head_data):
     return sources, all_headlines, np.array(effects)
 
 
-# In[6]:
+# In[17]:
 
 
 def encode_sentences(sources, sentences, tokenizer=None, max_length=100, vocab_size=100):
@@ -196,7 +196,7 @@ def encode_sentences(sources, sentences, tokenizer=None, max_length=100, vocab_s
     return source_mat, padded_headlines, tokenizer
 
 
-# In[7]:
+# In[18]:
 
 
 def split_data(X, X2, Y, ratio):
@@ -219,7 +219,7 @@ def split_data(X, X2, Y, ratio):
     return trainX, trainX2, trainY, testX, testX2, testY
 
 
-# In[8]:
+# In[19]:
 
 
 def get_model():
@@ -230,13 +230,13 @@ def get_model():
     
     emb = Embedding(vocab_size, emb_size, input_length=max_length)(text_input)
     
-    conv = Conv1D(filters=32, kernel_size=3, padding='same', activation='relu')(emb)
-    conv = MaxPooling1D(pool_size=2)(conv)
+    # conv = Conv1D(filters=64, kernel_size=5, padding='valid', activation='selu')(emb)
+    # conv = MaxPooling1D(pool_size=3)(conv)
     
-    lstm = LSTM(300)(conv)
-    lstm = Activation('relu')(lstm)
+    lstm = LSTM(120)(emb)
+    lstm = Activation('selu')(lstm)
     lstm = BatchNormalization()(lstm)
-    lstm = Dropout(0.1)(lstm)
+    lstm = Dropout(0.5)(lstm)
     
     ## Source
     
@@ -246,18 +246,23 @@ def get_model():
     
     merged = concatenate([lstm, source_input])
     
-    dense_1 = Dense(300)(merged)
-    dense_1 = Activation('relu')(dense_1)
+    dense_1 = Dense(120)(merged)
+    dense_1 = Activation('selu')(dense_1)
     dense_1 = BatchNormalization()(dense_1)
     dense_1 = Dropout(0.5)(dense_1)
     
-    dense_2 = Dense(300)(dense_1)
-    dense_2 = Activation('relu')(dense_2)
+    dense_2 = Dense(120)(dense_1)
+    dense_2 = Activation('selu')(dense_2)
     dense_2 = BatchNormalization()(dense_2)
     dense_2 = Dropout(0.5)(dense_2)
     
-    dense_3 = Dense(2)(dense_2)
-    out = Activation('softmax')(dense_3)
+    dense_3 = Dense(100)(dense_2)
+    dense_3 = Activation('selu')(dense_3)
+    dense_3 = BatchNormalization()(dense_3)
+    dense_3 = Dropout(0.5)(dense_3)
+    
+    dense_4 = Dense(2)(dense_3)
+    out = Activation('softmax')(dense_4)
     
     model = Model(inputs=[text_input, source_input], outputs=out)
     
@@ -266,7 +271,7 @@ def get_model():
     return model
 
 
-# In[9]:
+# In[20]:
 
 
 if __name__ == "__main__":
@@ -286,7 +291,7 @@ if __name__ == "__main__":
     print(trainX.shape, trainX2.shape, testY.shape)
 
 
-# In[10]:
+# In[21]:
 
 
 if __name__ == "__main__":
@@ -319,7 +324,7 @@ if __name__ == "__main__":
     
 
 
-# In[11]:
+# In[22]:
 
 
 if __name__ == "__main__":

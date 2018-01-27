@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[12]:
+# In[1]:
 
 # Imports
 
@@ -20,21 +20,21 @@ from keras.layers import Dense, Flatten, Embedding, LSTM, Activation, BatchNorma
 from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint
 
 
-# In[13]:
+# In[2]:
 
 # Options
 
 stocks = ['AAPL', 'AMD', 'AMZN', 'GOOG', 'MSFT']
 
 max_length = 50
-vocab_size = 400
-emb_size   = 32
+vocab_size = 1000
+emb_size   = 64
 
 epochs     = 120
-batch_size = 128
+batch_size = 32
 
 
-# In[14]:
+# In[3]:
 
 
 def get_tick_data(stocks):
@@ -65,7 +65,7 @@ def get_tick_data(stocks):
     return history
 
 
-# In[15]:
+# In[4]:
 
 
 def get_headline_data(stocks):
@@ -95,7 +95,7 @@ def get_headline_data(stocks):
     return history
 
 
-# In[16]:
+# In[5]:
 
 
 def make_headline_to_effect_data(tick_data, head_data):
@@ -160,7 +160,7 @@ def make_headline_to_effect_data(tick_data, head_data):
     return sources, all_headlines, np.array(effects)
 
 
-# In[17]:
+# In[6]:
 
 
 def encode_sentences(sources, sentences, tokenizer=None, max_length=100, vocab_size=100):
@@ -196,7 +196,7 @@ def encode_sentences(sources, sentences, tokenizer=None, max_length=100, vocab_s
     return source_mat, padded_headlines, tokenizer
 
 
-# In[18]:
+# In[7]:
 
 
 def split_data(X, X2, Y, ratio):
@@ -219,7 +219,7 @@ def split_data(X, X2, Y, ratio):
     return trainX, trainX2, trainY, testX, testX2, testY
 
 
-# In[19]:
+# In[8]:
 
 
 def get_model():
@@ -251,17 +251,17 @@ def get_model():
     dense_1 = BatchNormalization()(dense_1)
     dense_1 = Dropout(0.5)(dense_1)
     
-    dense_2 = Dense(120)(dense_1)
+    dense_2 = Dense(60)(dense_1)
     dense_2 = Activation('selu')(dense_2)
     dense_2 = BatchNormalization()(dense_2)
     dense_2 = Dropout(0.5)(dense_2)
     
-    dense_3 = Dense(100)(dense_2)
-    dense_3 = Activation('selu')(dense_3)
-    dense_3 = BatchNormalization()(dense_3)
-    dense_3 = Dropout(0.5)(dense_3)
+    # dense_3 = Dense(100)(dense_2)
+    # dense_3 = Activation('selu')(dense_3)
+    # dense_3 = BatchNormalization()(dense_3)
+    # dense_3 = Dropout(0.5)(dense_3)
     
-    dense_4 = Dense(2)(dense_3)
+    dense_4 = Dense(2)(dense_2)
     out = Activation('softmax')(dense_4)
     
     model = Model(inputs=[text_input, source_input], outputs=out)
@@ -271,7 +271,7 @@ def get_model():
     return model
 
 
-# In[20]:
+# In[9]:
 
 
 if __name__ == "__main__":
@@ -291,7 +291,7 @@ if __name__ == "__main__":
     print(trainX.shape, trainX2.shape, testY.shape)
 
 
-# In[21]:
+# In[10]:
 
 
 if __name__ == "__main__":
@@ -324,7 +324,7 @@ if __name__ == "__main__":
     
 
 
-# In[22]:
+# In[11]:
 
 
 if __name__ == "__main__":

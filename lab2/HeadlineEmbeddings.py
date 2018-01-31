@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 from keras.models import Sequential, load_model, Model
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
-from keras.layers import Input, concatenate
+from keras.layers import Input, concatenate, SpatialDropout1D
 from keras.layers import Dense, Flatten, Embedding, LSTM, Activation, BatchNormalization, Dropout, Conv1D, MaxPooling1D
 from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint
 
@@ -26,9 +26,9 @@ from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint
 
 stocks = ['AAPL', 'AMD', 'AMZN', 'GOOG', 'MSFT']
 
-max_length = 50
-vocab_size = 1000
-emb_size   = 64
+max_length = 60
+vocab_size = 2000
+emb_size   = 128
 
 epochs     = 120
 batch_size = 32
@@ -152,7 +152,7 @@ def make_headline_to_effect_data(tick_data, head_data):
                     effect = [0., 1.]
                     
                 for source, headline in headlines.items():
-                    
+
                     all_headlines.append(headline)
                     effects.append(effect)
                     sources.append(source)
@@ -229,14 +229,15 @@ def get_model():
     text_input = Input(shape=(max_length,))
     
     emb = Embedding(vocab_size, emb_size, input_length=max_length)(text_input)
+    emb = SpatialDropout1D(.2)(emb)
     
     # conv = Conv1D(filters=64, kernel_size=5, padding='valid', activation='selu')(emb)
     # conv = MaxPooling1D(pool_size=3)(conv)
     
-    lstm = LSTM(120)(emb)
+    lstm = LSTM(300, dropout=0.2, recurrent_dropout=0.2)(emb)
     lstm = Activation('selu')(lstm)
     lstm = BatchNormalization()(lstm)
-    lstm = Dropout(0.5)(lstm)
+    #lstm = Dropout(0.5)(lstm)
     
     ## Source
     
@@ -246,22 +247,22 @@ def get_model():
     
     merged = concatenate([lstm, source_input])
     
-    dense_1 = Dense(120)(merged)
+    dense_1 = Dense(300)(merged)
     dense_1 = Activation('selu')(dense_1)
     dense_1 = BatchNormalization()(dense_1)
     dense_1 = Dropout(0.5)(dense_1)
     
-    dense_2 = Dense(60)(dense_1)
-    dense_2 = Activation('selu')(dense_2)
-    dense_2 = BatchNormalization()(dense_2)
-    dense_2 = Dropout(0.5)(dense_2)
+    #dense_2 = Dense(300)(dense_1)
+    #dense_2 = Activation('selu')(dense_2)
+    #dense_2 = BatchNormalization()(dense_2)
+    #dense_2 = Dropout(0.5)(dense_2)
     
-    # dense_3 = Dense(100)(dense_2)
-    # dense_3 = Activation('selu')(dense_3)
-    # dense_3 = BatchNormalization()(dense_3)
-    # dense_3 = Dropout(0.5)(dense_3)
+    #dense_3 = Dense(300)(dense_2)
+    #dense_3 = Activation('selu')(dense_3)
+    #dense_3 = BatchNormalization()(dense_3)
+    #dense_3 = Dropout(0.5)(dense_3)
     
-    dense_4 = Dense(2)(dense_2)
+    dense_4 = Dense(2)(dense_1)
     out = Activation('softmax')(dense_4)
     
     model = Model(inputs=[text_input, source_input], outputs=out)

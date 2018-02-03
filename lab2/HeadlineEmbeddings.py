@@ -27,7 +27,7 @@ from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint
 stocks = ['AAPL', 'AMD', 'AMZN', 'GOOG', 'MSFT']
 
 max_length = 40
-vocab_size = 3000
+vocab_size = 5000
 emb_size   = 256
 
 epochs     = 120
@@ -229,12 +229,12 @@ def get_model():
     text_input = Input(shape=(max_length,))
     
     emb = Embedding(vocab_size, emb_size, input_length=max_length)(text_input)
-    emb = SpatialDropout1D(.5)(emb)
+    emb = SpatialDropout1D(.4)(emb)
     
     # conv = Conv1D(filters=64, kernel_size=5, padding='same', activation='selu')(emb)
     # conv = MaxPooling1D(pool_size=3)(conv)
     
-    lstm = LSTM(300, dropout=0.5, recurrent_dropout=0.5)(emb)
+    lstm = LSTM(300, dropout=0.4, recurrent_dropout=0.3)(emb)
     lstm = Activation('selu')(lstm)
     lstm = BatchNormalization()(lstm)
     

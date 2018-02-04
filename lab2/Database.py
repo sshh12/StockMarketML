@@ -31,6 +31,15 @@ def create_table_ticker():
     conn.commit()
     
     conn.close()
+    
+def create_table_headlines():
+    
+    conn, cur = connect()
+    
+    cur.execute('CREATE TABLE headlines (stock text, date text, source text, content text UNIQUE ON CONFLICT IGNORE)')
+    conn.commit()
+    
+    conn.close()
 
 
 # In[4]:
@@ -44,4 +53,22 @@ def add_stock_ticks(entries):
     conn.commit()
     
     conn.close()
+    
+def add_headlines(entries):
+    
+    conn, cur = connect()
+    
+    cur.executemany("INSERT INTO headlines VALUES (?,?,?,?)", entries)
+    conn.commit()
+    
+    conn.close()
+
+
+# In[5]:
+
+
+if __name__ == "__main__":
+    
+    create_table_ticker()
+    create_table_headlines()
 

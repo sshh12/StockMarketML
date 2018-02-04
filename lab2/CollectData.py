@@ -12,10 +12,10 @@ import random
 import os
 import re
 
-from Database import add_stock_ticks
+from Database import add_stock_ticks, add_headlines
 
 
-# In[3]:
+# In[2]:
 
 
 def consume_ticker_csv(stock, filename):
@@ -35,28 +35,7 @@ def consume_ticker_csv(stock, filename):
     add_stock_ticks(entries)
 
 
-# In[ ]:
-
-
-def clean_headline(headline, replacements={}):
-    """
-    Clean headline
-    
-    Removes extra chars and replaces words
-    """
-    headline = headline.lower()
-    headline = ''.join(c for c in headline if c not in ",.?!;-'\‘’\"{}[]()*#&:\\/@|0123456789$%")
-    headline = re.sub('\s+', ' ', headline)
-    
-    for original, replacement in replacements.items():
-        headline = headline.replace(original, replacement)
-        
-    headline = headline.replace('****', '** **') # Seperate joined kwords
-    
-    return headline.strip()
-
-
-# In[ ]:
+# In[3]:
 
 
 def get_reddit_news(subs, search_terms, limit=None, praw_config='StockMarketML'):
@@ -85,7 +64,7 @@ def get_reddit_news(subs, search_terms, limit=None, praw_config='StockMarketML')
         
     return articles
 
-def get_reuters_news(stock, pages=400):
+def get_reuters_news(stock, pages=0):
     """Get headlines from Reuters"""
     print('Downloading Reuters: ' + stock)
     
@@ -202,34 +181,55 @@ def get_seekingalpha_news(stock, pages=500):
     return articles
 
 
-# In[ ]:
+# In[4]:
+
+
+def clean_headline(headline, replacements={}):
+    """
+    Clean headline
+    
+    Removes extra chars and replaces words
+    """
+    headline = headline.lower()
+    headline = re.sub('\d+%', 'STAT', headline)
+    headline = ''.join(c for c in headline if c not in ",.?!;-'\‘’\"{}[]()*#&:\\/@|0123456789$%")
+    headline = re.sub('\s+', ' ', headline)
+    
+    for original, replacement in replacements.items():
+        headline = headline.replace(original, replacement)
+        
+    headline = headline.replace('STAT', '**STATISTIC**')
+        
+    headline = headline.replace('****', '** **') # Seperate joined kwords
+    
+    return headline.strip()
+
+
+# In[5]:
 
 
 def save_headlines(headlines, kword_replacements={}):
     """Save headlines to file"""
-    with open(os.path.join('..', 'data', "_".join(sorted(headlines.keys())) + '-headlines.csv'), 'w', encoding="utf-8") as headline_file:
+    
+    for stock in headlines:
         
-        for stock in headlines:
+        entries = []
+        
+        for source in headlines[stock]:
             
-            # Converting Stock -> Source -> Date -> Headlines
-            #         to Stock -> Date -> Source -> Headline
-            
-            articles = defaultdict(dict)
-
-            for source, source_headlines in headlines[stock].items():
-
-                for date in source_headlines:
+            for date in headlines[stock][source]:
+                
+                for headline in headlines[stock][source][date]:
                     
-                    articles[date][source] = clean_headline(random.choice(headlines[stock][source][date]), kword_replacements[stock])
-        
-            for date in sorted(articles):
+                    headline = clean_headline(headline, kword_replacements[stock])
+                    
+                    entries.append((stock, date, source, headline))
+                    
+        add_headlines(entries)
+    
 
-                current_articles = articles[date]
 
-                headline_file.write("{},{},{}\n".format(stock, date, str(current_articles).replace(',', '@')))
-
-
-# In[ ]:
+# In[6]:
 
 
 if __name__ == "__main__":
@@ -266,19 +266,15 @@ if __name__ == "__main__":
                 'seekingalpha': get_seekingalpha_news('AMZN')
             }
     }
-
-
-# In[ ]:
-
-
-if __name__ == "__main__":
     
-    kword_replacements = { # To generalize headlines
+    kword_replacements = { # To futher generalize headlines
         'GOOG': {
             'google': '**COMPANY**',
             'alphabet': '**COMPANY**',
             'android': '**PRODUCT**',
-            'pixel': '**PRODUCT**'
+            'pixel': '**PRODUCT**',
+            'maps': '**PRODUCT**',
+            'youtube': '**PRODUCT**'
         },
         'AAPL': {
             'apple': '**COMPANY**', 
@@ -304,5 +300,23 @@ if __name__ == "__main__":
         }
     }
 
+
+# In[7]:
+
+
+if __name__ == "__main__":
+
     save_headlines(headlines, kword_replacements)
+
+
+# In[8]:
+
+
+if __name__ == "__main__":
+    
+    consume_ticker_csv('AAPL', 'AAPL.csv')
+    consume_ticker_csv('AMZN', 'AMZN.csv')
+    consume_ticker_csv('AMD', 'AMD.csv')
+    consume_ticker_csv('GOOG', 'GOOG.csv')
+    consume_ticker_csv('MSFT', 'MSFT.csv')
 

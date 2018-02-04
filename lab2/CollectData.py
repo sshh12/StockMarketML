@@ -12,8 +12,30 @@ import random
 import os
 import re
 
+from Database import add_stock_ticks
 
-# In[2]:
+
+# In[3]:
+
+
+def consume_ticker_csv(stock, filename):
+    """Loads data from csv file into database"""
+    entries = []
+    
+    with open(os.path.join('..', 'data', filename), 'r') as tick_csv:
+        
+        for line in tick_csv:
+            
+            if "Date" not in line:
+                
+                date, open_, high, low, close, adj_close, volume = line.split(',')
+                
+                entries.append((stock, date, open_, high, low, close, adj_close, volume))
+                
+    add_stock_ticks(entries)
+
+
+# In[ ]:
 
 
 def clean_headline(headline, replacements={}):
@@ -34,7 +56,7 @@ def clean_headline(headline, replacements={}):
     return headline.strip()
 
 
-# In[3]:
+# In[ ]:
 
 
 def get_reddit_news(subs, search_terms, limit=None, praw_config='StockMarketML'):
@@ -180,7 +202,7 @@ def get_seekingalpha_news(stock, pages=500):
     return articles
 
 
-# In[4]:
+# In[ ]:
 
 
 def save_headlines(headlines, kword_replacements={}):
@@ -207,7 +229,7 @@ def save_headlines(headlines, kword_replacements={}):
                 headline_file.write("{},{},{}\n".format(stock, date, str(current_articles).replace(',', '@')))
 
 
-# In[5]:
+# In[ ]:
 
 
 if __name__ == "__main__":
@@ -246,7 +268,7 @@ if __name__ == "__main__":
     }
 
 
-# In[6]:
+# In[ ]:
 
 
 if __name__ == "__main__":

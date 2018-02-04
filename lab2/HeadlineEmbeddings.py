@@ -229,14 +229,14 @@ def get_model():
     text_input = Input(shape=(max_length,))
     
     emb = Embedding(vocab_size, emb_size, input_length=max_length)(text_input)
-    emb = SpatialDropout1D(.4)(emb)
+    emb = SpatialDropout1D(.3)(emb)
     
     # conv = Conv1D(filters=64, kernel_size=5, padding='same', activation='selu')(emb)
     # conv = MaxPooling1D(pool_size=3)(conv)
     
-    lstm = LSTM(300, dropout=0.4, recurrent_dropout=0.3)(emb)
-    lstm = Activation('selu')(lstm)
-    lstm = BatchNormalization()(lstm)
+    lstm = LSTM(300, dropout=0.3, recurrent_dropout=0.3)(emb)
+    # lstm = Activation('selu')(lstm)
+    # lstm = BatchNormalization()(lstm)
     
     ## Source
     
@@ -247,17 +247,17 @@ def get_model():
     merged = concatenate([lstm, source_input])
     
     dense_1 = Dense(200)(merged)
-    dense_1 = Activation('selu')(dense_1)
+    dense_1 = Activation('relu')(dense_1)
     dense_1 = BatchNormalization()(dense_1)
     dense_1 = Dropout(0.5)(dense_1)
     
-    dense_2 = Dense(200)(dense_1)
-    dense_2 = Activation('selu')(dense_2)
+    dense_2 = Dense(100)(dense_1)
+    dense_2 = Activation('relu')(dense_2)
     dense_2 = BatchNormalization()(dense_2)
     dense_2 = Dropout(0.5)(dense_2)
     
-    dense_3 = Dense(200)(dense_2)
-    dense_3 = Activation('selu')(dense_3)
+    dense_3 = Dense(100)(dense_2)
+    dense_3 = Activation('relu')(dense_3)
     dense_3 = BatchNormalization()(dense_3)
     dense_3 = Dropout(0.5)(dense_3)
     

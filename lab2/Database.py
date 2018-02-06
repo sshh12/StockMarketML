@@ -4,6 +4,7 @@
 # In[1]:
 
 
+from contextlib import contextmanager
 import sqlite3
 import os
 
@@ -11,13 +12,16 @@ import os
 # In[2]:
 
 
-def connect(db_filename='stock.db'):
+@contextmanager
+def db(db_filename='stock.db'):
     
     conn = sqlite3.connect(os.path.join('..', 'data', db_filename), detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
 
     cur = conn.cursor()
     
-    return conn, cur
+    yield conn, cur
+    
+    conn.close()
 
 
 # In[3]:
@@ -25,21 +29,17 @@ def connect(db_filename='stock.db'):
 
 def create_table_ticker():
     
-    conn, cur = connect()
+    with db() as (conn, cur):
     
-    cur.execute('CREATE TABLE ticks (stock text, date text, open real, high real, low real, close real, adjclose real, volume integer)')
-    conn.commit()
-    
-    conn.close()
+        cur.execute('CREATE TABLE ticks (stock text, date text, open real, high real, low real, close real, adjclose real, volume integer)')
+        conn.commit()
     
 def create_table_headlines():
     
-    conn, cur = connect()
+    with db() as (conn, cur):
     
-    cur.execute('CREATE TABLE headlines (stock text, date text, source text, content text UNIQUE ON CONFLICT IGNORE)')
-    conn.commit()
-    
-    conn.close()
+        cur.execute('CREATE TABLE headlines (stock text, date text, source text, content text UNIQUE ON CONFLICT IGNORE)')
+        conn.commit()
 
 
 # In[4]:
@@ -47,24 +47,20 @@ def create_table_headlines():
 
 def add_stock_ticks(entries):
     
-    conn, cur = connect()
+    with db() as (conn, cur):
     
-    cur.executemany("INSERT INTO ticks VALUES (?,?,?,?,?,?,?,?)", entries)
-    conn.commit()
-    
-    conn.close()
+        cur.executemany("INSERT INTO ticks VALUES (?,?,?,?,?,?,?,?)", entries)
+        conn.commit()
     
 def add_headlines(entries):
     
-    conn, cur = connect()
+    with db() as (conn, cur):
     
-    cur.executemany("INSERT INTO headlines VALUES (?,?,?,?)", entries)
-    conn.commit()
-    
-    conn.close()
+        cur.executemany("INSERT INTO headlines VALUES (?,?,?,?)", entries)
+        conn.commit()
 
 
-# In[5]:
+# In[ ]:
 
 
 if __name__ == "__main__":

@@ -7,6 +7,8 @@
 
 from datetime import datetime, timedelta
 
+from Database import db
+
 import numpy as np
 import os
 
@@ -32,67 +34,6 @@ emb_size   = 256
 
 epochs     = 120
 batch_size = 32
-
-
-# In[3]:
-
-
-def get_tick_data(stocks):
-    """
-    Tick Data
-    
-    This reads the high, lows, closes, etc. from data csv files
-    """
-    history = {}
-    
-    for stock in stocks:
-        
-        history[stock] = {}
-        
-        with open(os.path.join('..', 'data', stock + '.csv'), 'r') as data:
-
-            for line in data:
-
-                if len(line) > 6 and "Date" not in line and "null" not in line:
-
-                    items = line.split(",")
-                    
-                    date = items[0]
-                    data = np.array(list(map(float, items[1:]))) # 0, 1, 2, 4, 5 -> OPEN HIGH LOW ADJ_CLOSE VOLUME
-                    
-                    history[stock][date] = data
-        
-    return history
-
-
-# In[4]:
-
-
-def get_headline_data(stocks):
-    """
-    Headline Data
-    
-    This reads the headlines from the headline csv file (created by CollectData)
-    """
-    history = {}
-    
-    with open(os.path.join('..', 'data', "_".join(stocks) + '-headlines.csv'), 'r', encoding="utf8") as data:
-        
-        for line in data:
-
-            if len(line) > 6:
-
-                stock, date, headlines = line.split(",")
-                
-                headlines = eval(headlines.strip().replace('@', ','))
-        
-                if not stock in history:
-                    
-                    history[stock] = {}
-                
-                history[stock][date] = headlines
-                
-    return history
 
 
 # In[5]:
@@ -275,9 +216,6 @@ def get_model():
 
 
 if __name__ == "__main__":
-    
-    tick_data = get_tick_data(stocks)
-    head_data = get_headline_data(stocks)
     
     sources, headlines, effects = make_headline_to_effect_data(tick_data, head_data)
     

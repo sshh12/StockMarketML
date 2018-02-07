@@ -27,19 +27,20 @@ from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint
 # Options
 
 stocks = ['AAPL', 'AMD', 'AMZN', 'GOOG', 'MSFT']
+sources = ['reddit', 'twitter', 'seekingalpha']
 
-max_length = 40
-vocab_size = 5000
-emb_size   = 256
+max_length  = 40
+vocab_size  = 5000
+emb_size    = 256
 
 epochs     = 120
 batch_size = 32
 
 
-# In[5]:
+# In[3]:
 
 
-def make_headline_to_effect_data(tick_data, head_data):
+def make_headline_to_effect_data():
     """
     Headline -> Effect
     
@@ -47,61 +48,58 @@ def make_headline_to_effect_data(tick_data, head_data):
     when analyzing/encoding headlines. Returns a list of headlines and
     a list of corresponding 'effects' which represent a change in the stock price.
     """
-    sources, all_headlines, effects = [], [], []
+    sources, headlines, effects = [], [], []
     
-    for stock, dates in head_data.items():
+    with db() as (conn, cur):
         
-        for date, headlines in dates.items():
+        for stock in stocks:
             
-            ## Find Matching tick data dates for headline dates ##
+            print("Fetching..." + stock, end="\r")
             
-            event_date = datetime.strptime(date, '%Y-%m-%d') # The date `of` headline
-            effect_date = event_date + timedelta(days=1)     # The day after `affected` by headline
+            ## Go through all the headlines ##
             
-            for i in range(4):
-                if event_date.strftime('%Y-%m-%d') in tick_data[stock]:
-                    break
-                else:
-                    event_date -= timedelta(days=1)
-            else:
-                continue
-                    
-            for i in range(3):
-                if effect_date.strftime('%Y-%m-%d') in tick_data[stock]:
-                    break
-                else:
-                    effect_date += timedelta(days=1)
-            else:
-                continue
+            cur.execute("SELECT date, source, content FROM headlines WHERE stock=? AND LENGTH(content) >= 16", [stock])
+            headline_query = cur.fetchall()
+            
+            for (date, source, content) in headline_query:
                 
-            event_date = event_date.strftime('%Y-%m-%d')
-            effect_date = effect_date.strftime('%Y-%m-%d')
-            
-            ## Determine Effect ##
-            
-            if event_date in tick_data[stock] and effect_date in tick_data[stock]:
+                event_date = datetime.strptime(date, '%Y-%m-%d') # The date of headline
                 
-                tick_on = tick_data[stock][event_date]
-                tick_after = tick_data[stock][effect_date]
+                ## Find corresponding tick data ## 
                 
-                if tick_after[3] >= tick_on[3]: # Compare Close Prices
+                cur.execute("""SELECT adjclose FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date""", 
+                            [stock, (event_date - timedelta(days=3)).strftime('%Y-%m-%d'), event_date.strftime('%Y-%m-%d')])
+                
+                before_headline_ticks = cur.fetchall()
+                
+                cur.execute("""SELECT adjclose FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date""", 
+                            [stock, (event_date + timedelta(days=1)).strftime('%Y-%m-%d'), (event_date + timedelta(days=4)).strftime('%Y-%m-%d')])
+                
+                after_headline_ticks = cur.fetchall()
+                
+                ## Create training example ##
+                
+                if len(before_headline_ticks) > 0 and len(after_headline_ticks) > 0:
                     
-                    effect = [1., 0.]
-                    
-                else:
-                    
-                    effect = [0., 1.]
-                    
-                for source, headline in headlines.items():
-
-                    all_headlines.append(headline)
-                    effects.append(effect)
+                    previous_tick = before_headline_ticks[-1]
+                    result_tick = after_headline_ticks[0]
+                
+                    if result_tick > previous_tick:
+                        
+                        effect = [1., 0.]
+                        
+                    else:
+                        
+                        effect = [0., 1.]
+                        
                     sources.append(source)
-                
-    return sources, all_headlines, np.array(effects)
+                    headlines.append(content)
+                    effects.append(effect)
+                    
+    return sources, headlines, np.array(effects)
 
 
-# In[6]:
+# In[4]:
 
 
 def encode_sentences(sources, sentences, tokenizer=None, max_length=100, vocab_size=100):
@@ -114,7 +112,7 @@ def encode_sentences(sources, sentences, tokenizer=None, max_length=100, vocab_s
     
     if not tokenizer:
         
-        tokenizer = Tokenizer(num_words=vocab_size, filters='', lower=False) # Preprocessed
+        tokenizer = Tokenizer(num_words=vocab_size, filters='', lower=False) # Already Preprocessed
     
         tokenizer.fit_on_texts(sentences)
     
@@ -124,12 +122,12 @@ def encode_sentences(sources, sentences, tokenizer=None, max_length=100, vocab_s
     
     ## Encoding Source
     
-    source_set, source_mat = list(set(sources)), []
+    source_mat = []
     
     for source in sources:
         
-        row = [0] * len(source_set)
-        row[source_set.index(source)] = 1
+        row = [0] * len(sources)
+        row[sources.index(source)] = 1
         source_mat.append(row)
         
     source_mat = np.array(source_mat)
@@ -137,7 +135,7 @@ def encode_sentences(sources, sentences, tokenizer=None, max_length=100, vocab_s
     return source_mat, padded_headlines, tokenizer
 
 
-# In[7]:
+# In[5]:
 
 
 def split_data(X, X2, Y, ratio):
@@ -160,7 +158,7 @@ def split_data(X, X2, Y, ratio):
     return trainX, trainX2, trainY, testX, testX2, testY
 
 
-# In[8]:
+# In[6]:
 
 
 def get_model():
@@ -181,7 +179,7 @@ def get_model():
     
     ## Source
     
-    source_input = Input(shape=(4,))
+    source_input = Input(shape=(len(sources),))
     
     ## Combined
     
@@ -197,13 +195,8 @@ def get_model():
     dense_2 = BatchNormalization()(dense_2)
     dense_2 = Dropout(0.5)(dense_2)
     
-    dense_3 = Dense(100)(dense_2)
-    dense_3 = Activation('relu')(dense_3)
-    dense_3 = BatchNormalization()(dense_3)
-    dense_3 = Dropout(0.5)(dense_3)
-    
-    dense_4 = Dense(2)(dense_3)
-    out = Activation('softmax')(dense_4)
+    dense_3 = Dense(2)(dense_2)
+    out = Activation('softmax')(dense_3)
     
     model = Model(inputs=[text_input, source_input], outputs=out)
     
@@ -212,12 +205,12 @@ def get_model():
     return model
 
 
-# In[9]:
+# In[ ]:
 
 
 if __name__ == "__main__":
     
-    sources, headlines, effects = make_headline_to_effect_data(tick_data, head_data)
+    sources, headlines, effects = make_headline_to_effect_data()
     
     encoded_sources, encoded_headlines, toke = encode_sentences(sources, 
                                                                 headlines, 
@@ -229,7 +222,7 @@ if __name__ == "__main__":
     print(trainX.shape, trainX2.shape, testY.shape)
 
 
-# In[10]:
+# In[ ]:
 
 
 if __name__ == "__main__":
@@ -262,7 +255,7 @@ if __name__ == "__main__":
     
 
 
-# In[11]:
+# In[ ]:
 
 
 if __name__ == "__main__":

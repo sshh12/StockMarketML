@@ -31,14 +31,14 @@ def create_table_ticker():
     
     with db() as (conn, cur):
     
-        cur.execute('CREATE TABLE ticks (stock text, date text, open real, high real, low real, close real, adjclose real, volume integer)')
+        cur.execute('CREATE TABLE IF NOT EXISTS ticks (stock text, date text, open real, high real, low real, close real, adjclose real, volume integer)')
         conn.commit()
     
 def create_table_headlines():
     
     with db() as (conn, cur):
     
-        cur.execute('CREATE TABLE headlines (stock text, date text, source text, content text UNIQUE ON CONFLICT IGNORE)')
+        cur.execute('CREATE TABLE IF NOT EXISTS headlines (stock text, date text, source text, content text UNIQUE ON CONFLICT IGNORE)')
         conn.commit()
 
 
@@ -60,7 +60,7 @@ def add_headlines(entries):
         conn.commit()
 
 
-# In[ ]:
+# In[5]:
 
 
 if __name__ == "__main__":

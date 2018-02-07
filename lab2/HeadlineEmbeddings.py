@@ -205,7 +205,7 @@ def get_model():
     return model
 
 
-# In[ ]:
+# In[7]:
 
 
 if __name__ == "__main__":
@@ -222,7 +222,7 @@ if __name__ == "__main__":
     print(trainX.shape, trainX2.shape, testY.shape)
 
 
-# In[ ]:
+# In[8]:
 
 
 if __name__ == "__main__":
@@ -255,7 +255,7 @@ if __name__ == "__main__":
     
 
 
-# In[ ]:
+# In[10]:
 
 
 if __name__ == "__main__":
@@ -269,7 +269,7 @@ if __name__ == "__main__":
         'the **COMPANY** team released a breakthrough in **PRODUCT** gaming'
     ]
     
-    encoded_sources, test_encoded, _ = encode_sentences(['reuters', 'twitter', 'reddit', 'seekingalpha'], 
+    encoded_sources, test_encoded, _ = encode_sentences(['twitter', 'twitter', 'reddit', 'seekingalpha'], 
                                                         test_sents, 
                                                         tokenizer=toke, 
                                                         max_length=max_length, 

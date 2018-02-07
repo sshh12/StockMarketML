@@ -104,3 +104,4 @@ ENV/
 *.csv
 makepython.bat
 twitter_creds.py
+glove.840B.300d.txt

@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 from keras.models import Sequential, load_model, Model
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
-from keras.layers import Input, concatenate, SpatialDropout1D
+from keras.layers import Input, concatenate, SpatialDropout1D, GRU
 from keras.layers import Dense, Flatten, Embedding, LSTM, Activation, BatchNormalization, Dropout, Conv1D, MaxPooling1D
 from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint
 
@@ -26,10 +26,10 @@ from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint
 
 # Options
 
-stocks = ['AAPL', 'AMD', 'AMZN', 'GOOG', 'MSFT']
-sources = ['reddit', 'twitter', 'seekingalpha']
+stocks      = ['AAPL', 'AMD', 'AMZN', 'GOOG', 'MSFT']
+all_sources = ['reddit', 'twitter', 'seekingalpha']
 
-max_length  = 40
+max_length  = 50
 vocab_size  = 5000
 emb_size    = 256
 
@@ -126,8 +126,8 @@ def encode_sentences(sources, sentences, tokenizer=None, max_length=100, vocab_s
     
     for source in sources:
         
-        row = [0] * len(sources)
-        row[sources.index(source)] = 1
+        row = [0] * len(all_sources)
+        row[all_sources.index(source)] = 1
         source_mat.append(row)
         
     source_mat = np.array(source_mat)
@@ -142,18 +142,18 @@ def split_data(X, X2, Y, ratio):
     """
     Splits X/Y to Train/Test
     """
+    indexes = np.arange(X.shape[0])
+    np.random.shuffle(indexes)
+    
+    X  = X[indexes]
+    X2 = X2[indexes]
+    Y  = Y[indexes]
+    
     train_size = int(len(X) * ratio)
     
     trainX,  testX  = X[:train_size],  X[train_size:]
     trainX2, testX2 = X2[:train_size], X2[train_size:]
     trainY,  testY  = Y[:train_size],  Y[train_size:]
-        
-    indexes = np.arange(trainX.shape[0])
-    np.random.shuffle(indexes)
-        
-    trainX  = trainX[indexes]
-    trainX2 = trainX2[indexes]
-    trainY  = trainY[indexes]
     
     return trainX, trainX2, trainY, testX, testX2, testY
 
@@ -173,13 +173,13 @@ def get_model():
     # conv = Conv1D(filters=64, kernel_size=5, padding='same', activation='selu')(emb)
     # conv = MaxPooling1D(pool_size=3)(conv)
     
-    lstm = LSTM(300, dropout=0.3, recurrent_dropout=0.3)(emb)
-    # lstm = Activation('selu')(lstm)
-    # lstm = BatchNormalization()(lstm)
+    lstm = GRU(300, dropout=0.3, recurrent_dropout=0.3)(emb)
+    lstm = Activation('relu')(lstm)
+    lstm = BatchNormalization()(lstm)
     
     ## Source
     
-    source_input = Input(shape=(len(sources),))
+    source_input = Input(shape=(len(all_sources),))
     
     ## Combined
     
@@ -217,7 +217,7 @@ if __name__ == "__main__":
                                                                 max_length=max_length, 
                                                                 vocab_size=vocab_size)
     
-    trainX, trainX2, trainY, testX, testX2, testY = split_data(encoded_headlines, encoded_sources, effects, .8)
+    trainX, trainX2, trainY, testX, testX2, testY = split_data(encoded_headlines, encoded_sources, effects, .85)
     
     print(trainX.shape, trainX2.shape, testY.shape)
 
@@ -255,7 +255,7 @@ if __name__ == "__main__":
     
 
 
-# In[10]:
+# In[ ]:
 
 
 if __name__ == "__main__":

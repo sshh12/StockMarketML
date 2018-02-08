@@ -30,8 +30,8 @@ stocks      = ['AAPL', 'AMD', 'AMZN', 'GOOG', 'MSFT']
 all_sources = ['reddit', 'twitter', 'seekingalpha']
 
 max_length  = 50
-vocab_size  = 5000
-emb_size    = 256
+vocab_size  = 10100
+emb_size    = 300
 
 epochs     = 120
 batch_size = 32
@@ -54,7 +54,7 @@ def make_headline_to_effect_data():
         
         for stock in stocks:
             
-            print("Fetching..." + stock, end="\r")
+            print("Fetching..." + stock, end=" \r")
             
             ## Go through all the headlines ##
             
@@ -161,21 +161,50 @@ def split_data(X, X2, Y, ratio):
 # In[6]:
 
 
-def get_model():
+def get_embedding_matrix(tokenizer, pretrained_file='glove.840B.300d.txt'):
+    """Load Vectors from Glove File"""
+    print("Fetching...WordVecs", end="\r")
+    
+    embeddings_index = dict()
+    
+    with open(os.path.join('..', 'data', pretrained_file), 'r', encoding="utf-8") as glove:
+
+        for line in glove:
+
+            values = line.split(' ')
+            word = values[0]
+            coefs = np.asarray(values[1:], dtype='float32')
+            embeddings_index[word] = coefs
+
+    print('Loaded %s Glove Word Vectors.' % len(embeddings_index))
+    
+    embedding_matrix = np.zeros((vocab_size, emb_size))
+    
+    for word, i in tokenizer.word_index.items():
+        
+        embedding_vector = embeddings_index.get(word)
+        
+        if embedding_vector is not None:
+            
+            embedding_matrix[i] = embedding_vector
+            
+    return embedding_matrix
+
+def get_model(emb_matrix):
     
     ## Text
     
     text_input = Input(shape=(max_length,))
     
-    emb = Embedding(vocab_size, emb_size, input_length=max_length)(text_input)
+    emb = Embedding(vocab_size, emb_size, input_length=max_length, weights=[emb_matrix])(text_input)
     emb = SpatialDropout1D(.3)(emb)
     
     # conv = Conv1D(filters=64, kernel_size=5, padding='same', activation='selu')(emb)
     # conv = MaxPooling1D(pool_size=3)(conv)
     
-    lstm = GRU(300, dropout=0.3, recurrent_dropout=0.3)(emb)
-    lstm = Activation('relu')(lstm)
-    lstm = BatchNormalization()(lstm)
+    rnn = GRU(300, dropout=0.3, recurrent_dropout=0.3)(emb)
+    rnn = Activation('relu')(rnn)
+    rnn = BatchNormalization()(rnn)
     
     ## Source
     
@@ -183,7 +212,7 @@ def get_model():
     
     ## Combined
     
-    merged = concatenate([lstm, source_input])
+    merged = concatenate([rnn, source_input])
     
     dense_1 = Dense(200)(merged)
     dense_1 = Activation('relu')(dense_1)
@@ -217,6 +246,8 @@ if __name__ == "__main__":
                                                                 max_length=max_length, 
                                                                 vocab_size=vocab_size)
     
+    emb_matrix = get_embedding_matrix(toke)
+    
     trainX, trainX2, trainY, testX, testX2, testY = split_data(encoded_headlines, encoded_sources, effects, .85)
     
     print(trainX.shape, trainX2.shape, testY.shape)
@@ -227,7 +258,7 @@ if __name__ == "__main__":
 
 if __name__ == "__main__":
     
-    model = get_model()
+    model = get_model(emb_matrix)
     
     e_stopping = EarlyStopping(monitor='val_loss', patience=70)
     checkpoint = ModelCheckpoint(os.path.join('..', 'models', 'media-headlines.h5'), 
@@ -255,7 +286,7 @@ if __name__ == "__main__":
     
 
 
-# In[ ]:
+# In[9]:
 
 
 if __name__ == "__main__":

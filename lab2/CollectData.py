@@ -192,7 +192,7 @@ def clean_headline(headline, replacements={}):
     """
     headline = headline.lower()
     headline = re.sub('\d+%', 'STAT', headline)
-    headline = ''.join(c for c in headline if c not in ",.?!;-'\‘’\"{}[]()<>*#&:\\/@|0123456789$%")
+    headline = ''.join(c for c in headline if c in "abcdefghijklmnopqrstuvwxyz")
     headline = re.sub('\s+', ' ', headline)
     
     for original, replacement in replacements.items():

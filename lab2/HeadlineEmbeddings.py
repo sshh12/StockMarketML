@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[11]:
 
 # Imports
 
@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from Database import db
 
 import numpy as np
+import pickle
 import os
 
 import matplotlib.pyplot as plt
@@ -202,7 +203,7 @@ def get_model(emb_matrix):
     # conv = Conv1D(filters=64, kernel_size=5, padding='same', activation='selu')(emb)
     # conv = MaxPooling1D(pool_size=3)(conv)
     
-    rnn = GRU(300, dropout=0.3, recurrent_dropout=0.3)(emb)
+    rnn = LSTM(300, dropout=0.3, recurrent_dropout=0.3)(emb)
     rnn = Activation('relu')(rnn)
     rnn = BatchNormalization()(rnn)
     
@@ -219,7 +220,7 @@ def get_model(emb_matrix):
     dense_1 = BatchNormalization()(dense_1)
     dense_1 = Dropout(0.5)(dense_1)
     
-    dense_2 = Dense(100)(dense_1)
+    dense_2 = Dense(200)(dense_1)
     dense_2 = Activation('relu')(dense_2)
     dense_2 = BatchNormalization()(dense_2)
     dense_2 = Dropout(0.5)(dense_2)
@@ -253,10 +254,14 @@ if __name__ == "__main__":
     print(trainX.shape, trainX2.shape, testY.shape)
 
 
-# In[8]:
+# In[13]:
 
+# TRAIN MODEL
 
 if __name__ == "__main__":
+    
+    with open(os.path.join('..', 'models', 'toke.pkl'), 'wb') as toke_file:
+        pickle.dump(toke, toke_file, protocol=pickle.HIGHEST_PROTOCOL)
     
     model = get_model(emb_matrix)
     
@@ -286,12 +291,20 @@ if __name__ == "__main__":
     
 
 
-# In[9]:
+# In[ ]:
 
+# TEST MODEL
 
 if __name__ == "__main__":
     
+    ## Load Model For Manual Testing ##
+    
+    with open(os.path.join('..', 'models', 'toke.pkl'), 'rb') as toke_file:
+        toke = pickle.load(toke_file)
+    
     model = load_model(os.path.join('..', 'models', 'media-headlines.h5'))
+    
+    ## Fake Unique Test Data ##
     
     test_sents = [
         'the ceo of **COMPANY** was fired after selling a bad **PRODUCT**', 
@@ -299,6 +312,8 @@ if __name__ == "__main__":
         '**COMPANY**s **PRODUCT** killed a family of ducks in a sensor malfunction',
         'the **COMPANY** team released a breakthrough in **PRODUCT** gaming'
     ]
+    
+    ## Process ##
     
     encoded_sources, test_encoded, _ = encode_sentences(['twitter', 'twitter', 'reddit', 'seekingalpha'], 
                                                         test_sents, 
@@ -308,10 +323,64 @@ if __name__ == "__main__":
     
     predictions = model.predict([test_encoded, encoded_sources])
     
+    ## Display Predictions ##
+    
     for i in range(len(test_sents)):
         
         print("")
         print(test_sents[i])
         print(predictions[i])
         print("Stock Will Go Up" if np.argmax(predictions[i]) == 0 else "Stock Will Go Down")
+
+
+# In[36]:
+
+# TEST MODEL
+
+if __name__ == "__main__":
+    
+    ## **This Test May Overlap w/Train Data** ##
+    
+    current_date = '2018-01-18'
+    predict_date = '2018-01-19'
+    stock = 'AAPL'
+    
+    with db() as (conn, cur):
+        
+        ## Select Actual Stock Values ##
+        
+        cur.execute("""SELECT adjclose FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date""", 
+                    ['AAPL', current_date, predict_date])
+        ticks = cur.fetchall()
+        
+        ## Find Headlines ##
+    
+        cur.execute("SELECT source, content FROM headlines WHERE date=? AND stock=?", [current_date, stock])
+        headlines = cur.fetchall()
+        
+        ## Process ##
+        
+        sources, test_sents = [], []
+        
+        for (source, content) in headlines:
+            
+            sources.append(source)
+            test_sents.append(content)
+            
+        encoded_sources, test_encoded, _ = encode_sentences(sources, 
+                                                            test_sents, 
+                                                            tokenizer=toke, 
+                                                            max_length=max_length,
+                                                            vocab_size=vocab_size)
+        
+        predictions = model.predict([test_encoded, encoded_sources])
+        
+        ## Display ##
+        
+        print("Using: " + str(test_sents))
+        
+        print("Predicting Change: " +  str( round(np.mean(predictions[:, 0]) - .5, 2) * 2 ))
+        
+        print("Actual Stock Change: " + str(round(ticks[-1][0] - ticks[0][0], 2)))
+            
 

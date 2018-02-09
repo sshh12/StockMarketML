@@ -64,7 +64,7 @@ def get_reddit_news(subs, search_terms, limit=None, praw_config='StockMarketML')
         
     return articles
 
-def get_reuters_news(stock, pages=0):
+def get_reuters_news(stock, pages=60):
     """Get headlines from Reuters"""
     print('Downloading Reuters: ' + stock)
     
@@ -192,7 +192,7 @@ def clean_headline(headline, replacements={}):
     """
     headline = headline.lower()
     headline = re.sub('\d+%', 'STAT', headline)
-    headline = ''.join(c for c in headline if c in "abcdefghijklmnopqrstuvwxyz")
+    headline = ''.join(c for c in headline if c in "abcdefghijklmnopqrstuvwxyz ")
     headline = re.sub('\s+', ' ', headline)
     
     for original, replacement in replacements.items():
@@ -281,7 +281,8 @@ if __name__ == "__main__":
             'macbook': '**PRODUCT**',
             'iphone': '**PRODUCT**',
             'ipad': '**PRODUCT**',
-            'ios': '**PRODUCT**'
+            'ios': '**PRODUCT**',
+            'icloud': '**PRODUCT**'
         },
         'MSFT': {
             'microsoft': '**COMPANY**',

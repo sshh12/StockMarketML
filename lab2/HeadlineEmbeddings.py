@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[11]:
+# In[1]:
 
 # Imports
 
@@ -28,10 +28,10 @@ from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint
 # Options
 
 stocks      = ['AAPL', 'AMD', 'AMZN', 'GOOG', 'MSFT']
-all_sources = ['reddit', 'twitter', 'seekingalpha']
+all_sources = ['reddit', 'reuters', 'twitter', 'seekingalpha']
 
 max_length  = 50
-vocab_size  = 10100
+vocab_size  = 11455
 emb_size    = 300
 
 epochs     = 120
@@ -193,12 +193,12 @@ def get_embedding_matrix(tokenizer, pretrained_file='glove.840B.300d.txt'):
 
 def get_model(emb_matrix):
     
-    ## Text
+    ## Text ##
     
     text_input = Input(shape=(max_length,))
     
     emb = Embedding(vocab_size, emb_size, input_length=max_length, weights=[emb_matrix])(text_input)
-    emb = SpatialDropout1D(.3)(emb)
+    emb = SpatialDropout1D(.2)(emb)
     
     # conv = Conv1D(filters=64, kernel_size=5, padding='same', activation='selu')(emb)
     # conv = MaxPooling1D(pool_size=3)(conv)
@@ -207,11 +207,11 @@ def get_model(emb_matrix):
     rnn = Activation('relu')(rnn)
     rnn = BatchNormalization()(rnn)
     
-    ## Source
+    ## Source ##
     
     source_input = Input(shape=(len(all_sources),))
     
-    ## Combined
+    ## Combined ##
     
     merged = concatenate([rnn, source_input])
     
@@ -254,22 +254,28 @@ if __name__ == "__main__":
     print(trainX.shape, trainX2.shape, testY.shape)
 
 
-# In[13]:
+# In[8]:
 
 # TRAIN MODEL
 
 if __name__ == "__main__":
     
+    ## Save Tokenizer ##
+    
     with open(os.path.join('..', 'models', 'toke.pkl'), 'wb') as toke_file:
         pickle.dump(toke, toke_file, protocol=pickle.HIGHEST_PROTOCOL)
+        
+    ## Create Model ##
     
     model = get_model(emb_matrix)
     
-    e_stopping = EarlyStopping(monitor='val_loss', patience=70)
+    e_stopping = EarlyStopping(monitor='val_loss', patience=80)
     checkpoint = ModelCheckpoint(os.path.join('..', 'models', 'media-headlines.h5'), 
                                  monitor='val_loss',
                                  verbose=0,
                                  save_best_only=True)
+    
+    ## Train ##
     
     history = model.fit([trainX, trainX2],
                         trainY,
@@ -278,6 +284,8 @@ if __name__ == "__main__":
                         validation_data=([testX, testX2], testY),
                         verbose=0,
                         callbacks=[e_stopping, checkpoint])
+    
+    ## Display Train Data ##
     
     plt.plot(np.log(history.history['loss']))
     plt.plot(np.log(history.history['val_loss']))
@@ -291,7 +299,7 @@ if __name__ == "__main__":
     
 
 
-# In[ ]:
+# In[9]:
 
 # TEST MODEL
 
@@ -333,7 +341,7 @@ if __name__ == "__main__":
         print("Stock Will Go Up" if np.argmax(predictions[i]) == 0 else "Stock Will Go Down")
 
 
-# In[36]:
+# In[10]:
 
 # TEST MODEL
 
@@ -341,8 +349,8 @@ if __name__ == "__main__":
     
     ## **This Test May Overlap w/Train Data** ##
     
-    current_date = '2018-01-18'
-    predict_date = '2018-01-19'
+    current_date = '2018-02-06'
+    predict_date = '2018-02-07'
     stock = 'AAPL'
     
     with db() as (conn, cur):
@@ -379,8 +387,8 @@ if __name__ == "__main__":
         
         print("Using: " + str(test_sents))
         
-        print("Predicting Change: " +  str( round(np.mean(predictions[:, 0]) - .5, 2) * 2 ))
+        print("Predicting Change Coef: " +  str( round(np.mean(predictions[:, 0]) - .5, 2) * 2 ))
         
-        print("Actual Stock Change: " + str(round(ticks[-1][0] - ticks[0][0], 2)))
+        print("Actual Stock Change: " + str( round(ticks[-1][0] - ticks[0][0], 2) ))
             
 

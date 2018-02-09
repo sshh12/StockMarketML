@@ -31,7 +31,7 @@ def create_table_ticker():
     
     with db() as (conn, cur):
     
-        cur.execute('CREATE TABLE IF NOT EXISTS ticks (stock text, date text, open real, high real, low real, close real, adjclose real, volume integer)')
+        cur.execute('CREATE TABLE IF NOT EXISTS ticks (stock text, date text, open real, high real, low real, close real, adjclose real, volume integer, unique (stock, date))')
         conn.commit()
     
 def create_table_headlines():
@@ -49,14 +49,14 @@ def add_stock_ticks(entries):
     
     with db() as (conn, cur):
     
-        cur.executemany("INSERT INTO ticks VALUES (?,?,?,?,?,?,?,?)", entries)
+        cur.executemany("INSERT OR IGNORE INTO ticks VALUES (?,?,?,?,?,?,?,?)", entries)
         conn.commit()
     
 def add_headlines(entries):
     
     with db() as (conn, cur):
     
-        cur.executemany("INSERT INTO headlines VALUES (?,?,?,?)", entries)
+        cur.executemany("INSERT OR IGNORE INTO headlines VALUES (?,?,?,?)", entries)
         conn.commit()
 
 

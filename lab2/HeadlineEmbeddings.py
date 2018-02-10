@@ -31,7 +31,7 @@ stocks      = ['AAPL', 'AMD', 'AMZN', 'GOOG', 'MSFT']
 all_sources = ['reddit', 'reuters', 'twitter', 'seekingalpha']
 
 max_length  = 50
-vocab_size  = 11455
+vocab_size  = 11887
 emb_size    = 300
 
 epochs     = 120
@@ -66,15 +66,21 @@ def make_headline_to_effect_data():
                 
                 event_date = datetime.strptime(date, '%Y-%m-%d') # The date of headline
                 
+                add_time = lambda e, days: (e + timedelta(days=days)).strftime('%Y-%m-%d')
+                
                 ## Find corresponding tick data ## 
                 
                 cur.execute("""SELECT adjclose FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date""", 
-                            [stock, (event_date - timedelta(days=3)).strftime('%Y-%m-%d'), event_date.strftime('%Y-%m-%d')])
+                            [stock, 
+                             add_time(event_date, -3), 
+                             add_time(event_date, 0)])
                 
                 before_headline_ticks = cur.fetchall()
                 
                 cur.execute("""SELECT adjclose FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date""", 
-                            [stock, (event_date + timedelta(days=1)).strftime('%Y-%m-%d'), (event_date + timedelta(days=4)).strftime('%Y-%m-%d')])
+                            [stock, 
+                             add_time(event_date, 1), 
+                             add_time(event_date, 4)])
                 
                 after_headline_ticks = cur.fetchall()
                 
@@ -198,12 +204,16 @@ def get_model(emb_matrix):
     text_input = Input(shape=(max_length,))
     
     emb = Embedding(vocab_size, emb_size, input_length=max_length, weights=[emb_matrix])(text_input)
-    emb = SpatialDropout1D(.2)(emb)
+    emb = SpatialDropout1D(.1)(emb)
     
     # conv = Conv1D(filters=64, kernel_size=5, padding='same', activation='selu')(emb)
     # conv = MaxPooling1D(pool_size=3)(conv)
     
-    rnn = LSTM(300, dropout=0.3, recurrent_dropout=0.3)(emb)
+    rnn = LSTM(300, dropout=0.3, recurrent_dropout=0.3, return_sequences=True)(emb)
+    rnn = Activation('relu')(rnn)
+    rnn = BatchNormalization()(rnn)
+    
+    rnn = LSTM(300, dropout=0.3, recurrent_dropout=0.3)(rnn)
     rnn = Activation('relu')(rnn)
     rnn = BatchNormalization()(rnn)
     
@@ -215,18 +225,23 @@ def get_model(emb_matrix):
     
     merged = concatenate([rnn, source_input])
     
-    dense_1 = Dense(200)(merged)
+    dense_1 = Dense(300)(merged)
     dense_1 = Activation('relu')(dense_1)
     dense_1 = BatchNormalization()(dense_1)
     dense_1 = Dropout(0.5)(dense_1)
     
-    dense_2 = Dense(200)(dense_1)
-    dense_2 = Activation('relu')(dense_2)
-    dense_2 = BatchNormalization()(dense_2)
-    dense_2 = Dropout(0.5)(dense_2)
+    # dense_2 = Dense(300)(dense_1)
+    # dense_2 = Activation('relu')(dense_2)
+    # dense_2 = BatchNormalization()(dense_2)
+    # dense_2 = Dropout(0.5)(dense_2)
     
-    dense_3 = Dense(2)(dense_2)
-    out = Activation('softmax')(dense_3)
+    dense_3 = Dense(200)(dense_1)
+    dense_3 = Activation('relu')(dense_3)
+    dense_3 = BatchNormalization()(dense_3)
+    dense_3 = Dropout(0.5)(dense_3)
+    
+    dense_4 = Dense(2)(dense_3)
+    out = Activation('softmax')(dense_4)
     
     model = Model(inputs=[text_input, source_input], outputs=out)
     
@@ -341,24 +356,31 @@ if __name__ == "__main__":
         print("Stock Will Go Up" if np.argmax(predictions[i]) == 0 else "Stock Will Go Down")
 
 
-# In[10]:
+# In[12]:
 
 # TEST MODEL
 
 if __name__ == "__main__":
     
+    ## Load Model For Manual Testing ##
+    
+    with open(os.path.join('..', 'models', 'toke.pkl'), 'rb') as toke_file:
+        toke = pickle.load(toke_file)
+    
+    model = load_model(os.path.join('..', 'models', 'media-headlines.h5'))
+    
     ## **This Test May Overlap w/Train Data** ##
     
-    current_date = '2018-02-06'
-    predict_date = '2018-02-07'
-    stock = 'AAPL'
+    current_date = '2018-02-05'
+    predict_date = '2018-02-06'
+    stock = 'GOOG'
     
     with db() as (conn, cur):
         
         ## Select Actual Stock Values ##
         
         cur.execute("""SELECT adjclose FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date""", 
-                    ['AAPL', current_date, predict_date])
+                    [stock, current_date, predict_date])
         ticks = cur.fetchall()
         
         ## Find Headlines ##

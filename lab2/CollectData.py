@@ -64,7 +64,7 @@ def get_reddit_news(subs, search_terms, limit=None, praw_config='StockMarketML')
         
     return articles
 
-def get_reuters_news(stock, pages=60):
+def get_reuters_news(stock, pages=70):
     """Get headlines from Reuters"""
     print('Downloading Reuters: ' + stock)
     

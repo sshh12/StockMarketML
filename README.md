@@ -20,11 +20,11 @@ Current (Second) Attempt
 
 ##### CollectData
 
-This script gathers data by scraping websites and does basic word processing.
+This script gathers headlines/media data from various sources.
 
 ##### HeadlineEmbeddings
 
-This uses a model to extract the features from headlines.
+Creates and trains a model to predict stock prices based on headlines.
 
 ##### TrendPrediction
 

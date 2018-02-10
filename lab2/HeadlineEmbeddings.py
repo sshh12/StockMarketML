@@ -15,12 +15,13 @@ import os
 
 import matplotlib.pyplot as plt
 
+from keras import optimizers import RMSprop
 from keras.models import Sequential, load_model, Model
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 from keras.layers import Input, concatenate, SpatialDropout1D, GRU
 from keras.layers import Dense, Flatten, Embedding, LSTM, Activation, BatchNormalization, Dropout, Conv1D, MaxPooling1D
-from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint
+from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint, TensorBoard
 
 
 # In[2]:
@@ -31,11 +32,11 @@ stocks      = ['AAPL', 'AMD', 'AMZN', 'GOOG', 'MSFT']
 all_sources = ['reddit', 'reuters', 'twitter', 'seekingalpha']
 
 max_length  = 50
-vocab_size  = 11887
+vocab_size  = 11939
 emb_size    = 300
 
-epochs     = 120
-batch_size = 32
+epochs     = 180
+batch_size = 64
 
 
 # In[3]:
@@ -129,7 +130,7 @@ def encode_sentences(meta, sentences, tokenizer=None, max_length=100, vocab_size
     
     ## Encoding Meta Data
     
-    # OneHot Encode Source + OneHot of WeekDay
+    # OneHot(Source) + OneHot(WeekDay)
     
     meta_matrix = np.zeros((len(sentences), len(all_sources) + 7))
     index = 0
@@ -167,7 +168,7 @@ def split_data(X, X2, Y, ratio):
     return trainX, trainX2, trainY, testX, testX2, testY
 
 
-# In[11]:
+# In[6]:
 
 
 def get_embedding_matrix(tokenizer, pretrained_file='glove.840B.300d.txt'):
@@ -209,7 +210,7 @@ def get_model(emb_matrix):
     
     headline_input = Input(shape=(max_length,))
     
-    emb = Embedding(vocab_size, emb_size, input_length=max_length, weights=[emb_matrix])(headline_input)
+    emb = Embedding(vocab_size, emb_size, input_length=max_length, weights=[emb_matrix], trainable=True)(headline_input)
     emb = SpatialDropout1D(.1)(emb)
     
     # conv = Conv1D(filters=64, kernel_size=5, padding='same', activation='selu')(emb)
@@ -251,7 +252,9 @@ def get_model(emb_matrix):
     
     model = Model(inputs=[headline_input, meta_input], outputs=out)
     
-    model.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['acc'])
+    optimizer = RMSprop()
+    
+    model.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=['acc'])
     
     return model
 
@@ -275,7 +278,7 @@ if __name__ == "__main__":
     print(trainX.shape, trainX2.shape, testY.shape)
 
 
-# In[12]:
+# In[8]:
 
 # TRAIN MODEL
 
@@ -290,6 +293,7 @@ if __name__ == "__main__":
     
     model = get_model(emb_matrix)
     
+    tensorboard = TensorBoard(log_dir="logs/{}".format(datetime.now().strftime("%Y,%m,%d-%H,%M,%S")))
     e_stopping = EarlyStopping(monitor='val_loss', patience=80)
     checkpoint = ModelCheckpoint(os.path.join('..', 'models', 'media-headlines.h5'), 
                                  monitor='val_loss',
@@ -304,7 +308,7 @@ if __name__ == "__main__":
                         batch_size=batch_size,
                         validation_data=([testX, testX2], testY),
                         verbose=0,
-                        callbacks=[e_stopping, checkpoint])
+                        callbacks=[e_stopping, checkpoint, tensorboard])
     
     ## Display Train History ##
     
@@ -320,7 +324,7 @@ if __name__ == "__main__":
     
 
 
-# In[ ]:
+# In[9]:
 
 # TEST MODEL
 
@@ -362,7 +366,7 @@ if __name__ == "__main__":
         print("Stock Will Go Up" if np.argmax(predictions[i]) == 0 else "Stock Will Go Down")
 
 
-# In[14]:
+# In[10]:
 
 # TEST MODEL
 

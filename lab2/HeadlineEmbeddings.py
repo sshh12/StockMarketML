@@ -49,7 +49,7 @@ def make_headline_to_effect_data():
     when analyzing/encoding headlines. Returns a list of headlines and
     a list of corresponding 'effects' which represent a change in the stock price.
     """
-    sources, headlines, effects = [], [], []
+    meta, headlines, effects = [], [], []
     
     with db() as (conn, cur):
         
@@ -99,17 +99,17 @@ def make_headline_to_effect_data():
                         
                         effect = [0., 1.]
                         
-                    sources.append(source)
+                    meta.append((source, event_date.weekday()))
                     headlines.append(content)
                     effects.append(effect)
                     
-    return sources, headlines, np.array(effects)
+    return meta, headlines, np.array(effects)
 
 
 # In[4]:
 
 
-def encode_sentences(sources, sentences, tokenizer=None, max_length=100, vocab_size=100):
+def encode_sentences(meta, sentences, tokenizer=None, max_length=100, vocab_size=100):
     """
     Encoder
     
@@ -127,19 +127,21 @@ def encode_sentences(sources, sentences, tokenizer=None, max_length=100, vocab_s
     
     padded_headlines = pad_sequences(encoded_headlines, maxlen=max_length, padding='post')
     
-    ## Encoding Source
+    ## Encoding Meta Data
     
-    source_mat = []
+    # OneHot Encode Source + OneHot of WeekDay
     
-    for source in sources:
+    meta_matrix = np.zeros((len(sentences), len(all_sources) + 7))
+    index = 0
+    
+    for (source, weekday) in meta:
         
-        row = [0] * len(all_sources)
-        row[all_sources.index(source)] = 1
-        source_mat.append(row)
+        meta_matrix[index, all_sources.index(source)] = 1
+        meta_matrix[index, len(all_sources) + weekday] = 1
         
-    source_mat = np.array(source_mat)
+        index += 1
     
-    return source_mat, padded_headlines, tokenizer
+    return meta_matrix, padded_headlines, tokenizer
 
 
 # In[5]:
@@ -165,12 +167,14 @@ def split_data(X, X2, Y, ratio):
     return trainX, trainX2, trainY, testX, testX2, testY
 
 
-# In[6]:
+# In[11]:
 
 
 def get_embedding_matrix(tokenizer, pretrained_file='glove.840B.300d.txt'):
     """Load Vectors from Glove File"""
     print("Fetching...WordVecs", end="\r")
+    
+    ## Load Glove File (Super Slow) ##
     
     embeddings_index = dict()
     
@@ -184,6 +188,8 @@ def get_embedding_matrix(tokenizer, pretrained_file='glove.840B.300d.txt'):
             embeddings_index[word] = coefs
 
     print('Loaded %s Glove Word Vectors.' % len(embeddings_index))
+    
+    ## Set Embeddings ##
     
     embedding_matrix = np.zeros((vocab_size, emb_size))
     
@@ -199,31 +205,31 @@ def get_embedding_matrix(tokenizer, pretrained_file='glove.840B.300d.txt'):
 
 def get_model(emb_matrix):
     
-    ## Text ##
+    ## Headline ##
     
-    text_input = Input(shape=(max_length,))
+    headline_input = Input(shape=(max_length,))
     
-    emb = Embedding(vocab_size, emb_size, input_length=max_length, weights=[emb_matrix])(text_input)
+    emb = Embedding(vocab_size, emb_size, input_length=max_length, weights=[emb_matrix])(headline_input)
     emb = SpatialDropout1D(.1)(emb)
     
     # conv = Conv1D(filters=64, kernel_size=5, padding='same', activation='selu')(emb)
     # conv = MaxPooling1D(pool_size=3)(conv)
     
-    rnn = LSTM(300, dropout=0.3, recurrent_dropout=0.3, return_sequences=True)(emb)
-    rnn = Activation('relu')(rnn)
-    rnn = BatchNormalization()(rnn)
+    text_rnn = LSTM(300, dropout=0.3, recurrent_dropout=0.3, return_sequences=True)(emb)
+    text_rnn = Activation('relu')(text_rnn)
+    text_rnn = BatchNormalization()(text_rnn)
     
-    rnn = LSTM(300, dropout=0.3, recurrent_dropout=0.3)(rnn)
-    rnn = Activation('relu')(rnn)
-    rnn = BatchNormalization()(rnn)
+    text_rnn = LSTM(300, dropout=0.3, recurrent_dropout=0.3)(text_rnn)
+    text_rnn = Activation('relu')(text_rnn)
+    text_rnn = BatchNormalization()(text_rnn)
     
     ## Source ##
     
-    source_input = Input(shape=(len(all_sources),))
+    meta_input = Input(shape=(len(all_sources) + 7,))
     
     ## Combined ##
     
-    merged = concatenate([rnn, source_input])
+    merged = concatenate([text_rnn, meta_input])
     
     dense_1 = Dense(300)(merged)
     dense_1 = Activation('relu')(dense_1)
@@ -243,7 +249,7 @@ def get_model(emb_matrix):
     dense_4 = Dense(2)(dense_3)
     out = Activation('softmax')(dense_4)
     
-    model = Model(inputs=[text_input, source_input], outputs=out)
+    model = Model(inputs=[headline_input, meta_input], outputs=out)
     
     model.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['acc'])
     
@@ -255,21 +261,21 @@ def get_model(emb_matrix):
 
 if __name__ == "__main__":
     
-    sources, headlines, effects = make_headline_to_effect_data()
+    meta, headlines, effects = make_headline_to_effect_data()
     
-    encoded_sources, encoded_headlines, toke = encode_sentences(sources, 
-                                                                headlines, 
-                                                                max_length=max_length, 
-                                                                vocab_size=vocab_size)
+    encoded_meta, encoded_headlines, toke = encode_sentences(meta, 
+                                                             headlines, 
+                                                             max_length=max_length, 
+                                                             vocab_size=vocab_size)
     
     emb_matrix = get_embedding_matrix(toke)
     
-    trainX, trainX2, trainY, testX, testX2, testY = split_data(encoded_headlines, encoded_sources, effects, .85)
+    trainX, trainX2, trainY, testX, testX2, testY = split_data(encoded_headlines, encoded_meta, effects, .85)
     
     print(trainX.shape, trainX2.shape, testY.shape)
 
 
-# In[8]:
+# In[12]:
 
 # TRAIN MODEL
 
@@ -300,7 +306,7 @@ if __name__ == "__main__":
                         verbose=0,
                         callbacks=[e_stopping, checkpoint])
     
-    ## Display Train Data ##
+    ## Display Train History ##
     
     plt.plot(np.log(history.history['loss']))
     plt.plot(np.log(history.history['val_loss']))
@@ -314,7 +320,7 @@ if __name__ == "__main__":
     
 
 
-# In[9]:
+# In[ ]:
 
 # TEST MODEL
 
@@ -338,13 +344,13 @@ if __name__ == "__main__":
     
     ## Process ##
     
-    encoded_sources, test_encoded, _ = encode_sentences(['twitter', 'twitter', 'reddit', 'seekingalpha'], 
-                                                        test_sents, 
-                                                        tokenizer=toke, 
-                                                        max_length=max_length, 
-                                                        vocab_size=vocab_size)
+    encoded_meta, test_encoded, _ = encode_sentences([['reuters', 0], ['twitter', 1], ['reddit', 2], ['seekingalpha', 3]], 
+                                                      test_sents, 
+                                                      tokenizer=toke, 
+                                                      max_length=max_length, 
+                                                      vocab_size=vocab_size)
     
-    predictions = model.predict([test_encoded, encoded_sources])
+    predictions = model.predict([test_encoded, encoded_meta])
     
     ## Display Predictions ##
     
@@ -356,7 +362,7 @@ if __name__ == "__main__":
         print("Stock Will Go Up" if np.argmax(predictions[i]) == 0 else "Stock Will Go Down")
 
 
-# In[12]:
+# In[14]:
 
 # TEST MODEL
 
@@ -385,25 +391,25 @@ if __name__ == "__main__":
         
         ## Find Headlines ##
     
-        cur.execute("SELECT source, content FROM headlines WHERE date=? AND stock=?", [current_date, stock])
+        cur.execute("SELECT date, source, content FROM headlines WHERE date=? AND stock=?", [current_date, stock])
         headlines = cur.fetchall()
         
         ## Process ##
         
-        sources, test_sents = [], []
+        meta, test_sents = [], []
         
-        for (source, content) in headlines:
+        for (date, source, content) in headlines:
             
-            sources.append(source)
+            meta.append([source, datetime.strptime(date, '%Y-%m-%d').weekday()])
             test_sents.append(content)
             
-        encoded_sources, test_encoded, _ = encode_sentences(sources, 
-                                                            test_sents, 
-                                                            tokenizer=toke, 
-                                                            max_length=max_length,
-                                                            vocab_size=vocab_size)
+        encoded_meta, test_encoded, _ = encode_sentences(meta, 
+                                                         test_sents, 
+                                                         tokenizer=toke, 
+                                                         max_length=max_length,
+                                                         vocab_size=vocab_size)
         
-        predictions = model.predict([test_encoded, encoded_sources])
+        predictions = model.predict([test_encoded, encoded_meta])
         
         ## Display ##
         

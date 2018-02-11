@@ -15,7 +15,7 @@ import os
 
 import matplotlib.pyplot as plt
 
-from keras import optimizers import RMSprop
+from keras.optimizers import RMSprop
 from keras.models import Sequential, load_model, Model
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
@@ -36,7 +36,7 @@ vocab_size  = 11939
 emb_size    = 300
 
 epochs     = 180
-batch_size = 64
+batch_size = 32
 
 
 # In[3]:
@@ -252,7 +252,7 @@ def get_model(emb_matrix):
     
     model = Model(inputs=[headline_input, meta_input], outputs=out)
     
-    optimizer = RMSprop()
+    optimizer = RMSprop(lr=0.0005)
     
     model.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=['acc'])
     
@@ -278,7 +278,7 @@ if __name__ == "__main__":
     print(trainX.shape, trainX2.shape, testY.shape)
 
 
-# In[8]:
+# In[10]:
 
 # TRAIN MODEL
 
@@ -324,7 +324,7 @@ if __name__ == "__main__":
     
 
 
-# In[9]:
+# In[11]:
 
 # TEST MODEL
 
@@ -366,7 +366,7 @@ if __name__ == "__main__":
         print("Stock Will Go Up" if np.argmax(predictions[i]) == 0 else "Stock Will Go Down")
 
 
-# In[10]:
+# In[12]:
 
 # TEST MODEL
 

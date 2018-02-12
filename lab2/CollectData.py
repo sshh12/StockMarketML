@@ -205,7 +205,7 @@ def clean_headline(headline, replacements={}):
     return headline.strip()
 
 
-# In[5]:
+# In[11]:
 
 
 def save_headlines(headlines, kword_replacements={}):
@@ -302,7 +302,7 @@ if __name__ == "__main__":
     }
 
 
-# In[7]:
+# In[12]:
 
 
 if __name__ == "__main__":
@@ -320,4 +320,9 @@ if __name__ == "__main__":
     consume_ticker_csv('AMD', 'AMD.csv')
     consume_ticker_csv('GOOG', 'GOOG.csv')
     consume_ticker_csv('MSFT', 'MSFT.csv')
+
+
+# In[ ]:
+
+
 

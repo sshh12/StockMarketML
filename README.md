@@ -22,13 +22,9 @@ Current (Second) Attempt
 
 This script gathers headlines/media data from various sources.
 
-##### HeadlineEmbeddings
+##### HeadlineAnalysisAndPrediction
 
 Creates and trains a model to predict stock prices based on headlines.
-
-##### TrendPrediction
-
-This script takes window of stock prices and predicts next close price.
 
 ## Lab 1
 

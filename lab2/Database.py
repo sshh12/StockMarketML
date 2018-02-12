@@ -68,3 +68,11 @@ if __name__ == "__main__":
     create_table_ticker()
     create_table_headlines()
 
+
+# In[13]:
+
+with db() as (conn, cur):
+    
+    cur.execute("SELECT content FROM headlines WHERE content LIKE ?", ["%**PRODUCT**oupdatetolandinaboutaweek%"])
+    print(cur.fetchall())
+

@@ -168,7 +168,7 @@ def split_data(X, X2, Y, ratio):
     return trainX, trainX2, trainY, testX, testX2, testY
 
 
-# In[6]:
+# In[ ]:
 
 
 def get_embedding_matrix(tokenizer, pretrained_file='glove.840B.300d.txt'):
@@ -201,6 +201,15 @@ def get_embedding_matrix(tokenizer, pretrained_file='glove.840B.300d.txt'):
         if embedding_vector is not None:
             
             embedding_matrix[i] = embedding_vector
+            
+        elif word not in ["**PRODUCT**", "**COMPANY**", "**STATISTIC**", "**COMPANY**s"]:
+            
+            print("Purging " + word)
+            
+            #with db() as (conn, cur):
+            #    
+            #    cur.execute("SELECT content FROM headlines WHERE content LIKE ?", ["%" + word + "%"])
+            #    print(cur.fetchall())
             
     return embedding_matrix
 
@@ -258,8 +267,10 @@ def get_model(emb_matrix):
     
     return model
 
+x = get_embedding_matrix(toke)
 
-# In[7]:
+
+# In[ ]:
 
 
 if __name__ == "__main__":

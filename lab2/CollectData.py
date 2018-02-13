@@ -274,7 +274,8 @@ if __name__ == "__main__":
             'android': '**PRODUCT**',
             'pixel': '**PRODUCT**',
             'maps': '**PRODUCT**',
-            'youtube': '**PRODUCT**'
+            'youtube': '**PRODUCT**',
+            'chromecast': '**PRODUCT**'
         },
         'AAPL': {
             'apple': '**COMPANY**', 
@@ -297,7 +298,8 @@ if __name__ == "__main__":
             'amazon': '**COMPANY**',
             'echo': '**PRODUCT**',
             'prime': '**PRODUCT**',
-            'alexa': '**PRODUCT**'
+            'alexa': '**PRODUCT**',
+            'firetv': '**PRODUCT**'
         }
     }
 

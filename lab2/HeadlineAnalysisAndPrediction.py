@@ -32,7 +32,7 @@ stocks      = ['AAPL', 'AMD', 'AMZN', 'GOOG', 'MSFT']
 all_sources = ['reddit', 'reuters', 'twitter', 'seekingalpha']
 
 max_length  = 50
-vocab_size  = 11939
+vocab_size  = None # Set by tokenizer
 emb_size    = 300
 
 epochs     = 180
@@ -56,7 +56,7 @@ def make_headline_to_effect_data():
         
         for stock in stocks:
             
-            print("Fetching..." + stock, end=" \r")
+            print("Fetching Stock..." + stock)
             
             ## Go through all the headlines ##
             
@@ -168,16 +168,16 @@ def split_data(X, X2, Y, ratio):
     return trainX, trainX2, trainY, testX, testX2, testY
 
 
-# In[ ]:
+# In[8]:
 
 
-def get_embedding_matrix(tokenizer, pretrained_file='glove.840B.300d.txt'):
+def get_embedding_matrix(tokenizer, pretrained_file='glove.840B.300d.txt', purge=False):
     """Load Vectors from Glove File"""
-    print("Fetching...WordVecs", end="\r")
+    print("Loading...WordVecs")
     
     ## Load Glove File (Super Slow) ##
     
-    embeddings_index = dict()
+    glove_db = dict()
     
     with open(os.path.join('..', 'data', pretrained_file), 'r', encoding="utf-8") as glove:
 
@@ -186,32 +186,32 @@ def get_embedding_matrix(tokenizer, pretrained_file='glove.840B.300d.txt'):
             values = line.split(' ')
             word = values[0]
             coefs = np.asarray(values[1:], dtype='float32')
-            embeddings_index[word] = coefs
+            glove_db[word] = coefs
 
-    print('Loaded %s Glove Word Vectors.' % len(embeddings_index))
+    print('Loaded Word Vectors...' + str(len(glove_db)))
     
     ## Set Embeddings ##
     
-    embedding_matrix = np.zeros((vocab_size, emb_size))
+    embedding_matrix = np.zeros((vocab_size + 1, emb_size))
     
     for word, i in tokenizer.word_index.items():
         
-        embedding_vector = embeddings_index.get(word)
+        embedding_vector = glove_db.get(word)
         
         if embedding_vector is not None:
             
             embedding_matrix[i] = embedding_vector
             
-        elif word not in ["**PRODUCT**", "**COMPANY**", "**STATISTIC**", "**COMPANY**s"]:
+        elif purge and word not in ["**PRODUCT**", "**COMPANY**", "**STATISTIC**", "**COMPANY**s"]:
             
             print("Purging " + word)
             
-            #with db() as (conn, cur):
-            #    
-            #    cur.execute("SELECT content FROM headlines WHERE content LIKE ?", ["%" + word + "%"])
-            #    print(cur.fetchall())
+            with db() as (conn, cur):
+                
+                cur.execute("DELETE FROM headlines WHERE content LIKE ?", ["%" + word + "%"])
+                conn.commit()
             
-    return embedding_matrix
+    return embedding_matrix, glove_db
 
 def get_model(emb_matrix):
     
@@ -267,10 +267,8 @@ def get_model(emb_matrix):
     
     return model
 
-x = get_embedding_matrix(toke)
 
-
-# In[ ]:
+# In[10]:
 
 
 if __name__ == "__main__":
@@ -282,14 +280,17 @@ if __name__ == "__main__":
                                                              max_length=max_length, 
                                                              vocab_size=vocab_size)
     
-    emb_matrix = get_embedding_matrix(toke)
+    vocab_size = len(toke.word_counts)
+    print("Found Words..." + str(vocab_size))
+    
+    emb_matrix, glove_db = get_embedding_matrix(toke)
     
     trainX, trainX2, trainY, testX, testX2, testY = split_data(encoded_headlines, encoded_meta, effects, .85)
     
     print(trainX.shape, trainX2.shape, testY.shape)
 
 
-# In[10]:
+# In[ ]:
 
 # TRAIN MODEL
 
@@ -335,7 +336,7 @@ if __name__ == "__main__":
     
 
 
-# In[11]:
+# In[ ]:
 
 # TEST MODEL
 
@@ -377,7 +378,7 @@ if __name__ == "__main__":
         print("Stock Will Go Up" if np.argmax(predictions[i]) == 0 else "Stock Will Go Down")
 
 
-# In[12]:
+# In[ ]:
 
 # TEST MODEL
 

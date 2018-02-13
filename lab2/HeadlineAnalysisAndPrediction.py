@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 # Imports
 
@@ -24,7 +24,7 @@ from keras.layers import Dense, Flatten, Embedding, LSTM, Activation, BatchNorma
 from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint, TensorBoard
 
 
-# In[ ]:
+# In[2]:
 
 # Options
 
@@ -39,7 +39,7 @@ epochs     = 180
 batch_size = 32
 
 
-# In[ ]:
+# In[3]:
 
 
 def make_headline_to_effect_data():
@@ -107,7 +107,7 @@ def make_headline_to_effect_data():
     return meta, headlines, np.array(effects)
 
 
-# In[ ]:
+# In[4]:
 
 
 def encode_sentences(meta, sentences, tokenizer=None, max_length=100, vocab_size=100):
@@ -145,7 +145,7 @@ def encode_sentences(meta, sentences, tokenizer=None, max_length=100, vocab_size
     return meta_matrix, padded_headlines, tokenizer
 
 
-# In[ ]:
+# In[5]:
 
 
 def split_data(X, X2, Y, ratio):
@@ -168,7 +168,7 @@ def split_data(X, X2, Y, ratio):
     return trainX, trainX2, trainY, testX, testX2, testY
 
 
-# In[ ]:
+# In[9]:
 
 
 def get_embedding_matrix(tokenizer, pretrained_file='glove.840B.300d.txt', purge=False):
@@ -223,7 +223,7 @@ def get_model(emb_matrix):
     
     headline_input = Input(shape=(max_length,))
     
-    emb = Embedding(vocab_size, emb_size, input_length=max_length, weights=[emb_matrix], trainable=True)(headline_input)
+    emb = Embedding(vocab_size + 1, emb_size, input_length=max_length, weights=[emb_matrix], trainable=True)(headline_input)
     emb = SpatialDropout1D(.1)(emb)
     
     # conv = Conv1D(filters=64, kernel_size=5, padding='same', activation='selu')(emb)
@@ -272,7 +272,7 @@ def get_model(emb_matrix):
     return model
 
 
-# In[ ]:
+# In[7]:
 
 
 if __name__ == "__main__":
@@ -294,7 +294,7 @@ if __name__ == "__main__":
     print(trainX.shape, trainX2.shape, testY.shape)
 
 
-# In[ ]:
+# In[10]:
 
 # TRAIN MODEL
 
@@ -312,7 +312,7 @@ if __name__ == "__main__":
     tensorboard = TensorBoard(log_dir="logs/{}".format(datetime.now().strftime("%Y,%m,%d-%H,%M,%S")))
     e_stopping = EarlyStopping(monitor='val_loss', patience=80)
     checkpoint = ModelCheckpoint(os.path.join('..', 'models', 'media-headlines.h5'), 
-                                 monitor='val_loss',
+                                 monitor='val_acc',
                                  verbose=0,
                                  save_best_only=True)
     
@@ -382,7 +382,7 @@ if __name__ == "__main__":
         print("Stock Will Go Up" if np.argmax(predictions[i]) == 0 else "Stock Will Go Down")
 
 
-# In[ ]:
+# In[12]:
 
 # TEST MODEL
 
@@ -399,7 +399,7 @@ if __name__ == "__main__":
     
     current_date = '2018-02-05'
     predict_date = '2018-02-06'
-    stock = 'GOOG'
+    stock = 'AAPL'
     
     with db() as (conn, cur):
         

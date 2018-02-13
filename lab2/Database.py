@@ -27,18 +27,17 @@ def db(db_filename='stock.db'):
 # In[3]:
 
 
-def create_table_ticker():
+def create_tables():
     
     with db() as (conn, cur):
     
         cur.execute('CREATE TABLE IF NOT EXISTS ticks (stock text, date text, open real, high real, low real, close real, adjclose real, volume integer, unique (stock, date))')
         conn.commit()
-    
-def create_table_headlines():
-    
-    with db() as (conn, cur):
-    
+        
         cur.execute('CREATE TABLE IF NOT EXISTS headlines (stock text, date text, source text, content text UNIQUE ON CONFLICT IGNORE)')
+        conn.commit()      
+        
+        cur.execute('CREATE TABLE IF NOT EXISTS specialwords (word UNIQUE ON CONFLICT IGNORE)')
         conn.commit()
 
 
@@ -65,6 +64,59 @@ def add_headlines(entries):
 
 if __name__ == "__main__":
     
-    create_table_ticker()
-    create_table_headlines()
+    create_tables()
+
+
+# In[6]:
+
+
+if __name__ == "__main__":
+    
+    special_words = [ # Words Not in Glove
+        ["**PRODUCT**"], 
+        ["**COMPANY**"], 
+        ["**STATISTIC**"], 
+        ["**COMPANY**s"],
+        ["**COMPANY**stock"],
+        ["ex**COMPANY**"],
+        ["**COMPANY**made"],
+        ["singlecore"],
+        ["nowassistant"],
+        ["deeplearning"],
+        ["wannacry"],
+        ["qualcomms"],
+        ["smartglasses"],
+        ["selfdriving"],
+        ["pichai"],
+        ["zuckerberg"],
+        ["geekwire"],
+        ["uscanada"],
+        ["outofstock"],
+        ["outofsale"],
+        ["demonetizing"],
+        ["hydrogenpowered"],
+        ["homebutton"],
+        ["electriccar"],
+        ["xamarin"],
+        ["wellcalibrated"],
+        ["antitrump"],
+        ["multigpu"],
+        ["voicerecognition"],
+        ["firstgen"],
+        ["secondgeneration"],
+        ["investbuy"],
+        ["nearzero"],
+        ["techsavvy"],
+        ["steamvr"],
+        ["mostlycomplete"],
+        ["anticlimate"],
+        ["taxbonuses"],
+        ["steamos"]
+    ]
+    
+    with db() as (conn, cur):
+    
+        cur.executemany("INSERT OR IGNORE INTO specialwords VALUES (?)", special_words)
+        conn.commit()
+    
 

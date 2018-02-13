@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 # Imports
 
@@ -24,7 +24,7 @@ from keras.layers import Dense, Flatten, Embedding, LSTM, Activation, BatchNorma
 from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint, TensorBoard
 
 
-# In[2]:
+# In[ ]:
 
 # Options
 
@@ -39,7 +39,7 @@ epochs     = 180
 batch_size = 32
 
 
-# In[3]:
+# In[ ]:
 
 
 def make_headline_to_effect_data():
@@ -89,8 +89,8 @@ def make_headline_to_effect_data():
                 
                 if len(before_headline_ticks) > 0 and len(after_headline_ticks) > 0:
                     
-                    previous_tick = before_headline_ticks[-1]
-                    result_tick = after_headline_ticks[0]
+                    previous_tick = before_headline_ticks[-1][0]
+                    result_tick = after_headline_ticks[0][0]
                 
                     if result_tick > previous_tick:
                         
@@ -107,7 +107,7 @@ def make_headline_to_effect_data():
     return meta, headlines, np.array(effects)
 
 
-# In[4]:
+# In[ ]:
 
 
 def encode_sentences(meta, sentences, tokenizer=None, max_length=100, vocab_size=100):
@@ -145,7 +145,7 @@ def encode_sentences(meta, sentences, tokenizer=None, max_length=100, vocab_size
     return meta_matrix, padded_headlines, tokenizer
 
 
-# In[5]:
+# In[ ]:
 
 
 def split_data(X, X2, Y, ratio):
@@ -168,7 +168,7 @@ def split_data(X, X2, Y, ratio):
     return trainX, trainX2, trainY, testX, testX2, testY
 
 
-# In[8]:
+# In[ ]:
 
 
 def get_embedding_matrix(tokenizer, pretrained_file='glove.840B.300d.txt', purge=False):
@@ -202,14 +202,18 @@ def get_embedding_matrix(tokenizer, pretrained_file='glove.840B.300d.txt', purge
             
             embedding_matrix[i] = embedding_vector
             
-        elif purge and word not in ["**PRODUCT**", "**COMPANY**", "**STATISTIC**", "**COMPANY**s"]:
-            
-            print("Purging " + word)
+        elif purge:
             
             with db() as (conn, cur):
                 
-                cur.execute("DELETE FROM headlines WHERE content LIKE ?", ["%" + word + "%"])
-                conn.commit()
+                cur.execute("SELECT 1 FROM specialwords WHERE word=?", [word])
+                
+                if len(cur.fetchall()) == 0:
+                    
+                    print("Purge..." + word)
+
+                    cur.execute("DELETE FROM headlines WHERE content LIKE ?", ["%" + word + "%"])
+                    conn.commit()
             
     return embedding_matrix, glove_db
 
@@ -261,14 +265,14 @@ def get_model(emb_matrix):
     
     model = Model(inputs=[headline_input, meta_input], outputs=out)
     
-    optimizer = RMSprop(lr=0.0005)
+    optimizer = RMSprop(lr=0.001)
     
     model.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=['acc'])
     
     return model
 
 
-# In[10]:
+# In[ ]:
 
 
 if __name__ == "__main__":

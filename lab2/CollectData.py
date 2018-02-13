@@ -150,9 +150,16 @@ def get_seekingalpha_news(stock, pages=500):
             url = 'https://seekingalpha.com/symbol/{}/news'.format(stock)
         else:
             url = 'https://seekingalpha.com/symbol/{}/news/more_news_all?page={}'.format(stock, i)
+            
+        try:
 
-        r = requests.get(url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.84 Safari/537.36'}, cookies=cookies)
-
+            r = requests.get(url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.84 Safari/537.36'}, cookies=cookies)
+        
+        except Exception as e:
+            
+            print(e)
+            continue
+    
         text = r.text.replace('\\"', '"')
         cookies = r.cookies # SeekingAlpha wants cookies.
 
@@ -205,7 +212,7 @@ def clean_headline(headline, replacements={}):
     return headline.strip()
 
 
-# In[11]:
+# In[5]:
 
 
 def save_headlines(headlines, kword_replacements={}):
@@ -275,7 +282,10 @@ if __name__ == "__main__":
             'pixel': '**PRODUCT**',
             'maps': '**PRODUCT**',
             'youtube': '**PRODUCT**',
-            'chromecast': '**PRODUCT**'
+            'chromecast': '**PRODUCT**',
+            'nexusx': '**PRODUCT**',
+            'googletranslate': '**PRODUCT**',
+            'gboard': '**PRODUCT**'
         },
         'AAPL': {
             'apple': '**COMPANY**', 
@@ -283,14 +293,17 @@ if __name__ == "__main__":
             'iphone': '**PRODUCT**',
             'ipad': '**PRODUCT**',
             'ios': '**PRODUCT**',
-            'icloud': '**PRODUCT**'
+            'icloud': '**PRODUCT**',
+            'faceid': '**PRODUCT**',
+            'airpods': '**PRODUCT**'
         },
         'MSFT': {
             'microsoft': '**COMPANY**',
-            'windows': '**PRODUCT**'
+            'windows': '**PRODUCT**',
+            'onedrive': '**PRODUCT**'
         },
         'AMD': {
-            'amd': '**COMPANY**', 
+            'amd': '**COMPANY**',
             'ryzen': '**PRODUCT**',
             'radeon': '**PRODUCT**'
         },
@@ -304,7 +317,7 @@ if __name__ == "__main__":
     }
 
 
-# In[12]:
+# In[7]:
 
 
 if __name__ == "__main__":
@@ -322,9 +335,4 @@ if __name__ == "__main__":
     consume_ticker_csv('AMD', 'AMD.csv')
     consume_ticker_csv('GOOG', 'GOOG.csv')
     consume_ticker_csv('MSFT', 'MSFT.csv')
-
-
-# In[ ]:
-
-
 

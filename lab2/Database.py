@@ -57,6 +57,13 @@ def add_headlines(entries):
     
         cur.executemany("INSERT OR IGNORE INTO headlines VALUES (?,?,?,?)", entries)
         conn.commit()
+        
+def clean_ticks():
+    
+    with db() as (conn, cur):
+    
+        cur.execute("DELETE FROM ticks WHERE adjclose='null'")
+        conn.commit()
 
 
 # In[5]:
@@ -80,6 +87,7 @@ if __name__ == "__main__":
         ["**COMPANY**stock"],
         ["ex**COMPANY**"],
         ["**COMPANY**made"],
+        ["madeby**COMPANY**"],
         ["singlecore"],
         ["nowassistant"],
         ["deeplearning"],
@@ -111,7 +119,14 @@ if __name__ == "__main__":
         ["mostlycomplete"],
         ["anticlimate"],
         ["taxbonuses"],
-        ["steamos"]
+        ["steamos"],
+        ["specialedition"],
+        ["testdriving"],
+        ["oneplus"],
+        ["airpods"],
+        ["lyft"],
+        ["stockbased"],
+        ["multiadapter"]
     ]
     
     with db() as (conn, cur):

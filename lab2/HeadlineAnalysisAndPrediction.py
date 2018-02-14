@@ -168,7 +168,7 @@ def split_data(X, X2, Y, ratio):
     return trainX, trainX2, trainY, testX, testX2, testY
 
 
-# In[9]:
+# In[8]:
 
 
 def get_embedding_matrix(tokenizer, pretrained_file='glove.840B.300d.txt', purge=False):

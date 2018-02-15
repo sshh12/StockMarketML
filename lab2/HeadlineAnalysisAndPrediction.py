@@ -130,7 +130,7 @@ def encode_sentences(meta, sentences, tokenizer=None, max_length=100, vocab_size
     
     ## Encoding Meta Data
     
-    # OneHot(Source) + OneHot(WeekDay)
+    # OneHot(Source [reddit/twitter/reuters etc..]) + OneHot(WeekDay)
     
     meta_matrix = np.zeros((len(sentences), len(all_sources) + 7))
     index = 0
@@ -168,7 +168,7 @@ def split_data(X, X2, Y, ratio):
     return trainX, trainX2, trainY, testX, testX2, testY
 
 
-# In[8]:
+# In[9]:
 
 
 def get_embedding_matrix(tokenizer, pretrained_file='glove.840B.300d.txt', purge=False):
@@ -229,13 +229,13 @@ def get_model(emb_matrix):
     # conv = Conv1D(filters=64, kernel_size=5, padding='same', activation='selu')(emb)
     # conv = MaxPooling1D(pool_size=3)(conv)
     
-    text_rnn = LSTM(300, dropout=0.3, recurrent_dropout=0.3, return_sequences=True)(emb)
+    text_rnn = LSTM(400, dropout=0.3, recurrent_dropout=0.3)(emb)
     text_rnn = Activation('relu')(text_rnn)
     text_rnn = BatchNormalization()(text_rnn)
     
-    text_rnn = LSTM(300, dropout=0.3, recurrent_dropout=0.3)(text_rnn)
-    text_rnn = Activation('relu')(text_rnn)
-    text_rnn = BatchNormalization()(text_rnn)
+    #text_rnn = LSTM(300, dropout=0.3, recurrent_dropout=0.3)(text_rnn)
+    #text_rnn = Activation('relu')(text_rnn)
+    #text_rnn = BatchNormalization()(text_rnn)
     
     ## Source ##
     
@@ -352,7 +352,7 @@ if __name__ == "__main__":
         toke = pickle.load(toke_file)
     
     model = load_model(os.path.join('..', 'models', 'media-headlines.h5'))
-    
+      
     ## Fake Unique Test Data ##
     
     test_sents = [
@@ -382,7 +382,7 @@ if __name__ == "__main__":
         print("Stock Will Go Up" if np.argmax(predictions[i]) == 0 else "Stock Will Go Down")
 
 
-# In[12]:
+# In[11]:
 
 # TEST MODEL
 

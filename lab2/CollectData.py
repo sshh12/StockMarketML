@@ -12,7 +12,7 @@ import random
 import os
 import re
 
-from Database import add_stock_ticks, add_headlines
+from Database import add_stock_ticks, add_headlines, clean_ticks
 
 
 # In[2]:
@@ -33,6 +33,8 @@ def consume_ticker_csv(stock, filename):
                 entries.append((stock, date, open_, high, low, close, adj_close, volume))
                 
     add_stock_ticks(entries)
+    
+    clean_ticks()
 
 
 # In[3]:
@@ -284,6 +286,7 @@ if __name__ == "__main__":
             'youtube': '**PRODUCT**',
             'chromecast': '**PRODUCT**',
             'nexusx': '**PRODUCT**',
+            'nexusp': '**PRODUCT**',
             'googletranslate': '**PRODUCT**',
             'gboard': '**PRODUCT**'
         },
@@ -308,6 +311,7 @@ if __name__ == "__main__":
             'radeon': '**PRODUCT**'
         },
         'AMZN': {
+            'amazonfire':'**PRODUCT**',
             'amazon': '**COMPANY**',
             'echo': '**PRODUCT**',
             'prime': '**PRODUCT**',

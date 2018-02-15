@@ -88,6 +88,7 @@ if __name__ == "__main__":
         ["ex**COMPANY**"],
         ["**COMPANY**made"],
         ["madeby**COMPANY**"],
+        ["**PRODUCT**phones"],
         ["singlecore"],
         ["nowassistant"],
         ["deeplearning"],
@@ -126,7 +127,11 @@ if __name__ == "__main__":
         ["airpods"],
         ["lyft"],
         ["stockbased"],
-        ["multiadapter"]
+        ["multiadapter"],
+        ["tvstick"],
+        ["militarygrade"],
+        ["kotlin"],
+        ["stockindex"]
     ]
     
     with db() as (conn, cur):

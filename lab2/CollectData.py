@@ -66,7 +66,7 @@ def get_reddit_news(subs, search_terms, limit=None, praw_config='StockMarketML')
         
     return articles
 
-def get_reuters_news(stock, pages=70):
+def get_reuters_news(stock, pages=80):
     """Get headlines from Reuters"""
     print('Downloading Reuters: ' + stock)
     
@@ -278,9 +278,12 @@ if __name__ == "__main__":
     
     kword_replacements = { # To futher generalize headlines
         'GOOG': {
+            'googleplay': '**PRODUCT**',
+            'googlephotos': '**PRODUCT**',
             'google': '**COMPANY**',
             'alphabet': '**COMPANY**',
             'android': '**PRODUCT**',
+            'pixelxl': '**PRODUCT**',
             'pixel': '**PRODUCT**',
             'maps': '**PRODUCT**',
             'youtube': '**PRODUCT**',
@@ -291,6 +294,8 @@ if __name__ == "__main__":
             'gboard': '**PRODUCT**'
         },
         'AAPL': {
+            'applemusic': '**PRODUCT**',
+            'applepay': '**PRODUCT**',
             'apple': '**COMPANY**', 
             'macbook': '**PRODUCT**',
             'iphone': '**PRODUCT**',
@@ -303,7 +308,9 @@ if __name__ == "__main__":
         'MSFT': {
             'microsoft': '**COMPANY**',
             'windows': '**PRODUCT**',
-            'onedrive': '**PRODUCT**'
+            'onedrive': '**PRODUCT**',
+            'outlook': '**PRODUCT**',
+            'bing': '**PRODUCT**'
         },
         'AMD': {
             'amd': '**COMPANY**',
@@ -316,7 +323,8 @@ if __name__ == "__main__":
             'echo': '**PRODUCT**',
             'prime': '**PRODUCT**',
             'alexa': '**PRODUCT**',
-            'firetv': '**PRODUCT**'
+            'firetv': '**PRODUCT**',
+            'amazonvisa': '**PRODUCT**'
         }
     }
 
@@ -329,7 +337,7 @@ if __name__ == "__main__":
     save_headlines(headlines, kword_replacements)
 
 
-# In[8]:
+# In[9]:
 
 
 if __name__ == "__main__":

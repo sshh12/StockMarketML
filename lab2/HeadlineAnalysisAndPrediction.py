@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[6]:
 
 # Imports
 
@@ -24,7 +24,7 @@ from keras.layers import Dense, Flatten, Embedding, LSTM, Activation, BatchNorma
 from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint, TensorBoard
 
 
-# In[2]:
+# In[7]:
 
 # Options
 
@@ -35,11 +35,13 @@ max_length  = 50
 vocab_size  = None # Set by tokenizer
 emb_size    = 300
 
-epochs     = 180
-batch_size = 32
+model_type  = 'regression'
+
+epochs      = 180
+batch_size  = 32
 
 
-# In[3]:
+# In[16]:
 
 
 def make_headline_to_effect_data():
@@ -91,14 +93,21 @@ def make_headline_to_effect_data():
                     
                     previous_tick = before_headline_ticks[-1][0]
                     result_tick = after_headline_ticks[0][0]
-                
-                    if result_tick > previous_tick:
+                    
+                    if model_type == 'regression':
                         
-                        effect = [1., 0.]
-                        
+                        # Percent Diff (+Normalization Constant)
+                        effect = [(result_tick - previous_tick) / previous_tick / 0.022]
+                    
                     else:
-                        
-                        effect = [0., 1.]
+                
+                        if result_tick > previous_tick:
+
+                            effect = [1., 0.]
+
+                        else:
+
+                            effect = [0., 1.]
                         
                     meta.append((source, event_date.weekday()))
                     headlines.append(content)
@@ -107,7 +116,7 @@ def make_headline_to_effect_data():
     return meta, headlines, np.array(effects)
 
 
-# In[4]:
+# In[9]:
 
 
 def encode_sentences(meta, sentences, tokenizer=None, max_length=100, vocab_size=100):
@@ -145,7 +154,7 @@ def encode_sentences(meta, sentences, tokenizer=None, max_length=100, vocab_size
     return meta_matrix, padded_headlines, tokenizer
 
 
-# In[5]:
+# In[10]:
 
 
 def split_data(X, X2, Y, ratio):
@@ -168,7 +177,7 @@ def split_data(X, X2, Y, ratio):
     return trainX, trainX2, trainY, testX, testX2, testY
 
 
-# In[9]:
+# In[11]:
 
 
 def get_embedding_matrix(tokenizer, pretrained_file='glove.840B.300d.txt', purge=False):
@@ -184,7 +193,7 @@ def get_embedding_matrix(tokenizer, pretrained_file='glove.840B.300d.txt', purge
         for line in glove:
 
             values = line.split(' ')
-            word = values[0]
+            word = values[0].replace('-', '').lower()
             coefs = np.asarray(values[1:], dtype='float32')
             glove_db[word] = coefs
 
@@ -229,13 +238,13 @@ def get_model(emb_matrix):
     # conv = Conv1D(filters=64, kernel_size=5, padding='same', activation='selu')(emb)
     # conv = MaxPooling1D(pool_size=3)(conv)
     
-    text_rnn = LSTM(400, dropout=0.3, recurrent_dropout=0.3)(emb)
+    text_rnn = LSTM(300, dropout=0.3, recurrent_dropout=0.3, return_sequences=True)(emb)
     text_rnn = Activation('relu')(text_rnn)
     text_rnn = BatchNormalization()(text_rnn)
     
-    #text_rnn = LSTM(300, dropout=0.3, recurrent_dropout=0.3)(text_rnn)
-    #text_rnn = Activation('relu')(text_rnn)
-    #text_rnn = BatchNormalization()(text_rnn)
+    text_rnn = LSTM(300, dropout=0.3, recurrent_dropout=0.3)(text_rnn)
+    text_rnn = Activation('relu')(text_rnn)
+    text_rnn = BatchNormalization()(text_rnn)
     
     ## Source ##
     
@@ -245,34 +254,38 @@ def get_model(emb_matrix):
     
     merged = concatenate([text_rnn, meta_input])
     
-    dense_1 = Dense(300)(merged)
-    dense_1 = Activation('relu')(dense_1)
-    dense_1 = BatchNormalization()(dense_1)
-    dense_1 = Dropout(0.5)(dense_1)
+    final_dense = Dense(300)(merged)
+    final_dense = Activation('relu')(final_dense)
+    final_dense = BatchNormalization()(final_dense)
+    final_dense = Dropout(0.5)(final_dense)
     
-    # dense_2 = Dense(300)(dense_1)
-    # dense_2 = Activation('relu')(dense_2)
-    # dense_2 = BatchNormalization()(dense_2)
-    # dense_2 = Dropout(0.5)(dense_2)
+    final_dense = Dense(300)(merged)
+    final_dense = Activation('relu')(final_dense)
+    final_dense = BatchNormalization()(final_dense)
+    final_dense = Dropout(0.5)(final_dense)
     
-    dense_3 = Dense(200)(dense_1)
-    dense_3 = Activation('relu')(dense_3)
-    dense_3 = BatchNormalization()(dense_3)
-    dense_3 = Dropout(0.5)(dense_3)
+    if model_type == 'regression':
+        
+        pred_dense = Dense(1)(final_dense)
+        out = pred_dense
+        
+        model = Model(inputs=[headline_input, meta_input], outputs=out)
     
-    dense_4 = Dense(2)(dense_3)
-    out = Activation('softmax')(dense_4)
+        model.compile(optimizer=RMSprop(lr=0.001), loss='mse', metrics=['acc'])
     
-    model = Model(inputs=[headline_input, meta_input], outputs=out)
+    else:
     
-    optimizer = RMSprop(lr=0.001)
+        pred_dense = Dense(2)(final_dense)
+        out = Activation('softmax')(pred_dense)
+        
+        model = Model(inputs=[headline_input, meta_input], outputs=out)
     
-    model.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=['acc'])
+        model.compile(optimizer=RMSprop(lr=0.001), loss='categorical_crossentropy', metrics=['acc'])
     
     return model
 
 
-# In[7]:
+# In[17]:
 
 
 if __name__ == "__main__":
@@ -294,7 +307,7 @@ if __name__ == "__main__":
     print(trainX.shape, trainX2.shape, testY.shape)
 
 
-# In[10]:
+# In[19]:
 
 # TRAIN MODEL
 
@@ -309,10 +322,15 @@ if __name__ == "__main__":
     
     model = get_model(emb_matrix)
     
-    tensorboard = TensorBoard(log_dir="logs/{}".format(datetime.now().strftime("%Y,%m,%d-%H,%M,%S")))
-    e_stopping = EarlyStopping(monitor='val_loss', patience=80)
-    checkpoint = ModelCheckpoint(os.path.join('..', 'models', 'media-headlines.h5'), 
-                                 monitor='val_acc',
+    if model_type == 'regression':
+        moniter_mode = 'val_loss'
+    else:
+        moniter_mode = 'val_acc'
+    
+    tensorboard = TensorBoard(log_dir="logs/{}".format(datetime.now().strftime("%Y,%m,%d-%H,%M,%S," + model_type)))
+    e_stopping = EarlyStopping(monitor=moniter_mode, patience=80)
+    checkpoint = ModelCheckpoint(os.path.join('..', 'models', 'media-headlines-' + model_type + '.h5'), 
+                                 monitor=moniter_mode,
                                  verbose=0,
                                  save_best_only=True)
     
@@ -351,7 +369,7 @@ if __name__ == "__main__":
     with open(os.path.join('..', 'models', 'toke.pkl'), 'rb') as toke_file:
         toke = pickle.load(toke_file)
     
-    model = load_model(os.path.join('..', 'models', 'media-headlines.h5'))
+    model = load_model(os.path.join('..', 'models', 'media-headlines-' + model_type + '.h5'))
       
     ## Fake Unique Test Data ##
     
@@ -378,11 +396,10 @@ if __name__ == "__main__":
         
         print("")
         print(test_sents[i])
-        print(predictions[i])
-        print("Stock Will Go Up" if np.argmax(predictions[i]) == 0 else "Stock Will Go Down")
+        print(predictions[i], "UP")
 
 
-# In[11]:
+# In[21]:
 
 # TEST MODEL
 
@@ -393,12 +410,12 @@ if __name__ == "__main__":
     with open(os.path.join('..', 'models', 'toke.pkl'), 'rb') as toke_file:
         toke = pickle.load(toke_file)
     
-    model = load_model(os.path.join('..', 'models', 'media-headlines.h5'))
+    model = load_model(os.path.join('..', 'models', 'media-headlines-' + model_type + '.h5'))
     
     ## **This Test May Overlap w/Train Data** ##
     
-    current_date = '2018-02-05'
-    predict_date = '2018-02-06'
+    current_date = '2018-02-14'
+    predict_date = '2018-02-15'
     stock = 'AAPL'
     
     with db() as (conn, cur):
@@ -435,7 +452,13 @@ if __name__ == "__main__":
         
         print("Using: " + str(test_sents))
         
-        print("Predicting Change Coef: " +  str( round(np.mean(predictions[:, 0]) - .5, 2) * 2 ))
+        if model_type == 'regression':
+            
+            print("Predicting Change Coef: " +  str( round(np.mean(predictions[:, 0]), 2)))
+            
+        else:
+        
+            print("Predicting Change Coef: " +  str( round(np.mean(predictions[:, 0]) - .5, 2) * 2 ))
         
         print("Actual Stock Change: " + str( round(ticks[-1][0] - ticks[0][0], 2) ))
             

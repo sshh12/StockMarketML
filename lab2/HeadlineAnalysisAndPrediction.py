@@ -316,7 +316,7 @@ if __name__ == "__main__":
     print(trainX.shape, trainX2.shape, testY.shape)
 
 
-# In[8]:
+# In[9]:
 
 # TRAIN MODEL
 
@@ -367,7 +367,7 @@ if __name__ == "__main__":
     
 
 
-# In[ ]:
+# In[18]:
 
 # TEST MODEL
 
@@ -375,46 +375,8 @@ if __name__ == "__main__":
     
     ## Load Model For Manual Testing ##
     
-    with open(os.path.join('..', 'models', 'toke.pkl'), 'rb') as toke_file:
-        toke = pickle.load(toke_file)
-    
-    model = load_model(os.path.join('..', 'models', 'media-headlines-' + model_type + '.h5'))
-      
-    ## Fake Unique Test Data ##
-    
-    test_sents = [
-        'the ceo of **COMPANY** was fired after selling a bad **PRODUCT**', 
-        '**COMPANY** just released a **PRODUCT** thats better than every other company',
-        '**COMPANY**s **PRODUCT** killed a family of ducks in a sensor malfunction',
-        'the **COMPANY** team released a breakthrough in **PRODUCT** gaming'
-    ]
-    
-    ## Process ##
-    
-    encoded_meta, test_encoded, _ = encode_sentences([['reuters', 0], ['twitter', 1], ['reddit', 2], ['seekingalpha', 3]], 
-                                                      test_sents, 
-                                                      tokenizer=toke, 
-                                                      max_length=max_length, 
-                                                      vocab_size=vocab_size)
-    
-    predictions = model.predict([test_encoded, encoded_meta])
-    
-    ## Display Predictions ##
-    
-    for i in range(len(test_sents)):
-        
-        print("")
-        print(test_sents[i])
-        print(predictions[i], "UP")
-
-
-# In[ ]:
-
-# TEST MODEL
-
-if __name__ == "__main__":
-    
-    ## Load Model For Manual Testing ##
+    import keras.metrics
+    keras.metrics.correct_sign_acc = correct_sign_acc
     
     with open(os.path.join('..', 'models', 'toke.pkl'), 'rb') as toke_file:
         toke = pickle.load(toke_file)
@@ -471,4 +433,48 @@ if __name__ == "__main__":
         
         print("Actual Stock Change: " + str( round(ticks[-1][0] - ticks[0][0], 2) ))
             
+
+
+# In[19]:
+
+# TEST MODEL
+
+if __name__ == "__main__":
+    
+    ## Load Model For Manual Testing ##
+    
+    import keras.metrics
+    keras.metrics.correct_sign_acc = correct_sign_acc
+     
+    with open(os.path.join('..', 'models', 'toke.pkl'), 'rb') as toke_file:
+        toke = pickle.load(toke_file)
+    
+    model = load_model(os.path.join('..', 'models', 'media-headlines-' + model_type + '.h5'))
+      
+    ## Fake Unique Test Data ##
+    
+    test_sents = [
+        '**COMPANY** just released a **PRODUCT** thats better than every other company',
+        '**COMPANY** just released a **PRODUCT** thats better than every other company',
+        '**COMPANY** just released a **PRODUCT** thats better than every other company',
+        '**COMPANY** just released a **PRODUCT** thats better than every other company'
+    ]
+    
+    ## Process ##
+    
+    encoded_meta, test_encoded, _ = encode_sentences([['reuters', 0], ['twitter', 0], ['reddit', 0], ['seekingalpha', 0]], 
+                                                      test_sents, 
+                                                      tokenizer=toke, 
+                                                      max_length=max_length, 
+                                                      vocab_size=vocab_size)
+    
+    predictions = model.predict([test_encoded, encoded_meta])
+    
+    ## Display Predictions ##
+    
+    for i in range(len(test_sents)):
+        
+        print("")
+        print(test_sents[i])
+        print(predictions[i], "UP")
 

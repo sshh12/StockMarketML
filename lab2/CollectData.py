@@ -279,9 +279,12 @@ if __name__ == "__main__":
     kword_replacements = { # To futher generalize headlines
         'GOOG': {
             'googleplay': '**PRODUCT**',
+            'googlemusic': '**PRODUCT**',
+            'googlehome': '**PRODUCT**',
             'googlephotos': '**PRODUCT**',
             'google': '**COMPANY**',
             'alphabet': '**COMPANY**',
+            'androidpay': '**PRODUCT**',
             'android': '**PRODUCT**',
             'pixelxl': '**PRODUCT**',
             'pixel': '**PRODUCT**',
@@ -303,7 +306,10 @@ if __name__ == "__main__":
             'ios': '**PRODUCT**',
             'icloud': '**PRODUCT**',
             'faceid': '**PRODUCT**',
-            'airpods': '**PRODUCT**'
+            'airpods': '**PRODUCT**',
+            'animoji': '**PRODUCT**',
+            'lightningpin': '**PRODUCT**',
+            'touchid': '**PRODUCT**'
         },
         'MSFT': {
             'microsoft': '**COMPANY**',
@@ -315,7 +321,8 @@ if __name__ == "__main__":
         'AMD': {
             'amd': '**COMPANY**',
             'ryzen': '**PRODUCT**',
-            'radeon': '**PRODUCT**'
+            'radeon': '**PRODUCT**',
+            'rxvega': '**PRODUCT**'
         },
         'AMZN': {
             'amazonfire':'**PRODUCT**',
@@ -337,7 +344,7 @@ if __name__ == "__main__":
     save_headlines(headlines, kword_replacements)
 
 
-# In[9]:
+# In[8]:
 
 
 if __name__ == "__main__":

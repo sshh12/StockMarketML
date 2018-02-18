@@ -85,11 +85,13 @@ if __name__ == "__main__":
         ["**COMPANY**"], 
         ["**COMPANY**owned"],
         ["**COMPANY**s"],
+        ["**COMPANY**es"],
         ["**COMPANY**stock"],
         ["ex**COMPANY**"],
         ["**COMPANY**made"],
         ["madeby**COMPANY**"],
         ["**COMPANY**com"],
+        ["r**COMPANY**stock"],
         
         ["**PRODUCT**phones"],
         ["**PRODUCT**com"],
@@ -99,6 +101,9 @@ if __name__ == "__main__":
         ["**PRODUCT**like"],
         ["**PRODUCT**tablet"],
         ["**PRODUCT**authority"],
+        ["ultra**PRODUCT**"],
+        ["**PRODUCT**insiders"],
+        ["**PRODUCT**enabled"],
         
         ["singlecore"],
         ["nowassistant"],
@@ -192,7 +197,28 @@ if __name__ == "__main__":
         ["forceclosed"],
         ["trudeaus"],
         ["upgradekits"],
-        ["autoorientation"]
+        ["autoorientation"],
+        ["ryzen"],
+        ["computershared"],
+        ["hypetrain"],
+        ["adaptercharger"],
+        ["bigbasket"],
+        ["muslimban"],
+        ["samsungbuilt"],
+        ["unesthetic"],
+        ["outlookcom"],
+        ["postsnowden"],
+        ["hashrate"],
+        ["yoloed"],
+        ["halfsalary"],
+        ["neweggcom"],
+        ["hyperlapse"],
+        ["snapchats"],
+        ["browserhijacking"],
+        ["iconpack"],
+        ["vpnbased"],
+        ["onecore"],
+        ["russianlinked"]
     ]
     
     with db() as (conn, cur):

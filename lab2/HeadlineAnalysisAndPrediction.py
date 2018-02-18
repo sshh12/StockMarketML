@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[6]:
+# In[1]:
 
 # Imports
 
@@ -22,9 +22,10 @@ from keras.preprocessing.sequence import pad_sequences
 from keras.layers import Input, concatenate, SpatialDropout1D, GRU
 from keras.layers import Dense, Flatten, Embedding, LSTM, Activation, BatchNormalization, Dropout, Conv1D, MaxPooling1D
 from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint, TensorBoard
+import keras.backend as K
 
 
-# In[7]:
+# In[2]:
 
 # Options
 
@@ -41,7 +42,7 @@ epochs      = 180
 batch_size  = 32
 
 
-# In[16]:
+# In[3]:
 
 
 def make_headline_to_effect_data():
@@ -116,7 +117,7 @@ def make_headline_to_effect_data():
     return meta, headlines, np.array(effects)
 
 
-# In[9]:
+# In[4]:
 
 
 def encode_sentences(meta, sentences, tokenizer=None, max_length=100, vocab_size=100):
@@ -154,7 +155,7 @@ def encode_sentences(meta, sentences, tokenizer=None, max_length=100, vocab_size
     return meta_matrix, padded_headlines, tokenizer
 
 
-# In[10]:
+# In[5]:
 
 
 def split_data(X, X2, Y, ratio):
@@ -177,7 +178,7 @@ def split_data(X, X2, Y, ratio):
     return trainX, trainX2, trainY, testX, testX2, testY
 
 
-# In[11]:
+# In[6]:
 
 
 def get_embedding_matrix(tokenizer, pretrained_file='glove.840B.300d.txt', purge=False):
@@ -226,6 +227,14 @@ def get_embedding_matrix(tokenizer, pretrained_file='glove.840B.300d.txt', purge
             
     return embedding_matrix, glove_db
 
+def correct_sign_acc(y_true, y_pred):
+    """
+    Accuracy of Being Positive or Negative
+    """
+    diff = K.equal(y_true > 0, y_pred > 0)
+    
+    return K.mean(diff, axis=-1)
+
 def get_model(emb_matrix):
     
     ## Headline ##
@@ -271,7 +280,7 @@ def get_model(emb_matrix):
         
         model = Model(inputs=[headline_input, meta_input], outputs=out)
     
-        model.compile(optimizer=RMSprop(lr=0.001), loss='mse', metrics=['acc'])
+        model.compile(optimizer=RMSprop(lr=0.001), loss='mse', metrics=[correct_sign_acc])
     
     else:
     
@@ -285,7 +294,7 @@ def get_model(emb_matrix):
     return model
 
 
-# In[17]:
+# In[7]:
 
 
 if __name__ == "__main__":
@@ -302,12 +311,12 @@ if __name__ == "__main__":
     
     emb_matrix, glove_db = get_embedding_matrix(toke)
     
-    trainX, trainX2, trainY, testX, testX2, testY = split_data(encoded_headlines, encoded_meta, effects, .85)
+    trainX, trainX2, trainY, testX, testX2, testY = split_data(encoded_headlines, encoded_meta, effects, .8)
     
     print(trainX.shape, trainX2.shape, testY.shape)
 
 
-# In[19]:
+# In[8]:
 
 # TRAIN MODEL
 
@@ -323,14 +332,14 @@ if __name__ == "__main__":
     model = get_model(emb_matrix)
     
     if model_type == 'regression':
-        moniter_mode = 'val_loss'
+        monitor_mode = 'correct_sign_acc'
     else:
-        moniter_mode = 'val_acc'
+        monitor_mode = 'val_acc'
     
     tensorboard = TensorBoard(log_dir="logs/{}".format(datetime.now().strftime("%Y,%m,%d-%H,%M,%S," + model_type)))
-    e_stopping = EarlyStopping(monitor=moniter_mode, patience=80)
+    e_stopping = EarlyStopping(monitor=monitor_mode, patience=80)
     checkpoint = ModelCheckpoint(os.path.join('..', 'models', 'media-headlines-' + model_type + '.h5'), 
-                                 monitor=moniter_mode,
+                                 monitor=monitor_mode,
                                  verbose=0,
                                  save_best_only=True)
     
@@ -351,8 +360,8 @@ if __name__ == "__main__":
     plt.legend(['LogTrainLoss', 'LogTestLoss'])
     plt.show()
     
-    plt.plot(history.history['acc'])
-    plt.plot(history.history['val_acc'])
+    plt.plot(history.history[monitor_mode])
+    plt.plot(history.history['val_' + monitor_mode])
     plt.legend(['TrainAcc', 'TestAcc'])
     plt.show()
     
@@ -399,7 +408,7 @@ if __name__ == "__main__":
         print(predictions[i], "UP")
 
 
-# In[21]:
+# In[ ]:
 
 # TEST MODEL
 

@@ -294,13 +294,16 @@ if __name__ == "__main__":
             'nexusx': '**PRODUCT**',
             'nexusp': '**PRODUCT**',
             'googletranslate': '**PRODUCT**',
-            'gboard': '**PRODUCT**'
+            'gboard': '**PRODUCT**',
+            'materialdesign': '**PRODUCT**'
         },
         'AAPL': {
             'applemusic': '**PRODUCT**',
             'applepay': '**PRODUCT**',
+            'appletv': '**PRODUCT**',
             'apple': '**COMPANY**', 
             'macbook': '**PRODUCT**',
+            'iphone x': '**PRODUCT**',
             'iphone': '**PRODUCT**',
             'ipad': '**PRODUCT**',
             'ios': '**PRODUCT**',

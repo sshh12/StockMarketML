@@ -92,6 +92,9 @@ if __name__ == "__main__":
         ["madeby**COMPANY**"],
         ["**COMPANY**com"],
         ["r**COMPANY**stock"],
+        ["non**COMPANY**"],
+        ["**COMPANY**insider"],
+        ["nasdaq**COMPANY**"],
         
         ["**PRODUCT**phones"],
         ["**PRODUCT**com"],
@@ -104,6 +107,8 @@ if __name__ == "__main__":
         ["ultra**PRODUCT**"],
         ["**PRODUCT**insiders"],
         ["**PRODUCT**enabled"],
+        ["r**PRODUCT**s"],
+        ["**PRODUCT**based"],
         
         ["singlecore"],
         ["nowassistant"],
@@ -218,7 +223,13 @@ if __name__ == "__main__":
         ["iconpack"],
         ["vpnbased"],
         ["onecore"],
-        ["russianlinked"]
+        ["russianlinked"],
+        ["playerunknowns"],
+        ["russianbought"],
+        ["instacart"],
+        ["intelbacked"],
+        ["pointzero"],
+        ["snapchatlike"]
     ]
     
     with db() as (conn, cur):

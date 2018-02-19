@@ -242,18 +242,18 @@ def get_model(emb_matrix):
     headline_input = Input(shape=(max_length,))
     
     emb = Embedding(vocab_size + 1, emb_size, input_length=max_length, weights=[emb_matrix], trainable=True)(headline_input)
-    emb = SpatialDropout1D(.1)(emb)
+    emb = SpatialDropout1D(.2)(emb)
     
     # conv = Conv1D(filters=64, kernel_size=5, padding='same', activation='selu')(emb)
     # conv = MaxPooling1D(pool_size=3)(conv)
     
-    text_rnn = LSTM(300, dropout=0.3, recurrent_dropout=0.3, return_sequences=True)(emb)
-    text_rnn = Activation('relu')(text_rnn)
+    text_rnn = LSTM(400, dropout=0.3, recurrent_dropout=0.3, return_sequences=False)(emb)
+    text_rnn = Activation('sigmoid')(text_rnn)
     text_rnn = BatchNormalization()(text_rnn)
     
-    text_rnn = LSTM(300, dropout=0.3, recurrent_dropout=0.3)(text_rnn)
-    text_rnn = Activation('relu')(text_rnn)
-    text_rnn = BatchNormalization()(text_rnn)
+    # text_rnn = LSTM(300, dropout=0.3, recurrent_dropout=0.3)(text_rnn)
+    # text_rnn = Activation('relu')(text_rnn)
+    # text_rnn = BatchNormalization()(text_rnn)
     
     ## Source ##
     
@@ -263,13 +263,13 @@ def get_model(emb_matrix):
     
     merged = concatenate([text_rnn, meta_input])
     
-    final_dense = Dense(300)(merged)
-    final_dense = Activation('relu')(final_dense)
+    final_dense = Dense(400)(merged)
+    final_dense = Activation('sigmoid')(final_dense)
     final_dense = BatchNormalization()(final_dense)
     final_dense = Dropout(0.5)(final_dense)
     
-    final_dense = Dense(300)(merged)
-    final_dense = Activation('relu')(final_dense)
+    final_dense = Dense(400)(merged)
+    final_dense = Activation('sigmoid')(final_dense)
     final_dense = BatchNormalization()(final_dense)
     final_dense = Dropout(0.5)(final_dense)
     
@@ -316,11 +316,11 @@ if __name__ == "__main__":
     print(trainX.shape, trainX2.shape, testY.shape)
 
 
-# In[9]:
+# In[8]:
 
 # TRAIN MODEL
 
-if __name__ == "__main__":
+if __name__ == "__main__": 
     
     ## Save Tokenizer ##
     
@@ -367,7 +367,7 @@ if __name__ == "__main__":
     
 
 
-# In[18]:
+# In[9]:
 
 # TEST MODEL
 
@@ -435,7 +435,7 @@ if __name__ == "__main__":
             
 
 
-# In[19]:
+# In[10]:
 
 # TEST MODEL
 
@@ -453,28 +453,32 @@ if __name__ == "__main__":
       
     ## Fake Unique Test Data ##
     
-    test_sents = [
-        '**COMPANY** just released a **PRODUCT** thats better than every other company',
-        '**COMPANY** just released a **PRODUCT** thats better than every other company',
-        '**COMPANY** just released a **PRODUCT** thats better than every other company',
-        '**COMPANY** just released a **PRODUCT** thats better than every other company'
-    ]
+    test_sents, meta = [], []
+    
+    for source in all_sources: 
+        
+        for weekday in range(7):
+            
+            test_sents.append("**COMPANY** just released a **PRODUCT** thats better than every other company")
+            meta.append([source, weekday])
     
     ## Process ##
     
-    encoded_meta, test_encoded, _ = encode_sentences([['reuters', 0], ['twitter', 0], ['reddit', 0], ['seekingalpha', 0]], 
-                                                      test_sents, 
-                                                      tokenizer=toke, 
-                                                      max_length=max_length, 
-                                                      vocab_size=vocab_size)
+    encoded_meta, test_encoded, _ = encode_sentences(meta, 
+                                                     test_sents, 
+                                                     tokenizer=toke, 
+                                                     max_length=max_length, 
+                                                     vocab_size=vocab_size)
     
     predictions = model.predict([test_encoded, encoded_meta])
     
     ## Display Predictions ##
     
-    for i in range(len(test_sents)):
-        
-        print("")
-        print(test_sents[i])
-        print(predictions[i], "UP")
+    from matplotlib.colors import Normalize
+    plt.imshow(predictions.reshape((len(all_sources), 7)), interpolation='none', cmap='PRGn', norm=Normalize(vmin=-2, vmax=2))
+    plt.xlabel('Weekday')
+    plt.ylabel('Source')
+    plt.xticks(np.arange(7), list('MTWTFSS'))
+    plt.yticks(np.arange(len(all_sources)), all_sources)
+    plt.show()
 

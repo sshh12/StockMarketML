@@ -293,9 +293,11 @@ if __name__ == "__main__":
             'chromecast': '**PRODUCT**',
             'nexusx': '**PRODUCT**',
             'nexusp': '**PRODUCT**',
+            'nexus': '**PRODUCT**',
             'googletranslate': '**PRODUCT**',
             'gboard': '**PRODUCT**',
-            'materialdesign': '**PRODUCT**'
+            'materialdesign': '**PRODUCT**',
+            'alphago': '**PRODUCT**'
         },
         'AAPL': {
             'applemusic': '**PRODUCT**',
@@ -334,7 +336,10 @@ if __name__ == "__main__":
             'prime': '**PRODUCT**',
             'alexa': '**PRODUCT**',
             'firetv': '**PRODUCT**',
-            'amazonvisa': '**PRODUCT**'
+            'amazonvisa': '**PRODUCT**',
+            'amazondot': '**PRODUCT**',
+            'dot': '**PRODUCT**',
+            'jeffbezos': '**MEMBER**'
         }
     }
 

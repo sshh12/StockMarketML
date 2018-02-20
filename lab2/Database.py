@@ -95,6 +95,7 @@ if __name__ == "__main__":
         ["non**COMPANY**"],
         ["**COMPANY**insider"],
         ["nasdaq**COMPANY**"],
+        ["**COMPANY**cloud"],
         
         ["**PRODUCT**phones"],
         ["**PRODUCT**com"],
@@ -109,6 +110,10 @@ if __name__ == "__main__":
         ["**PRODUCT**enabled"],
         ["r**PRODUCT**s"],
         ["**PRODUCT**based"],
+        ["**PRODUCT**only"],
+        ["anti**PRODUCT**"],
+        
+        ["**MEMBER**"],
         
         ["singlecore"],
         ["nowassistant"],
@@ -229,7 +234,13 @@ if __name__ == "__main__":
         ["instacart"],
         ["intelbacked"],
         ["pointzero"],
-        ["snapchatlike"]
+        ["snapchatlike"],
+        ["housesharing"],
+        ["waymo"],
+        ["bugglitch"],
+        ["xiaomi"],
+        ["driverlesscar"],
+        ["axpowered"]
     ]
     
     with db() as (conn, cur):
@@ -237,4 +248,16 @@ if __name__ == "__main__":
         cur.executemany("INSERT OR IGNORE INTO specialwords VALUES (?)", special_words)
         conn.commit()
     
+
+
+# In[8]:
+
+with db() as (conn, cur):
+    cur.execute("SELECT AVG(adjclose) FROM ticks WHERE stock='AAPL' AND date BETWEEN '2100-02-14' AND '2100-02-17' ORDER BY date")
+    print(cur.fetchall())
+
+
+# In[ ]:
+
+
 

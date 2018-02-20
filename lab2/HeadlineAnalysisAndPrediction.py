@@ -38,7 +38,7 @@ emb_size    = 300
 
 model_type  = 'regression'
 
-epochs      = 180
+epochs      = 5
 batch_size  = 32
 
 
@@ -81,16 +81,16 @@ def make_headline_to_effect_data():
                 
                 before_headline_ticks = cur.fetchall()
                 
-                cur.execute("""SELECT adjclose FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date""", 
+                cur.execute("""SELECT AVG(adjclose) FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date""", 
                             [stock, 
                              add_time(event_date, 1), 
-                             add_time(event_date, 4)])
+                             add_time(event_date, 5)])
                 
                 after_headline_ticks = cur.fetchall()
                 
                 ## Create training example ##
                 
-                if len(before_headline_ticks) > 0 and len(after_headline_ticks) > 0:
+                if len(before_headline_ticks) > 0 and len(after_headline_ticks) > 0 and after_headline_ticks[0][0] != None:
                     
                     previous_tick = before_headline_ticks[-1][0]
                     result_tick = after_headline_ticks[0][0]
@@ -247,7 +247,7 @@ def get_model(emb_matrix):
     # conv = Conv1D(filters=64, kernel_size=5, padding='same', activation='selu')(emb)
     # conv = MaxPooling1D(pool_size=3)(conv)
     
-    text_rnn = LSTM(400, dropout=0.3, recurrent_dropout=0.3, return_sequences=False)(emb)
+    text_rnn = LSTM(100, dropout=0.3, recurrent_dropout=0.3, return_sequences=False)(emb)
     text_rnn = Activation('sigmoid')(text_rnn)
     text_rnn = BatchNormalization()(text_rnn)
     
@@ -263,12 +263,12 @@ def get_model(emb_matrix):
     
     merged = concatenate([text_rnn, meta_input])
     
-    final_dense = Dense(400)(merged)
+    final_dense = Dense(100)(merged)
     final_dense = Activation('sigmoid')(final_dense)
     final_dense = BatchNormalization()(final_dense)
     final_dense = Dropout(0.5)(final_dense)
     
-    final_dense = Dense(400)(merged)
+    final_dense = Dense(100)(merged)
     final_dense = Activation('sigmoid')(final_dense)
     final_dense = BatchNormalization()(final_dense)
     final_dense = Dropout(0.5)(final_dense)
@@ -367,7 +367,7 @@ if __name__ == "__main__":
     
 
 
-# In[9]:
+# In[12]:
 
 # TEST MODEL
 
@@ -440,7 +440,7 @@ if __name__ == "__main__":
 # TEST MODEL
 
 if __name__ == "__main__":
-    
+     
     ## Load Model For Manual Testing ##
     
     import keras.metrics
@@ -455,7 +455,7 @@ if __name__ == "__main__":
     
     test_sents, meta = [], []
     
-    for source in all_sources: 
+    for source in all_sources:
         
         for weekday in range(7):
             

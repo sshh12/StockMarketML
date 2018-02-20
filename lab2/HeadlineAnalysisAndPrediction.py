@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 # Imports
 
@@ -25,7 +25,7 @@ from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint, T
 import keras.backend as K
 
 
-# In[ ]:
+# In[2]:
 
 # Options
 
@@ -42,7 +42,7 @@ epochs      = 180
 batch_size  = 32
 
 
-# In[ ]:
+# In[3]:
 
 
 def make_headline_to_effect_data():
@@ -117,7 +117,7 @@ def make_headline_to_effect_data():
     return meta, headlines, np.array(effects)
 
 
-# In[ ]:
+# In[4]:
 
 
 def encode_sentences(meta, sentences, tokenizer=None, max_length=100, vocab_size=100):
@@ -155,7 +155,7 @@ def encode_sentences(meta, sentences, tokenizer=None, max_length=100, vocab_size
     return meta_matrix, padded_headlines, tokenizer
 
 
-# In[ ]:
+# In[5]:
 
 
 def split_data(X, X2, Y, ratio):
@@ -183,7 +183,7 @@ def split_data(X, X2, Y, ratio):
 
 def get_embedding_matrix(tokenizer, pretrained_file='glove.840B.300d.txt', purge=False):
     """Load Vectors from Glove File"""
-    print("Loading...WordVecs")
+    print("Loading WordVecs..")
     
     ## Load Glove File (Super Slow) ##
     
@@ -248,7 +248,7 @@ def get_model(emb_matrix):
     # conv = MaxPooling1D(pool_size=3)(conv)
     
     text_rnn = LSTM(200, dropout=0.3, recurrent_dropout=0.3, return_sequences=False)(emb)
-    text_rnn = Activation('sigmoid')(text_rnn)
+    text_rnn = Activation('selu')(text_rnn)
     text_rnn = BatchNormalization()(text_rnn)
     
     # text_rnn = LSTM(300, dropout=0.3, recurrent_dropout=0.3)(text_rnn)
@@ -264,12 +264,12 @@ def get_model(emb_matrix):
     merged = concatenate([text_rnn, meta_input])
     
     final_dense = Dense(100)(merged)
-    final_dense = Activation('sigmoid')(final_dense)
+    final_dense = Activation('selu')(final_dense)
     final_dense = BatchNormalization()(final_dense)
     final_dense = Dropout(0.5)(final_dense)
     
     final_dense = Dense(100)(merged)
-    final_dense = Activation('sigmoid')(final_dense)
+    final_dense = Activation('selu')(final_dense)
     final_dense = BatchNormalization()(final_dense)
     final_dense = Dropout(0.5)(final_dense)
     
@@ -294,7 +294,7 @@ def get_model(emb_matrix):
     return model
 
 
-# In[ ]:
+# In[7]:
 
 
 if __name__ == "__main__":
@@ -307,7 +307,7 @@ if __name__ == "__main__":
                                                              vocab_size=vocab_size)
     
     vocab_size = len(toke.word_counts)
-    print("Found Words..." + str(vocab_size))
+    print("Found Words......" + str(vocab_size))
     
     emb_matrix, glove_db = get_embedding_matrix(toke)
     
@@ -316,7 +316,7 @@ if __name__ == "__main__":
     print(trainX.shape, trainX2.shape, testY.shape)
 
 
-# In[ ]:
+# In[8]:
 
 # TRAIN MODEL
 
@@ -367,7 +367,7 @@ if __name__ == "__main__":
     
 
 
-# In[ ]:
+# In[25]:
 
 # TEST MODEL
 
@@ -421,21 +421,25 @@ if __name__ == "__main__":
         
         ## Display ##
         
+        parse = lambda num: str(round(num, 2))
+        
         print("Using: " + str(test_sents))
         
         if model_type == 'regression':
             
-            print("Predicting Change Coef: " +  str( round(np.mean(predictions[:, 0]), 2)))
+            print("Predicting Change Coef: " +  parse(np.mean(predictions[:, 0])))
+            print("Predicting Price: " +  parse(np.mean(predictions[:, 0]) * .022 * ticks[0][0] + ticks[0][0]))
             
         else:
         
-            print("Predicting Change Coef: " +  str( round(np.mean(predictions[:, 0]) - .5, 2) * 2 ))
+            print("Predicting Change Coef: " +  parse(np.mean(predictions[:, 0]) - .5))
         
-        print("Actual Stock Change: " + str( round(ticks[-1][0] - ticks[0][0], 2) ))
+        print("Actual Stock: " + parse(ticks[0][0]))
+        print("Actual Stock Change: " + parse(ticks[-1][0] - ticks[0][0]))
             
 
 
-# In[ ]:
+# In[29]:
 
 # TEST MODEL
 
@@ -453,14 +457,21 @@ if __name__ == "__main__":
       
     ## Fake Unique Test Data ##
     
+    headlines = [
+        "**COMPANY** is the best",
+        "companies set to lose from **COMPANY**s **PRODUCT**s"
+    ]
+    
     test_sents, meta = [], []
     
-    for source in all_sources:
-        
-        for weekday in range(7):
+    for headline in headlines:
+    
+        for source in all_sources:
+
+            for weekday in range(7):
             
-            test_sents.append("**COMPANY** just released a **PRODUCT** thats better than every other company")
-            meta.append([source, weekday])
+                test_sents.append(headline)
+                meta.append([source, weekday])
     
     ## Process ##
     
@@ -472,13 +483,19 @@ if __name__ == "__main__":
     
     predictions = model.predict([test_encoded, encoded_meta])
     
+    predictions = predictions.reshape((len(headlines), len(all_sources), 7))
+    
     ## Display Predictions ##
     
     from matplotlib.colors import Normalize
-    plt.imshow(predictions.reshape((len(all_sources), 7)), interpolation='none', cmap='PRGn', norm=Normalize(vmin=-2, vmax=2))
-    plt.xlabel('Weekday')
-    plt.ylabel('Source')
-    plt.xticks(np.arange(7), list('MTWTFSS'))
-    plt.yticks(np.arange(len(all_sources)), all_sources)
-    plt.show()
+    
+    for i, headline in enumerate(headlines):
+        
+        plt.imshow(predictions[i], interpolation='none', cmap='PRGn', norm=Normalize(vmin=-2, vmax=2))
+        plt.title(headline)
+        plt.xlabel('Weekday')
+        plt.ylabel('Source')
+        plt.xticks(np.arange(7), list('MTWTFSS'))
+        plt.yticks(np.arange(len(all_sources)), all_sources)
+        plt.show()
 

@@ -189,7 +189,7 @@ def get_seekingalpha_news(stock, pages=500):
 
     return articles
 
-def get_fool_news(stock, pages=20):
+def get_fool_news(stock, pages=30):
     "Get headlines from Motley Fool"
     print('Downloading MotleyFool: ' + stock)
     
@@ -213,7 +213,7 @@ def get_fool_news(stock, pages=20):
         for headline, date in headlines:
             
             date = datetime.strptime(date.strip(), "%b %d %Y")
-            headline = headline.strip().replace("&#39;", "'")
+            headline = headline.strip().replace("&#39;", "'").replace("&quot;", "")
             
             articles[date.strftime('%Y-%m-%d')].append(headline)
             
@@ -341,6 +341,7 @@ if __name__ == "__main__":
             'apple': '**COMPANY**', 
             'macbook': '**PRODUCT**',
             'iphone x': '**PRODUCT**',
+            'iphonex': '**PRODUCT**',
             'iphone': '**PRODUCT**',
             'ipad': '**PRODUCT**',
             'ios': '**PRODUCT**',

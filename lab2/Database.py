@@ -99,6 +99,8 @@ if __name__ == "__main__":
         ["un**COMPANY**like"],
         ["**COMPANY**like"],
         ["**COMPANY**only"],
+        ["**COMPANY**certified"],
+        ["anti**COMPANY**"],
         
         ["**PRODUCT**phones"],
         ["**PRODUCT**com"],
@@ -258,7 +260,13 @@ if __name__ == "__main__":
         ["topreferrer"],
         ["litecoin"],
         ["gearvr"],
-        ["lightsail"]
+        ["lightsail"],
+        ["autovoice"],
+        ["dnapowered"],
+        ["profitsurging"],
+        ["ballooninternet"],
+        ["amazonvisa"],
+        ["antiencryption"]
     ]
     
     with db() as (conn, cur):

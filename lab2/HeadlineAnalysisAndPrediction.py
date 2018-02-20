@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 # Imports
 
@@ -25,12 +25,12 @@ from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint, T
 import keras.backend as K
 
 
-# In[2]:
+# In[ ]:
 
 # Options
 
 stocks      = ['AAPL', 'AMD', 'AMZN', 'GOOG', 'MSFT']
-all_sources = ['reddit', 'reuters', 'twitter', 'seekingalpha']
+all_sources = ['reddit', 'reuters', 'twitter', 'seekingalpha', 'fool']
 
 max_length  = 50
 vocab_size  = None # Set by tokenizer
@@ -38,11 +38,11 @@ emb_size    = 300
 
 model_type  = 'regression'
 
-epochs      = 5
+epochs      = 180
 batch_size  = 32
 
 
-# In[3]:
+# In[ ]:
 
 
 def make_headline_to_effect_data():
@@ -117,7 +117,7 @@ def make_headline_to_effect_data():
     return meta, headlines, np.array(effects)
 
 
-# In[4]:
+# In[ ]:
 
 
 def encode_sentences(meta, sentences, tokenizer=None, max_length=100, vocab_size=100):
@@ -155,7 +155,7 @@ def encode_sentences(meta, sentences, tokenizer=None, max_length=100, vocab_size
     return meta_matrix, padded_headlines, tokenizer
 
 
-# In[5]:
+# In[ ]:
 
 
 def split_data(X, X2, Y, ratio):
@@ -178,7 +178,7 @@ def split_data(X, X2, Y, ratio):
     return trainX, trainX2, trainY, testX, testX2, testY
 
 
-# In[6]:
+# In[ ]:
 
 
 def get_embedding_matrix(tokenizer, pretrained_file='glove.840B.300d.txt', purge=False):
@@ -247,7 +247,7 @@ def get_model(emb_matrix):
     # conv = Conv1D(filters=64, kernel_size=5, padding='same', activation='selu')(emb)
     # conv = MaxPooling1D(pool_size=3)(conv)
     
-    text_rnn = LSTM(100, dropout=0.3, recurrent_dropout=0.3, return_sequences=False)(emb)
+    text_rnn = LSTM(200, dropout=0.3, recurrent_dropout=0.3, return_sequences=False)(emb)
     text_rnn = Activation('sigmoid')(text_rnn)
     text_rnn = BatchNormalization()(text_rnn)
     
@@ -294,7 +294,7 @@ def get_model(emb_matrix):
     return model
 
 
-# In[7]:
+# In[ ]:
 
 
 if __name__ == "__main__":
@@ -316,7 +316,7 @@ if __name__ == "__main__":
     print(trainX.shape, trainX2.shape, testY.shape)
 
 
-# In[8]:
+# In[ ]:
 
 # TRAIN MODEL
 
@@ -367,7 +367,7 @@ if __name__ == "__main__":
     
 
 
-# In[12]:
+# In[ ]:
 
 # TEST MODEL
 
@@ -435,7 +435,7 @@ if __name__ == "__main__":
             
 
 
-# In[10]:
+# In[ ]:
 
 # TEST MODEL
 

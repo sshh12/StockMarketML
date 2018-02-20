@@ -189,6 +189,36 @@ def get_seekingalpha_news(stock, pages=500):
 
     return articles
 
+def get_fool_news(stock, pages=20):
+    "Get headlines from Motley Fool"
+    print('Downloading MotleyFool: ' + stock)
+    
+    stock = stock.lower()
+    
+    re_headline = re.compile('<article id="article-\d+">[\s\S]+?">([\s\S]+?)<\/a>[\s\S]+?calendar"><\/i>([\s\S]+?20\d{2})')
+    
+    articles = defaultdict(list)
+    
+    for i in range(pages):
+        
+        if i == 0:
+            url = "https://www.fool.com/quote/nasdaq/apple/{}/content".format(stock)
+        else:
+            url = "https://www.fool.com/quote/nasdaq/apple/{}/content/more?page={}".format(stock, i)
+            
+        text = requests.get(url).text
+        
+        headlines = [(match.group(1), match.group(2)) for match in re_headline.finditer(text)]
+        
+        for headline, date in headlines:
+            
+            date = datetime.strptime(date.strip(), "%b %d %Y")
+            headline = headline.strip().replace("&#39;", "'")
+            
+            articles[date.strftime('%Y-%m-%d')].append(headline)
+            
+    return articles
+
 
 # In[4]:
 
@@ -248,31 +278,36 @@ if __name__ == "__main__":
                 'reddit': get_reddit_news(['google', 'Android', 'GooglePixel', 'news'], ['Google', 'pixel', 'android', 'stock']), 
                 'reuters': get_reuters_news('GOOG.O'),
                 'twitter': get_twitter_news(['@Google', '#Google', '#googlepixel', '#Alphabet']),
-                'seekingalpha': get_seekingalpha_news('GOOG')
+                'seekingalpha': get_seekingalpha_news('GOOG'),
+                'fool': get_fool_news('GOOG')
             },
             'AAPL': {
                 'reddit': get_reddit_news(['apple', 'ios', 'AAPL', 'news'], ['apple', 'iphone', 'ipad', 'ios', 'stock']), 
                 'reuters': get_reuters_news('AAPL.O'),
                 'twitter': get_twitter_news(['@Apple', '#Apple', '#IPhone', '#ios']),
-                'seekingalpha': get_seekingalpha_news('AAPL')
+                'seekingalpha': get_seekingalpha_news('AAPL'),
+                'fool': get_fool_news('AAPL')
             },
             'MSFT': {
                 'reddit': get_reddit_news(['microsoft', 'windowsphone', 'windows'], ['microsoft', 'phone', 'windows', 'stock']), 
                 'reuters': get_reuters_news('MSFT.O'),
                 'twitter': get_twitter_news(['@Microsoft', '#Windows', '#Microsoft', '#windowsphone']),
-                'seekingalpha': get_seekingalpha_news('MSFT')
+                'seekingalpha': get_seekingalpha_news('MSFT'),
+                'fool': get_fool_news('MSFT')
             },
             'AMD': {
                 'reddit': get_reddit_news(['Amd', 'AMD_Stock', 'pcmasterrace'], ['AMD', 'radeon', 'ryzen', 'stock']), 
                 'reuters': get_reuters_news('AMD.O'),
                 'twitter': get_twitter_news(['@AMD', '#AMD', '#Ryzen', '#radeon']),
-                'seekingalpha': get_seekingalpha_news('AMD')
+                'seekingalpha': get_seekingalpha_news('AMD'),
+                'fool': get_fool_news('AMD')
             },
             'AMZN': {
                 'reddit': get_reddit_news(['amazon', 'amazonprime', 'amazonecho'], ['amazon', 'echo', 'prime', 'stock']), 
                 'reuters': get_reuters_news('AMZN.O'),
                 'twitter': get_twitter_news(['@amazon', '#Amazon', '#jeffbezos', '@amazonecho', '#amazonprime']),
-                'seekingalpha': get_seekingalpha_news('AMZN')
+                'seekingalpha': get_seekingalpha_news('AMZN'),
+                'fool': get_fool_news('AMZN')
             }
     }
     
@@ -339,6 +374,7 @@ if __name__ == "__main__":
             'amazonvisa': '**PRODUCT**',
             'amazondot': '**PRODUCT**',
             'dot': '**PRODUCT**',
+            'firephone': '**PRODUCT**',
             'jeffbezos': '**MEMBER**'
         }
     }

@@ -12,6 +12,8 @@ import random
 import os
 import re
 
+import yqd
+
 from Database import add_stock_ticks, add_headlines, clean_ticks
 
 
@@ -35,6 +37,26 @@ def consume_ticker_csv(stock, filename):
     add_stock_ticks(entries)
     
     clean_ticks()
+
+def dl_ticker(stock, num_days=10):
+    """Loads data from yahoo"""
+    entries = []
+    
+    end_date = datetime.today()
+    begin_date = end_date - timedelta(days=num_days)
+    
+    for line in yqd.load_yahoo_quote(stock, begin_date.strftime('%Y%m%d'), end_date.strftime('%Y%m%d')):
+        
+        if "Date" not in line and len(line) > 1:
+                
+                date, open_, high, low, close, adj_close, volume = line.split(',')
+                
+                entries.append((stock, date, open_, high, low, close, adj_close, volume))
+                
+    add_stock_ticks(entries)
+    
+    clean_ticks()
+    
 
 
 # In[3]:
@@ -394,9 +416,9 @@ if __name__ == "__main__":
 
 if __name__ == "__main__":
     
-    consume_ticker_csv('AAPL', 'AAPL.csv')
-    consume_ticker_csv('AMZN', 'AMZN.csv')
-    consume_ticker_csv('AMD', 'AMD.csv')
-    consume_ticker_csv('GOOG', 'GOOG.csv')
-    consume_ticker_csv('MSFT', 'MSFT.csv')
+    dl_ticker('AAPL')
+    dl_ticker('AMZN')
+    dl_ticker('AMD')
+    dl_ticker('GOOG')
+    dl_ticker('MSFT')
 

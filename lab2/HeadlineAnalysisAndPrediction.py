@@ -42,7 +42,7 @@ epochs      = 180
 batch_size  = 32
 
 
-# In[3]:
+# In[10]:
 
 
 def make_headline_to_effect_data():
@@ -76,7 +76,7 @@ def make_headline_to_effect_data():
                 
                 cur.execute("""SELECT AVG(adjclose) FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date""", 
                             [stock, 
-                             add_time(event_date, -2), 
+                             add_time(event_date, -3), 
                              add_time(event_date, 0)])
                 
                 before_headline_ticks = cur.fetchall()
@@ -90,7 +90,7 @@ def make_headline_to_effect_data():
                 
                 ## Create training example ##
                 
-                if len(before_headline_ticks) > 0 and len(after_headline_ticks) > 0 and after_headline_ticks[0][0] != None:
+                if len(before_headline_ticks) > 0 and len(after_headline_ticks) > 0 and before_headline_ticks[0][0] != None and after_headline_ticks[0][0] != None:
                     
                     previous_tick = before_headline_ticks[-1][0]
                     result_tick = after_headline_ticks[0][0]
@@ -244,10 +244,10 @@ def get_model(emb_matrix):
     emb = Embedding(vocab_size + 1, emb_size, input_length=max_length, weights=[emb_matrix], trainable=True)(headline_input)
     emb = SpatialDropout1D(.2)(emb)
     
-    # conv = Conv1D(filters=64, kernel_size=5, padding='same', activation='selu')(emb)
-    # conv = MaxPooling1D(pool_size=3)(conv)
+    conv = Conv1D(filters=64, kernel_size=5, padding='same', activation='selu')(emb)
+    conv = MaxPooling1D(pool_size=3)(conv)
     
-    text_rnn = LSTM(200, dropout=0.3, recurrent_dropout=0.3, return_sequences=False)(emb)
+    text_rnn = LSTM(200, dropout=0.3, recurrent_dropout=0.3, return_sequences=False)(conv)
     text_rnn = Activation('selu')(text_rnn)
     text_rnn = BatchNormalization()(text_rnn)
     
@@ -294,7 +294,7 @@ def get_model(emb_matrix):
     return model
 
 
-# In[7]:
+# In[11]:
 
 
 if __name__ == "__main__":
@@ -316,7 +316,7 @@ if __name__ == "__main__":
     print(trainX.shape, trainX2.shape, testY.shape)
 
 
-# In[8]:
+# In[12]:
 
 # TRAIN MODEL
 
@@ -367,7 +367,7 @@ if __name__ == "__main__":
     
 
 
-# In[22]:
+# In[13]:
 
 # TEST MODEL
 
@@ -440,7 +440,7 @@ if __name__ == "__main__":
             
 
 
-# In[34]:
+# In[14]:
 
 # TEST MODEL
 
@@ -499,4 +499,9 @@ if __name__ == "__main__":
         plt.xticks(np.arange(7), list('MTWTFSS'))
         plt.yticks(np.arange(len(all_sources)), all_sources)
         plt.show()
+
+
+# In[ ]:
+
+
 

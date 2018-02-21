@@ -76,7 +76,7 @@ def make_headline_to_effect_data():
                 
                 cur.execute("""SELECT AVG(adjclose) FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date""", 
                             [stock, 
-                             add_time(event_date, -3), 
+                             add_time(event_date, -2), 
                              add_time(event_date, 0)])
                 
                 before_headline_ticks = cur.fetchall()
@@ -84,7 +84,7 @@ def make_headline_to_effect_data():
                 cur.execute("""SELECT AVG(adjclose) FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date""", 
                             [stock, 
                              add_time(event_date, 1), 
-                             add_time(event_date, 8)])
+                             add_time(event_date, 6)])
                 
                 after_headline_ticks = cur.fetchall()
                 
@@ -98,7 +98,7 @@ def make_headline_to_effect_data():
                     if model_type == 'regression':
                         
                         # Percent Diff (+Normalization Constant)
-                        effect = [(result_tick - previous_tick) / previous_tick / 0.022]
+                        effect = [(result_tick - previous_tick) / previous_tick / 0.0044]
                     
                     else:
                 
@@ -183,7 +183,7 @@ def split_data(X, X2, Y, ratio):
 
 def get_embedding_matrix(tokenizer, pretrained_file='glove.840B.300d.txt', purge=False):
     """Load Vectors from Glove File"""
-    print("Loading WordVecs..")
+    print("Loading WordVecs...")
     
     ## Load Glove File (Super Slow) ##
     
@@ -198,7 +198,7 @@ def get_embedding_matrix(tokenizer, pretrained_file='glove.840B.300d.txt', purge
             coefs = np.asarray(values[1:], dtype='float32')
             glove_db[word] = coefs
 
-    print('Loaded Word Vectors...' + str(len(glove_db)))
+    print('Loaded WordVectors...' + str(len(glove_db)))
     
     ## Set Embeddings ##
     
@@ -367,7 +367,7 @@ if __name__ == "__main__":
     
 
 
-# In[13]:
+# In[22]:
 
 # TEST MODEL
 
@@ -385,9 +385,10 @@ if __name__ == "__main__":
     
     ## **This Test May Overlap w/Train Data** ##
     
+    pretick_date = '2018-02-12'
     current_date = '2018-02-14'
     predict_date = '2018-02-15'
-    stock = 'AMZN'
+    stock = 'AAPL'
     
     with db() as (conn, cur):
         
@@ -399,7 +400,7 @@ if __name__ == "__main__":
         
         ## Find Headlines ##
     
-        cur.execute("SELECT date, source, content FROM headlines WHERE date=? AND stock=?", [current_date, stock])
+        cur.execute("SELECT date, source, content FROM headlines WHERE date BETWEEN ? AND ? AND stock=?", [pretick_date, current_date, stock])
         headlines = cur.fetchall()
         
         ## Process ##
@@ -428,7 +429,7 @@ if __name__ == "__main__":
         if model_type == 'regression':
             
             print("Predicting Change Coef: " +  parse(np.mean(predictions[:, 0])))
-            print("Predicting Price: " +  parse(np.mean(predictions[:, 0]) * .022 * ticks[0][0] + ticks[0][0]))
+            print("Predicting Price: " +  parse(np.mean(predictions[:, 0]) * 0.0044 * ticks[0][0] + ticks[0][0]))
             
         else:
         
@@ -439,7 +440,7 @@ if __name__ == "__main__":
             
 
 
-# In[ ]:
+# In[34]:
 
 # TEST MODEL
 
@@ -458,8 +459,8 @@ if __name__ == "__main__":
     ## Fake Unique Test Data ##
     
     headlines = [
-        "**COMPANY** is the best",
-        "companies set to lose from **COMPANY**s **PRODUCT**s"
+        "**COMPANY** gains a ton of stock after creating **PRODUCT**",
+        "**COMPANY** loses a ton of stock after killing **PRODUCT**"
     ]
     
     test_sents, meta = [], []

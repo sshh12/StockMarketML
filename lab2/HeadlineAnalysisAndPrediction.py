@@ -74,7 +74,7 @@ def make_headline_to_effect_data():
                 
                 ## Find corresponding tick data ## 
                 
-                cur.execute("""SELECT adjclose FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date""", 
+                cur.execute("""SELECT AVG(adjclose) FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date""", 
                             [stock, 
                              add_time(event_date, -3), 
                              add_time(event_date, 0)])
@@ -84,7 +84,7 @@ def make_headline_to_effect_data():
                 cur.execute("""SELECT AVG(adjclose) FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date""", 
                             [stock, 
                              add_time(event_date, 1), 
-                             add_time(event_date, 5)])
+                             add_time(event_date, 8)])
                 
                 after_headline_ticks = cur.fetchall()
                 
@@ -178,7 +178,7 @@ def split_data(X, X2, Y, ratio):
     return trainX, trainX2, trainY, testX, testX2, testY
 
 
-# In[ ]:
+# In[6]:
 
 
 def get_embedding_matrix(tokenizer, pretrained_file='glove.840B.300d.txt', purge=False):
@@ -337,7 +337,7 @@ if __name__ == "__main__":
         monitor_mode = 'val_acc'
     
     tensorboard = TensorBoard(log_dir="logs/{}".format(datetime.now().strftime("%Y,%m,%d-%H,%M,%S," + model_type)))
-    e_stopping = EarlyStopping(monitor=monitor_mode, patience=80)
+    e_stopping = EarlyStopping(monitor=monitor_mode, patience=60)
     checkpoint = ModelCheckpoint(os.path.join('..', 'models', 'media-headlines-' + model_type + '.h5'), 
                                  monitor=monitor_mode,
                                  verbose=0,
@@ -367,7 +367,7 @@ if __name__ == "__main__":
     
 
 
-# In[25]:
+# In[13]:
 
 # TEST MODEL
 
@@ -387,7 +387,7 @@ if __name__ == "__main__":
     
     current_date = '2018-02-14'
     predict_date = '2018-02-15'
-    stock = 'AAPL'
+    stock = 'AMZN'
     
     with db() as (conn, cur):
         
@@ -434,12 +434,12 @@ if __name__ == "__main__":
         
             print("Predicting Change Coef: " +  parse(np.mean(predictions[:, 0]) - .5))
         
-        print("Actual Stock: " + parse(ticks[0][0]))
+        print("Actual Stock: " + parse(ticks[0][0]) + " to " + parse(ticks[-1][0]))
         print("Actual Stock Change: " + parse(ticks[-1][0] - ticks[0][0]))
             
 
 
-# In[29]:
+# In[ ]:
 
 # TEST MODEL
 

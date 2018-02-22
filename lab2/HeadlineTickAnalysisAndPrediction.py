@@ -389,80 +389,208 @@ if __name__ == "__main__":
     
 
 
-# In[9]:
+# In[42]:
 
-# # TEST MODEL
+# TEST MODEL
 
-# if __name__ == "__main__":
+if __name__ == "__main__":
     
-#     ## Load Model For Manual Testing ##
+    ## Load Model For Manual Testing ##
     
-#     import keras.metrics
-#     keras.metrics.correct_sign_acc = correct_sign_acc
+    import keras.metrics
+    keras.metrics.correct_sign_acc = correct_sign_acc
     
-#     with open(os.path.join('..', 'models', 'toke-tick.pkl'), 'rb') as toke_file:
-#         toke = pickle.load(toke_file)
+    with open(os.path.join('..', 'models', 'toke-tick.pkl'), 'rb') as toke_file:
+        toke = pickle.load(toke_file)
     
-#     model = load_model(os.path.join('..', 'models', 'media-headlines-ticks-' + model_type + '.h5'))
+    model = load_model(os.path.join('..', 'models', 'media-headlines-ticks-' + model_type + '.h5'))
     
-#     ## **This Test May Overlap w/Train Data** ##
+    ## **This Test May Overlap w/Train Data** ##
     
-#     pretick_date = '2018-02-12'
-#     current_date = '2018-02-14'
-#     predict_date = '2018-02-15'
-#     stock = 'AAPL'
+    pretick_date = '2018-02-19'
+    current_date = '2018-02-21'
+    predict_date = '2018-02-22'
+    stock = 'AMD'
     
-#     with db() as (conn, cur):
+    with db() as (conn, cur):
         
-#         ## Select Actual Stock Values ##
+        ## Select Actual Stock Values ##
         
-#         cur.execute("""SELECT adjclose FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date""", 
-#                     [stock, current_date, predict_date])
-#         ticks = cur.fetchall()
+        event_date = datetime.strptime(current_date, '%Y-%m-%d')
         
-#         ## Find Headlines ##
+        add_time = lambda e, days: (e + timedelta(days=days)).strftime('%Y-%m-%d')
+                
+        cur.execute("""SELECT open, high, low, adjclose, volume FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date DESC""", 
+                    [stock, 
+                    add_time(event_date, -10 - tick_window), 
+                    add_time(event_date, 0)])
+                
+        before_headline_ticks = cur.fetchall()[:tick_window]
+        
+        
+        cur.execute("""SELECT adjclose FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date ASC LIMIT 1""", 
+                    [stock, 
+                    add_time(event_date, 1), 
+                    add_time(event_date, 6)])
+        
+        after_headline_ticks = cur.fetchall()
+        
+        tick_hist = np.array(before_headline_ticks)
+        tick_hist -= np.mean(tick_hist, axis=0)
+        tick_hist /= np.std(tick_hist, axis=0)
+        
+        ## Find Headlines ##
     
-#         cur.execute("SELECT date, source, content FROM headlines WHERE date BETWEEN ? AND ? AND stock=?", [pretick_date, current_date, stock])
-#         headlines = cur.fetchall()
+        cur.execute("SELECT date, source, content FROM headlines WHERE date BETWEEN ? AND ? AND stock=?", [pretick_date, current_date, stock])
+        headlines = cur.fetchall()
         
-#         ## Process ##
+        ## Process ##
         
-#         meta, test_sents = [], []
+        meta, test_sents = [], []
         
-#         for (date, source, content) in headlines:
+        for (date, source, content) in headlines:
             
-#             meta.append([source, datetime.strptime(date, '%Y-%m-%d').weekday()])
-#             test_sents.append(content)
+            meta.append([source, datetime.strptime(date, '%Y-%m-%d').weekday()])
+            test_sents.append(content)
             
-#         encoded_meta, test_encoded, _ = encode_sentences(meta, 
-#                                                          test_sents, 
-#                                                          tokenizer=toke, 
-#                                                          max_length=max_length,
-#                                                          vocab_size=vocab_size)
+        encoded_meta, test_encoded, _ = encode_sentences(meta, 
+                                                         test_sents, 
+                                                         tokenizer=toke, 
+                                                         max_length=max_length,
+                                                         vocab_size=vocab_size)
         
-#         predictions = model.predict([test_encoded, encoded_meta])
+        tick_hists = np.array([tick_hist] * len(headlines))
         
-#         ## Display ##
+        predictions = model.predict([test_encoded, tick_hists, encoded_meta])
         
-#         parse = lambda num: str(round(num, 2))
+        ## Display ##
         
-#         print("Using: " + str(test_sents))
+        predictions = predictions[:, 0]
         
-#         if model_type == 'regression':
+        actual_current = before_headline_ticks[0][3]
+        
+        try:
+            actual_result = after_headline_ticks[0][0]
+        except:
+            actual_result = -1
+        
+        parse = lambda num: str(round(num, 2))
+        
+        print("Using: " + str(test_sents))
+        
+        if model_type == 'regression':
             
-#             print("Predicting Change Coef: " +  parse(np.mean(predictions[:, 0])))
-#             print("Predicting Price: " +  parse(np.mean(predictions[:, 0]) * 0.0044 * ticks[0][0] + ticks[0][0]))
+            print("Predicting Change Coef: " +  parse(np.mean(predictions)))
+            print("Predicting Price: " +  parse(np.mean(predictions) * 0.02 * actual_current + actual_current))
             
-#         else:
+        else:
         
-#             print("Predicting Change Coef: " +  parse(np.mean(predictions[:, 0]) - .5))
+            print("Predicting Change Coef: " +  parse(np.mean(predictions) - .5))
         
-#         print("Actual Stock: " + parse(ticks[0][0]) + " to " + parse(ticks[-1][0]))
-#         print("Actual Stock Change: " + parse(ticks[-1][0] - ticks[0][0]))
+        print("Actual Stock: " + parse(actual_current) + " to " + parse(actual_result))
             
 
 
-# In[10]:
+# In[78]:
+
+# TEST MODEL
+
+if __name__ == "__main__":
+    
+    ## Load Model For Manual Testing ##
+    
+    import keras.metrics
+    keras.metrics.correct_sign_acc = correct_sign_acc
+    
+    with open(os.path.join('..', 'models', 'toke-tick.pkl'), 'rb') as toke_file:
+        toke = pickle.load(toke_file)
+    
+    model = load_model(os.path.join('..', 'models', 'media-headlines-ticks-' + model_type + '.h5'))
+    
+    ## **This Test May Overlap w/Train Data** ##
+    
+    current_date = '2017-11-01'
+    past_days = 80
+    predict_days = 110
+    stock = 'AAPL'
+    
+    with db() as (conn, cur):
+        
+        add_time = lambda e, days: (e + timedelta(days=days)).strftime('%Y-%m-%d')
+        
+        pivot_date = datetime.strptime(current_date, '%Y-%m-%d')
+        
+        cur.execute("""SELECT date, adjclose FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date ASC""", 
+                    [stock, 
+                    add_time(pivot_date, -past_days), 
+                    add_time(pivot_date, predict_days)])
+        
+        real_ticks = cur.fetchall()
+        dates = sorted([ date for date, _ in real_ticks])
+        real_ticks = { date: close for (date, close) in real_ticks }
+        fake_ticks = { date: real_ticks[dates[0]] for date in real_ticks }
+        
+        print(dates[-predict_days], "to", dates[-1])
+        
+        for pred_date in dates[-predict_days:]:
+        
+            ## Select Actual Stock Values ##
+
+            event_date = datetime.strptime(pred_date, '%Y-%m-%d')
+            
+            pretick_date = add_time(event_date, -2)
+
+            cur.execute("""SELECT open, high, low, adjclose, volume FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date DESC""", 
+                        [stock, 
+                        add_time(event_date, -10 - tick_window), 
+                        add_time(event_date, 0)])
+
+            before_headline_ticks = cur.fetchall()[:tick_window]
+
+            tick_hist = np.array(before_headline_ticks)
+            tick_hist -= np.mean(tick_hist, axis=0)
+            tick_hist /= np.std(tick_hist, axis=0)
+
+            ## Find Headlines ##
+
+            cur.execute("SELECT date, source, content FROM headlines WHERE date BETWEEN ? AND ? AND stock=?", [pretick_date, event_date, stock])
+            headlines = cur.fetchall()
+
+            ## Process ##
+
+            meta, test_sents = [], []
+
+            for (date, source, content) in headlines:
+
+                meta.append([source, datetime.strptime(date, '%Y-%m-%d').weekday()])
+                test_sents.append(content)
+
+            encoded_meta, test_encoded, _ = encode_sentences(meta, 
+                                                             test_sents, 
+                                                             tokenizer=toke, 
+                                                             max_length=max_length,
+                                                             vocab_size=vocab_size)
+
+            tick_hists = np.array([tick_hist] * len(headlines))
+
+            predictions = model.predict([test_encoded, tick_hists, encoded_meta])
+            
+            actual_current = before_headline_ticks[0][3]
+            
+            pred_price = np.mean(predictions) * 0.02 * actual_current + actual_current
+            
+            fake_ticks[pred_date] = pred_price
+        
+        plt.plot([real_ticks[date] for date in dates])
+        plt.plot([fake_ticks[date] for date in dates])
+        plt.show()
+        
+        plt.plot(np.array([fake_ticks[date] for date in dates]) - np.array([real_ticks[date] for date in dates]))
+        plt.show()
+            
+
+
+# In[ ]:
 
 # # TEST MODEL
 

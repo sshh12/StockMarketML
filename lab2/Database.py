@@ -266,7 +266,16 @@ if __name__ == "__main__":
         ["profitsurging"],
         ["ballooninternet"],
         ["amazonvisa"],
-        ["antiencryption"]
+        ["antiencryption"],
+        ["undisruptive"],
+        ["lumentum"],
+        ["renderingtext"],
+        ["expectationcrushing"],
+        ["microbezel"],
+        ["cryptocurrencies"],
+        ["softcard"],
+        ["millionairemaker"],
+        ["debtpowered"]
     ]
     
     with db() as (conn, cur):

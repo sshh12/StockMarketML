@@ -358,6 +358,8 @@ if __name__ == "__main__":
         },
         'AAPL': {
             'applemusic': '**PRODUCT**',
+            'applepark': '**PRODUCT**',
+            'applewatch': '**PRODUCT**',
             'applepay': '**PRODUCT**',
             'appletv': '**PRODUCT**',
             'apple': '**COMPANY**', 
@@ -372,7 +374,8 @@ if __name__ == "__main__":
             'airpods': '**PRODUCT**',
             'animoji': '**PRODUCT**',
             'lightningpin': '**PRODUCT**',
-            'touchid': '**PRODUCT**'
+            'touchid': '**PRODUCT**',
+            'siri': '**PRODUCT**'
         },
         'MSFT': {
             'microsoft': '**COMPANY**',
@@ -389,6 +392,7 @@ if __name__ == "__main__":
         },
         'AMZN': {
             'amazonfire':'**PRODUCT**',
+            'amazonfresh':'**PRODUCT**',
             'amazon': '**COMPANY**',
             'echo': '**PRODUCT**',
             'prime': '**PRODUCT**',

@@ -39,7 +39,7 @@ emb_size    = 300
 
 model_type  = 'regression'
 
-epochs      = 1
+epochs      = 200
 batch_size  = 32
 
 
@@ -94,19 +94,19 @@ def make_headline_to_effect_data():
                 
                 ## Create training example ##
                 
-                if len(after_headline_ticks) > 0:
+                previous_tick = before_headline_ticks[0][3]
+                result_tick = after_headline_ticks[0][0]
+                
+                if previous_tick and result_tick and len(after_headline_ticks) > 0:
                     
                     tick_hist = np.array(before_headline_ticks)
                     tick_hist -= np.mean(tick_hist, axis=0)
                     tick_hist /= np.std(tick_hist, axis=0)
                     
-                    previous_tick = before_headline_ticks[0][3]
-                    result_tick = after_headline_ticks[0][0]
-                    
                     if model_type == 'regression':
                         
                         # Percent Diff (+Normalization Constant)
-                        effect = [(result_tick - previous_tick) / previous_tick / 0.0044]
+                        effect = [(result_tick - previous_tick) / previous_tick / 0.02]
                     
                     else:
                 
@@ -122,8 +122,6 @@ def make_headline_to_effect_data():
                     headlines.append(content)
                     tick_hists.append(tick_hist)
                     effects.append(effect)
-                    
-                break
                     
     return meta, headlines, np.array(tick_hists), np.array(effects)
 
@@ -327,13 +325,13 @@ if __name__ == "__main__":
     
     encoded_meta, encoded_headlines, toke = encode_sentences(meta, 
                                                              headlines, 
-                                                             max_length=max_length, 
+                                                              max_length=max_length, 
                                                              vocab_size=vocab_size)
     
     vocab_size = len(toke.word_counts)
     print("Found Words......" + str(vocab_size))
     
-    emb_matrix, glove_db = get_embedding_matrix(toke, use_glove=False)
+    emb_matrix, glove_db = get_embedding_matrix(toke)
     
     trainX, trainX2, trainX3, trainY, testX, testX2, testX3, testY = split_data(encoded_headlines, tick_hists, encoded_meta, effects, .8)
     

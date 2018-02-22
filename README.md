@@ -26,6 +26,10 @@ This script gathers headlines/media data from various sources.
 
 Creates and trains a model to predict stock prices based on headlines.
 
+##### HeadlineTickAnalysisAndPrediction
+
+Creates and trains a model to predict stock prices based on headlines and historical data.
+
 ## Lab 1
 
 First Attempt

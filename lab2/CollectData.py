@@ -235,7 +235,7 @@ def get_fool_news(stock, pages=30):
         for headline, date in headlines:
             
             date = datetime.strptime(date.strip(), "%b %d %Y")
-            headline = headline.strip().replace("&#39;", "'").replace("&quot;", "")
+            headline = headline.strip().replace("&#39;", "'").replace("&quot;", "").replace("&amp;", "and")
             
             articles[date.strftime('%Y-%m-%d')].append(headline)
             
@@ -343,21 +343,25 @@ if __name__ == "__main__":
             'alphabet': '**COMPANY**',
             'androidpay': '**PRODUCT**',
             'android': '**PRODUCT**',
-            'allo': '**PRODUCT**',
+            ' allo ': ' **PRODUCT** ',
             'pixel xl': '**PRODUCT**',
+            'chromebook': '**PRODUCT**',
+            'chromecast': '**PRODUCT**',
             'chrome': '**PRODUCT**',
             'pixelxl': '**PRODUCT**',
+            'play store': '**PRODUCT**',
             'pixel': '**PRODUCT**',
             'maps': '**PRODUCT**',
             'youtube': '**PRODUCT**',
-            'chromecast': '**PRODUCT**',
             'nexusx': '**PRODUCT**',
             'nexusp': '**PRODUCT**',
             'nexus': '**PRODUCT**',
             'googletranslate': '**PRODUCT**',
             'gboard': '**PRODUCT**',
             'materialdesign': '**PRODUCT**',
-            'alphago': '**PRODUCT**'
+            'alphago': '**PRODUCT**',
+            'sundar pichai': '**MEMBER**',
+            'sundarpichai': '**MEMBER**'
         },
         'AAPL': {
             'applemusic': '**PRODUCT**',
@@ -379,26 +383,45 @@ if __name__ == "__main__":
             'animoji': '**PRODUCT**',
             'lightningpin': '**PRODUCT**',
             'touchid': '**PRODUCT**',
-            'siri': '**PRODUCT**'
+            'face id': '**PRODUCT**',
+            'facetime': '**PRODUCT**',
+            'd touch': '**PRODUCT**',
+            'imessage': '**PRODUCT**',
+            'siri': '**PRODUCT**',
+            'imac': '**PRODUCT**',
+            'tim cook': '**MEMBER**'
         },
         'MSFT': {
             'microsoft': '**COMPANY**',
             'windows': '**PRODUCT**',
             'onedrive': '**PRODUCT**',
             'outlook': '**PRODUCT**',
-            'bing': '**PRODUCT**'
+            'bing': '**PRODUCT**',
+            'xbox one x': '**PRODUCT**',
+            'xbox one': '**PRODUCT**',
+            'xbox': '**PRODUCT**',
+            'satya nadella': '**MEMBER**'
         },
         'AMD': {
+            'advanced micro devices': '**COMPANY**',
             'amd': '**COMPANY**',
             'ryzen': '**PRODUCT**',
+            'radeon rxvega': '**PRODUCT**',
+            'radeon vega frontier edition': '**PRODUCT**',
             'radeon': '**PRODUCT**',
-            'rxvega': '**PRODUCT**'
+            'rxvega': '**PRODUCT**',
+            'vega fe': '**PRODUCT**',
+            'zen': '**PRODUCT**',
+            'lisa su': '**MEMBER**'
         },
         'AMZN': {
             'amazonfire':'**PRODUCT**',
             'amazonfresh':'**PRODUCT**',
+            'smileamazoncom':'**PRODUCT**',
+            ' dash': ' **PRODUCT**',
             'amazon': '**COMPANY**',
             'echo': '**PRODUCT**',
+            'prime video': '**PRODUCT**',
             'prime': '**PRODUCT**',
             'alexa': '**PRODUCT**',
             'firetv': '**PRODUCT**',
@@ -406,7 +429,8 @@ if __name__ == "__main__":
             'amazondot': '**PRODUCT**',
             'dot': '**PRODUCT**',
             'firephone': '**PRODUCT**',
-            'jeffbezos': '**MEMBER**'
+            'jeffbezos': '**MEMBER**',
+            'jeff bezos': '**MEMBER**'
         }
     }
 

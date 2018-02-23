@@ -69,12 +69,40 @@ def clean_ticks():
 # In[5]:
 
 
+def db_replace_all(query, replacement, stock='', commit=False):
+    """
+    Do a `replace all` on headlines in database
+    
+    Used to fix parsing errors of already parsed headlines
+    """
+    with db() as (conn, cur):
+        
+        cur.execute("SELECT stock, date, source, content FROM headlines WHERE stock=? AND content LIKE ?", [stock, query])
+        results = cur.fetchall()
+        
+        for (stock, date, source, content) in results:
+            
+            new_content = content.replace(query.replace('%', ''), replacement)
+            
+            print(content)
+            print(new_content)
+            
+            if commit:
+                
+                cur.execute("UPDATE headlines SET content=? WHERE stock=? AND content=?", [new_content, stock, content])
+                conn.commit()
+        
+
+
+# In[6]:
+
+
 if __name__ == "__main__":
     
     create_tables()
 
 
-# In[6]:
+# In[7]:
 
 
 if __name__ == "__main__":
@@ -101,6 +129,7 @@ if __name__ == "__main__":
         ["**COMPANY**only"],
         ["**COMPANY**certified"],
         ["anti**COMPANY**"],
+        ["**COMPANY**esque"],
         
         ["**PRODUCT**phones"],
         ["**PRODUCT**com"],
@@ -272,10 +301,20 @@ if __name__ == "__main__":
         ["renderingtext"],
         ["expectationcrushing"],
         ["microbezel"],
+        ["bezelless"],
         ["cryptocurrencies"],
         ["softcard"],
         ["millionairemaker"],
-        ["debtpowered"]
+        ["debtpowered"],
+        ["nonxl"],
+        ["panoramafunction"],
+        ["applesized"],
+        ["quartercrushing"],
+        ["internetofthings"],
+        ["marginexpansion"],
+        ["linkedins"],
+        ["phoneshaped"],
+        ["chipgate"]
     ]
     
     with db() as (conn, cur):

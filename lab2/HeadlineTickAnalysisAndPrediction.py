@@ -32,7 +32,7 @@ import keras.backend as K
 stocks      = ['AAPL', 'AMD', 'AMZN', 'GOOG', 'MSFT']
 all_sources = ['reddit', 'reuters', 'twitter', 'seekingalpha', 'fool']
 
-tick_window = 10
+tick_window = 15
 max_length  = 50
 vocab_size  = None # Set by tokenizer
 emb_size    = 300
@@ -88,7 +88,7 @@ def make_headline_to_effect_data():
                 cur.execute("""SELECT AVG(adjclose) FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date""", 
                             [stock, 
                              add_time(event_date, 1), 
-                             add_time(event_date, 6)])
+                             add_time(event_date, 4)])
                 
                 after_headline_ticks = cur.fetchall()
                 
@@ -106,16 +106,13 @@ def make_headline_to_effect_data():
                     if model_type == 'regression':
                         
                         # Percent Diff (+Normalization Constant)
-                        effect = [(result_tick - previous_tick) / previous_tick / 0.02]
+                        effect = [(result_tick - previous_tick) / previous_tick / 0.15]
                     
                     else:
                 
                         if result_tick > previous_tick:
-
                             effect = [1., 0.]
-
                         else:
-
                             effect = [0., 1.]
                         
                     meta.append((source, event_date.weekday()))
@@ -167,7 +164,7 @@ def encode_sentences(meta, sentences, tokenizer=None, max_length=100, vocab_size
 # In[5]:
 
 
-def split_data(X, X2, X3, Y, ratio):
+def split_data(X, X2, X3, Y, ratio): #TODO Make Better
     """
     Splits X/Y to Train/Test
     """
@@ -273,11 +270,11 @@ def get_model(emb_matrix):
     
     tick_input = Input(shape=(tick_window, 5))
     
-    tick_rnn = LSTM(200, dropout=0.3, recurrent_dropout=0.3, return_sequences=False)(tick_input)
+    tick_rnn = LSTM(200, dropout=0.4, recurrent_dropout=0.4, return_sequences=False)(tick_input)
     tick_rnn = Activation('selu')(tick_rnn)
     tick_rnn = BatchNormalization()(tick_rnn)
     
-    ## Source ##
+    ## Meta ##
     
     meta_input = Input(shape=(len(all_sources) + 7,))
     
@@ -285,7 +282,7 @@ def get_model(emb_matrix):
     
     merged = concatenate([text_rnn, tick_rnn, meta_input])
     
-    final_dense = Dense(100)(merged)
+    final_dense = Dense(300)(merged)
     final_dense = Activation('selu')(final_dense)
     final_dense = BatchNormalization()(final_dense)
     final_dense = Dropout(0.5)(final_dense)
@@ -325,7 +322,7 @@ if __name__ == "__main__":
     
     encoded_meta, encoded_headlines, toke = encode_sentences(meta, 
                                                              headlines, 
-                                                              max_length=max_length, 
+                                                             max_length=max_length, 
                                                              vocab_size=vocab_size)
     
     vocab_size = len(toke.word_counts)
@@ -338,7 +335,7 @@ if __name__ == "__main__":
     print(trainX.shape, trainX2.shape, trainX3.shape, testY.shape)
 
 
-# In[8]:
+# In[ ]:
 
 # TRAIN MODEL
 
@@ -359,7 +356,7 @@ if __name__ == "__main__":
         monitor_mode = 'val_acc'
     
     tensorboard = TensorBoard(log_dir="logs/{}".format(datetime.now().strftime("%Y,%m,%d-%H,%M,%S,tick," + model_type)))
-    e_stopping = EarlyStopping(monitor=monitor_mode, patience=60)
+    e_stopping = EarlyStopping(monitor=monitor_mode, patience=50)
     checkpoint = ModelCheckpoint(os.path.join('..', 'models', 'media-headlines-ticks-' + model_type + '.h5'), 
                                  monitor=monitor_mode,
                                  verbose=0,
@@ -389,7 +386,7 @@ if __name__ == "__main__":
     
 
 
-# In[42]:
+# In[ ]:
 
 # TEST MODEL
 
@@ -408,8 +405,8 @@ if __name__ == "__main__":
     ## **This Test May Overlap w/Train Data** ##
     
     pretick_date = '2018-02-19'
-    current_date = '2018-02-21'
-    predict_date = '2018-02-22'
+    current_date = '2018-02-22'
+    predict_date = '2018-02-23'
     stock = 'AMD'
     
     with db() as (conn, cur):
@@ -491,7 +488,7 @@ if __name__ == "__main__":
             
 
 
-# In[78]:
+# In[ ]:
 
 # TEST MODEL
 
@@ -577,7 +574,7 @@ if __name__ == "__main__":
             
             actual_current = before_headline_ticks[0][3]
             
-            pred_price = np.mean(predictions) * 0.02 * actual_current + actual_current
+            pred_price = np.mean(predictions) * 0.015 * actual_current + actual_current
             
             fake_ticks[pred_date] = pred_price
         

@@ -91,6 +91,27 @@ def db_replace_all(query, replacement, stock='', commit=False):
                 
                 cur.execute("UPDATE headlines SET content=? WHERE stock=? AND content=?", [new_content, stock, content])
                 conn.commit()
+                
+def do_labeling():
+
+    with db() as (conn, cur):
+        
+        while True:
+        
+            cur.execute("SELECT content, rawcontent, sentimentlabel, stock FROM headlines ORDER BY RANDOM() LIMIT 1")
+            row = cur.fetchall()[0]
+            print(row)
+
+            label = int(input())
+
+            if label < -10:
+
+                break
+                
+            else:
+                
+                cur.execute("UPDATE headlines SET sentimentlabel=? WHERE content=?", [label, row[0]])
+                conn.commit()
         
 
 

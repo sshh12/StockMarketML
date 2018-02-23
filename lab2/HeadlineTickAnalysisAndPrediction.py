@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[4]:
+# In[1]:
 
 # Imports
 
@@ -25,7 +25,7 @@ from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint, T
 import keras.backend as K
 
 
-# In[5]:
+# In[2]:
 
 # Options
 
@@ -43,7 +43,7 @@ epochs      = 200
 batch_size  = 32
 
 
-# In[6]:
+# In[3]:
 
 
 def make_headline_to_effect_data():
@@ -64,10 +64,10 @@ def make_headline_to_effect_data():
             
             ## Go through all the headlines ##
             
-            cur.execute("SELECT date, source, content FROM headlines WHERE stock=? AND LENGTH(content) >= 16", [stock])
+            cur.execute("SELECT date, source, content, sentimentlabel FROM headlines WHERE stock=? AND LENGTH(content) >= 16", [stock])
             headline_query = cur.fetchall()
             
-            for (date, source, content) in headline_query:
+            for (date, source, content, label) in headline_query:
                 
                 event_date = datetime.strptime(date, '%Y-%m-%d') # The date of headline
                 
@@ -107,6 +107,13 @@ def make_headline_to_effect_data():
                         
                         # Percent Diff (+Normalization Constant)
                         effect = [(result_tick - previous_tick) / previous_tick / 0.15]
+                        
+                        # Use labels to adjust effect
+                        if label != -999:
+                            if np.sign(label) == np.sign(effect[0]):
+                                effect = [effect[0] * 2]
+                            else:
+                                effect = [effect[0] / 4]
                     
                     else:
                 
@@ -114,6 +121,10 @@ def make_headline_to_effect_data():
                             effect = [1., 0.]
                         else:
                             effect = [0., 1.]
+                            
+                        if label != -999:
+                            if np.sign(label) != np.sign(effect[0]):
+                                effect = [.5, .5]
                         
                     meta.append((source, event_date.weekday()))
                     headlines.append(content)
@@ -123,7 +134,7 @@ def make_headline_to_effect_data():
     return meta, headlines, np.array(tick_hists), np.array(effects)
 
 
-# In[7]:
+# In[4]:
 
 
 def encode_sentences(meta, sentences, tokenizer=None, max_length=100, vocab_size=100):
@@ -161,7 +172,7 @@ def encode_sentences(meta, sentences, tokenizer=None, max_length=100, vocab_size
     return meta_matrix, padded_headlines, tokenizer
 
 
-# In[8]:
+# In[5]:
 
 
 def split_data(X, X2, X3, Y, ratio): #TODO Make Better
@@ -186,7 +197,7 @@ def split_data(X, X2, X3, Y, ratio): #TODO Make Better
     return trainX, trainX2, trainX3, trainY, testX, testX2, testX3, testY
 
 
-# In[9]:
+# In[7]:
 
 
 def get_embedding_matrix(tokenizer, use_glove=True, pretrained_file='glove.840B.300d.txt', purge=False):
@@ -313,7 +324,7 @@ def get_model(emb_matrix):
     return model
 
 
-# In[7]:
+# In[ ]:
 
 
 if __name__ == "__main__":
@@ -335,7 +346,7 @@ if __name__ == "__main__":
     print(trainX.shape, trainX2.shape, trainX3.shape, testY.shape)
 
 
-# In[8]:
+# In[ ]:
 
 # TRAIN MODEL
 
@@ -386,7 +397,7 @@ if __name__ == "__main__":
     
 
 
-# In[11]:
+# In[ ]:
 
 # TEST MODEL
 
@@ -404,7 +415,7 @@ if __name__ == "__main__":
     
     ## **This Test May Overlap w/Train Data** ##
     
-    pretick_date = '2018-02-19'
+    pretick_date = '2018-02-21'
     current_date = '2018-02-23'
     predict_date = '2018-02-24'
     stock = 'AMD'
@@ -488,7 +499,7 @@ if __name__ == "__main__":
             
 
 
-# In[10]:
+# In[ ]:
 
 # TEST MODEL
 

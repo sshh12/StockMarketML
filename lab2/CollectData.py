@@ -14,7 +14,7 @@ import re
 
 import yqd
 
-from Database import add_stock_ticks, add_headlines, clean_ticks
+from Database import add_stock_ticks, add_headlines, clean_ticks, db
 
 
 # In[2]:
@@ -211,7 +211,7 @@ def get_seekingalpha_news(stock, pages=500):
 
     return articles
 
-def get_fool_news(stock, pages=30):
+def get_fool_news(stock, pages=40):
     "Get headlines from Motley Fool"
     print('Downloading MotleyFool: ' + stock)
     
@@ -245,7 +245,7 @@ def get_fool_news(stock, pages=30):
 # In[4]:
 
 
-def clean_headline(headline, replacements={}):
+def clean_headline(headline, dictionary):
     """
     Clean headline
     
@@ -253,11 +253,13 @@ def clean_headline(headline, replacements={}):
     """
     headline = headline.lower()
     headline = re.sub('\d+%', 'STAT', headline)
+    headline = re.sub('\b\d+\b', 'STAT', headline)
     headline = ''.join(c for c in headline if c in "abcdefghijklmnopqrstuvwxyz ")
     headline = re.sub('\s+', ' ', headline)
-    
-    for original, replacement in replacements.items():
-        headline = headline.replace(original, replacement)
+        
+    for (word, replacement) in dictionary:
+            
+        headline = headline.replace(word, replacement)
         
     headline = headline.replace('STAT', '**STATISTIC**')
         
@@ -266,15 +268,20 @@ def clean_headline(headline, replacements={}):
     return headline.strip()
 
 
-# In[5]:
+# In[ ]:
 
 
-def save_headlines(headlines, kword_replacements={}):
+def save_headlines(headlines):
     """Save headlines to file"""
     
     for stock in headlines:
         
         entries = []
+        
+        with db() as (conn, cur):
+        
+            cur.execute("SELECT word, replacement FROM dictionary WHERE stock=? ORDER BY LENGTH(word) DESC", [stock])
+            dictionary = cur.fetchall()
         
         for source in headlines[stock]:
             
@@ -282,15 +289,15 @@ def save_headlines(headlines, kword_replacements={}):
                 
                 for headline in headlines[stock][source][date]:
                     
-                    headline = clean_headline(headline, kword_replacements[stock])
+                    cleaned_headline = clean_headline(headline, dictionary)
                     
-                    entries.append((stock, date, source, headline))
+                    entries.append((stock, date, source, cleaned_headline, headline, -999))
                     
         add_headlines(entries)
     
 
 
-# In[6]:
+# In[ ]:
 
 
 if __name__ == "__main__":
@@ -332,118 +339,17 @@ if __name__ == "__main__":
                 'fool': get_fool_news('AMZN')
             }
     }
-    
-    kword_replacements = { # To futher generalize headlines
-        'GOOG': {
-            'googleplay': '**PRODUCT**',
-            'googlemusic': '**PRODUCT**',
-            'googlehome': '**PRODUCT**',
-            'googlephotos': '**PRODUCT**',
-            'google': '**COMPANY**',
-            'alphabet': '**COMPANY**',
-            'androidpay': '**PRODUCT**',
-            'android': '**PRODUCT**',
-            ' allo ': ' **PRODUCT** ',
-            'pixel xl': '**PRODUCT**',
-            'chromebook': '**PRODUCT**',
-            'chromecast': '**PRODUCT**',
-            'chrome': '**PRODUCT**',
-            'pixelxl': '**PRODUCT**',
-            'play store': '**PRODUCT**',
-            'pixel': '**PRODUCT**',
-            'maps': '**PRODUCT**',
-            'youtube': '**PRODUCT**',
-            'nexusx': '**PRODUCT**',
-            'nexusp': '**PRODUCT**',
-            'nexus': '**PRODUCT**',
-            'googletranslate': '**PRODUCT**',
-            'gboard': '**PRODUCT**',
-            'materialdesign': '**PRODUCT**',
-            'alphago': '**PRODUCT**',
-            'sundar pichai': '**MEMBER**',
-            'sundarpichai': '**MEMBER**'
-        },
-        'AAPL': {
-            'applemusic': '**PRODUCT**',
-            'applepark': '**PRODUCT**',
-            'applewatch': '**PRODUCT**',
-            'applepay': '**PRODUCT**',
-            'appletv': '**PRODUCT**',
-            'apple': '**COMPANY**', 
-            'macbook': '**PRODUCT**',
-            'iphone x': '**PRODUCT**',
-            'iphonex': '**PRODUCT**',
-            'iphone': '**PRODUCT**',
-            'ipad': '**PRODUCT**',
-            'ios': '**PRODUCT**',
-            'icloud': '**PRODUCT**',
-            'faceid': '**PRODUCT**',
-            'airpods': '**PRODUCT**',
-            'imessage': '**PRODUCT**',
-            'animoji': '**PRODUCT**',
-            'lightningpin': '**PRODUCT**',
-            'touchid': '**PRODUCT**',
-            'face id': '**PRODUCT**',
-            'facetime': '**PRODUCT**',
-            'd touch': '**PRODUCT**',
-            'imessage': '**PRODUCT**',
-            'siri': '**PRODUCT**',
-            'imac': '**PRODUCT**',
-            'tim cook': '**MEMBER**'
-        },
-        'MSFT': {
-            'microsoft': '**COMPANY**',
-            'windows': '**PRODUCT**',
-            'onedrive': '**PRODUCT**',
-            'outlook': '**PRODUCT**',
-            'bing': '**PRODUCT**',
-            'xbox one x': '**PRODUCT**',
-            'xbox one': '**PRODUCT**',
-            'xbox': '**PRODUCT**',
-            'satya nadella': '**MEMBER**'
-        },
-        'AMD': {
-            'advanced micro devices': '**COMPANY**',
-            'amd': '**COMPANY**',
-            'ryzen': '**PRODUCT**',
-            'radeon rxvega': '**PRODUCT**',
-            'radeon vega frontier edition': '**PRODUCT**',
-            'radeon': '**PRODUCT**',
-            'rxvega': '**PRODUCT**',
-            'vega fe': '**PRODUCT**',
-            'zen': '**PRODUCT**',
-            'lisa su': '**MEMBER**'
-        },
-        'AMZN': {
-            'amazonfire':'**PRODUCT**',
-            'amazonfresh':'**PRODUCT**',
-            'smileamazoncom':'**PRODUCT**',
-            ' dash': ' **PRODUCT**',
-            'amazon': '**COMPANY**',
-            'echo': '**PRODUCT**',
-            'prime video': '**PRODUCT**',
-            'prime': '**PRODUCT**',
-            'alexa': '**PRODUCT**',
-            'firetv': '**PRODUCT**',
-            'amazonvisa': '**PRODUCT**',
-            'amazondot': '**PRODUCT**',
-            'dot': '**PRODUCT**',
-            'firephone': '**PRODUCT**',
-            'jeffbezos': '**MEMBER**',
-            'jeff bezos': '**MEMBER**'
-        }
-    }
 
 
-# In[7]:
+# In[ ]:
 
 
 if __name__ == "__main__":
 
-    save_headlines(headlines, kword_replacements)
+    save_headlines(headlines)
 
 
-# In[8]:
+# In[ ]:
 
 
 if __name__ == "__main__":

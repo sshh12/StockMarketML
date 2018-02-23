@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[4]:
 
 # Imports
 
@@ -25,7 +25,7 @@ from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint, T
 import keras.backend as K
 
 
-# In[2]:
+# In[5]:
 
 # Options
 
@@ -43,7 +43,7 @@ epochs      = 200
 batch_size  = 32
 
 
-# In[3]:
+# In[6]:
 
 
 def make_headline_to_effect_data():
@@ -123,7 +123,7 @@ def make_headline_to_effect_data():
     return meta, headlines, np.array(tick_hists), np.array(effects)
 
 
-# In[4]:
+# In[7]:
 
 
 def encode_sentences(meta, sentences, tokenizer=None, max_length=100, vocab_size=100):
@@ -161,7 +161,7 @@ def encode_sentences(meta, sentences, tokenizer=None, max_length=100, vocab_size
     return meta_matrix, padded_headlines, tokenizer
 
 
-# In[5]:
+# In[8]:
 
 
 def split_data(X, X2, X3, Y, ratio): #TODO Make Better
@@ -186,7 +186,7 @@ def split_data(X, X2, X3, Y, ratio): #TODO Make Better
     return trainX, trainX2, trainX3, trainY, testX, testX2, testX3, testY
 
 
-# In[6]:
+# In[9]:
 
 
 def get_embedding_matrix(tokenizer, use_glove=True, pretrained_file='glove.840B.300d.txt', purge=False):
@@ -227,7 +227,7 @@ def get_embedding_matrix(tokenizer, use_glove=True, pretrained_file='glove.840B.
             
             with db() as (conn, cur):
                 
-                cur.execute("SELECT 1 FROM specialwords WHERE word=?", [word])
+                cur.execute("SELECT 1 FROM dictionary WHERE word=? AND stock=?", [word, "none"])
                 
                 if len(cur.fetchall()) == 0:
                     
@@ -335,11 +335,11 @@ if __name__ == "__main__":
     print(trainX.shape, trainX2.shape, trainX3.shape, testY.shape)
 
 
-# In[ ]:
+# In[8]:
 
 # TRAIN MODEL
 
-if __name__ == "__main__": 
+if __name__ == "__main__":  
     
     ## Save Tokenizer ##
     
@@ -386,7 +386,7 @@ if __name__ == "__main__":
     
 
 
-# In[ ]:
+# In[11]:
 
 # TEST MODEL
 
@@ -405,8 +405,8 @@ if __name__ == "__main__":
     ## **This Test May Overlap w/Train Data** ##
     
     pretick_date = '2018-02-19'
-    current_date = '2018-02-22'
-    predict_date = '2018-02-23'
+    current_date = '2018-02-23'
+    predict_date = '2018-02-24'
     stock = 'AMD'
     
     with db() as (conn, cur):
@@ -488,7 +488,7 @@ if __name__ == "__main__":
             
 
 
-# In[ ]:
+# In[10]:
 
 # TEST MODEL
 

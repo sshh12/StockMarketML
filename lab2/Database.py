@@ -34,10 +34,10 @@ def create_tables():
         cur.execute('CREATE TABLE IF NOT EXISTS ticks (stock text, date text, open real, high real, low real, close real, adjclose real, volume integer, unique (stock, date))')
         conn.commit()
         
-        cur.execute('CREATE TABLE IF NOT EXISTS headlines (stock text, date text, source text, content text UNIQUE ON CONFLICT IGNORE)')
+        cur.execute('CREATE TABLE IF NOT EXISTS headlines (stock text, date text, source text, content text UNIQUE ON CONFLICT IGNORE, rawcontent text UNIQUE ON CONFLICT IGNORE, sentimentlabel integer)')
         conn.commit()      
         
-        cur.execute('CREATE TABLE IF NOT EXISTS specialwords (word UNIQUE ON CONFLICT IGNORE)')
+        cur.execute('CREATE TABLE IF NOT EXISTS dictionary (word text, stock text, replacement text, unique (word, stock, replacement))')
         conn.commit()
 
 
@@ -55,7 +55,7 @@ def add_headlines(entries):
     
     with db() as (conn, cur):
     
-        cur.executemany("INSERT OR IGNORE INTO headlines VALUES (?,?,?,?)", entries)
+        cur.executemany("INSERT OR IGNORE INTO headlines VALUES (?,?,?,?,?,?)", entries)
         conn.commit()
         
 def clean_ticks():
@@ -107,9 +107,12 @@ if __name__ == "__main__":
 
 if __name__ == "__main__":
     
-    special_words = [ # Words Not in Glove
+    ## Populate Database of Words ##
+    
+    hardcoded_dict = [
+        ## Special Generic Tokens ##
         ["**STATISTIC**"], 
-         
+        ### Company ###
         ["**COMPANY**"], 
         ["**COMPANY**owned"],
         ["**COMPANY**s"],
@@ -130,7 +133,7 @@ if __name__ == "__main__":
         ["**COMPANY**certified"],
         ["anti**COMPANY**"],
         ["**COMPANY**esque"],
-        
+        ### Product ###
         ["**PRODUCT**phones"],
         ["**PRODUCT**com"],
         ["**PRODUCT**"],
@@ -149,9 +152,10 @@ if __name__ == "__main__":
         ["**PRODUCT**tm"],
         ["**PRODUCT**s"],
         ["non**PRODUCT**"],
-        
+        ### Member ###
         ["**MEMBER**"],
-        
+        ["**MEMBERs**"],
+        ## Common (non-glove) Tokens ##
         ["singlecore"],
         ["nowassistant"],
         ["assistantenabled"],
@@ -314,12 +318,110 @@ if __name__ == "__main__":
         ["marginexpansion"],
         ["linkedins"],
         ["phoneshaped"],
-        ["chipgate"]
+        ["chipgate"],
+        ## Specialized Tokens ##
+        ### MSFT ###
+        ["onedrive", "MSFT", "**PRODUCT**"],
+        ["bing", "MSFT", "**PRODUCT**"],
+        ["xbox one x", "MSFT", "**PRODUCT**"],
+        ["satya nadella", "MSFT", "**MEMBER**"],
+        ["microsoft", "MSFT", "**COMPANY**"],
+        ["outlook", "MSFT", "**PRODUCT**"],
+        ["xbox one", "MSFT", "**PRODUCT**"],
+        ["windows", "MSFT", "**PRODUCT**"],
+        ["xbox", "MSFT", "**PRODUCT**"],
+        ### AMD ###
+        ["radeon rxvega", "AMD", "**PRODUCT**"],
+        ["rxvega", "AMD", "**PRODUCT**"],
+        ["advanced micro devices", "AMD", "**COMPANY**"],
+        ["radeon vega frontier edition", "AMD", "**PRODUCT**"],
+        ["lisa su", "AMD", "**MEMBER**"],
+        ["radeon", "AMD", "**PRODUCT**"],
+        ["zen", "AMD", "**PRODUCT**"],
+        ["amd", "AMD", "**COMPANY**"],
+        ["vega fe", "AMD", "**PRODUCT**"],
+        ["ryzen", "AMD", "**PRODUCT**"],
+        ### AMZN ###
+        ["echo", "AMZN", "**PRODUCT**"],
+        ["alexa", "AMZN", "**PRODUCT**"],
+        ["prime video", "AMZN", "**PRODUCT**"],
+        ["firephone", "AMZN", "**PRODUCT**"],
+        ["amazon", "AMZN", "**COMPANY**"],
+        ["jeff bezos", "AMZN", "**MEMBER**"],
+        ["amazondot", "AMZN", "**PRODUCT**"],
+        ["firetv", "AMZN", "**PRODUCT**"],
+        ["jeffbezos", "AMZN", "**MEMBER**"],
+        ["amazonfire", "AMZN", "**PRODUCT**"],
+        ["amazonfresh", "AMZN", "**PRODUCT**"],
+        ["dot", "AMZN", "**PRODUCT**"],
+        ["amazonvisa", "AMZN", "**PRODUCT**"],
+        ["prime", "AMZN", "**PRODUCT**"],
+        [" dash", "AMZN", " **PRODUCT**"],
+        ["smileamazoncom", "AMZN", "**PRODUCT**"],
+        ### AAPL ###
+        ["lightningpin", "AAPL", "**PRODUCT**"],
+        ["siri", "AAPL", "**PRODUCT**"],
+        ["iphone", "AAPL", "**PRODUCT**"],
+        ["iphone x", "AAPL", "**PRODUCT**"],
+        ["applepark", "AAPL", "**PRODUCT**"],
+        ["iphonex", "AAPL", "**PRODUCT**"],
+        ["airpods", "AAPL", "**PRODUCT**"],
+        ["macbook", "AAPL", "**PRODUCT**"],
+        ["appletv", "AAPL", "**PRODUCT**"],
+        ["applepay", "AAPL", "**PRODUCT**"],
+        ["apple", "AAPL", "**COMPANY**"],
+        ["imessage", "AAPL", "**PRODUCT**"],
+        ["icloud", "AAPL", "**PRODUCT**"],
+        ["applewatch", "AAPL", "**PRODUCT**"],
+        ["facetime", "AAPL", "**PRODUCT**"],
+        ["animoji", "AAPL", "**PRODUCT**"],
+        ["faceid", "AAPL", "**PRODUCT**"],
+        ["face id", "AAPL", "**PRODUCT**"],
+        ["imac", "AAPL", "**PRODUCT**"],
+        ["ios", "AAPL", "**PRODUCT**"],
+        ["d touch", "AAPL", "**PRODUCT**"],
+        ["ipad", "AAPL", "**PRODUCT**"],
+        ["touchid", "AAPL", "**PRODUCT**"],
+        ["tim cook", "AAPL", "**MEMBER**"],
+        ["applemusic", "AAPL", "**PRODUCT**"],
+        ### GOOG ###
+        ["nexusx", "GOOG", "**PRODUCT**"],
+        ["pixel xl", "GOOG", "**PRODUCT**"],
+        ["pixelxl", "GOOG", "**PRODUCT**"],
+        ["pixel", "GOOG", "**PRODUCT**"],
+        ["chrome", "GOOG", "**PRODUCT**"],
+        ["googlephotos", "GOOG", "**PRODUCT**"],
+        ["chromecast", "GOOG", "**PRODUCT**"],
+        ["chromebook", "GOOG", "**PRODUCT**"],
+        ["googleplay", "GOOG", "**PRODUCT**"],
+        ["android", "GOOG", "**PRODUCT**"],
+        ["nexusp", "GOOG", "**PRODUCT**"],
+        ["nexus", "GOOG", "**PRODUCT**"],
+        ["maps", "GOOG", "**PRODUCT**"],
+        [" allo ", "GOOG", " **PRODUCT** "],
+        ["youtube", "GOOG", "**PRODUCT**"],
+        ["googletranslate", "GOOG", "**PRODUCT**"],
+        ["alphabet", "GOOG", "**COMPANY**"],
+        ["androidpay", "GOOG", "**PRODUCT**"],
+        ["googlehome", "GOOG", "**PRODUCT**"],
+        ["play store", "GOOG", "**PRODUCT**"],
+        ["googlemusic", "GOOG", "**PRODUCT**"],
+        ["sundar pichai", "GOOG", "**MEMBER**"],
+        ["gboard", "GOOG", "**PRODUCT**"],
+        ["alphago", "GOOG", "**PRODUCT**"],
+        ["sundarpichai", "GOOG", "**MEMBER**"],
+        ["materialdesign", "GOOG", "**PRODUCT**"],
+        ["google", "GOOG", "**COMPANY**"]
     ]
+    
+    for item in hardcoded_dict:
+        
+        if len(item) == 1:
+            item.extend(['none', item[0]])
     
     with db() as (conn, cur):
     
-        cur.executemany("INSERT OR IGNORE INTO specialwords VALUES (?)", special_words)
+        cur.executemany("INSERT OR IGNORE INTO dictionary VALUES (?,?,?)", hardcoded_dict)
         conn.commit()
     
 

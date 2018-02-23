@@ -216,7 +216,7 @@ def get_embedding_matrix(tokenizer, pretrained_file='glove.840B.300d.txt', purge
             
             with db() as (conn, cur):
                 
-                cur.execute("SELECT 1 FROM specialwords WHERE word=?", [word])
+                cur.execute("SELECT 1 FROM dictionary WHERE word=?", [word])
                 
                 if len(cur.fetchall()) == 0:
                     

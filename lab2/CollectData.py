@@ -337,6 +337,13 @@ if __name__ == "__main__":
                 'twitter': get_twitter_news(['@amazon', '#Amazon', '#jeffbezos', '@amazonecho', '#amazonprime']),
                 'seekingalpha': get_seekingalpha_news('AMZN'),
                 'fool': get_fool_news('AMZN')
+            },
+            'INTC': {
+                'reddit': get_reddit_news(['intel', 'hardware'], ['intel', 'cpu']),
+                'reuters': get_reuters_news('INTC.O'),
+                'twitter': get_twitter_news(['@intel']),
+                'seekingalpha': get_seekingalpha_news('INTC'),
+                'fool': get_fool_news('INTC')
             }
     }
 
@@ -359,4 +366,5 @@ if __name__ == "__main__":
     dl_ticker('AMD')
     dl_ticker('GOOG')
     dl_ticker('MSFT')
+    dl_ticker('INTC')
 

@@ -25,11 +25,11 @@ from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint, T
 import keras.backend as K
 
 
-# In[2]:
+# In[11]:
 
 # Options
 
-stocks      = ['AAPL', 'AMD', 'AMZN', 'GOOG', 'MSFT']
+stocks      = ['AAPL', 'AMD', 'AMZN', 'INTC', 'GOOG', 'MSFT']
 all_sources = ['reddit', 'reuters', 'twitter', 'seekingalpha', 'fool']
 
 tick_window = 15
@@ -43,7 +43,7 @@ epochs      = 200
 batch_size  = 32
 
 
-# In[3]:
+# In[12]:
 
 
 def make_headline_to_effect_data():
@@ -77,7 +77,7 @@ def make_headline_to_effect_data():
                 
                 cur.execute("""SELECT open, high, low, adjclose, volume FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date DESC""", 
                             [stock, 
-                             add_time(event_date, -10 - tick_window), 
+                             add_time(event_date, -8 - tick_window), 
                              add_time(event_date, 0)])
                 
                 before_headline_ticks = cur.fetchall()[:tick_window]
@@ -134,7 +134,7 @@ def make_headline_to_effect_data():
     return meta, headlines, np.array(tick_hists), np.array(effects)
 
 
-# In[4]:
+# In[13]:
 
 
 def encode_sentences(meta, sentences, tokenizer=None, max_length=100, vocab_size=100):
@@ -172,7 +172,7 @@ def encode_sentences(meta, sentences, tokenizer=None, max_length=100, vocab_size
     return meta_matrix, padded_headlines, tokenizer
 
 
-# In[5]:
+# In[14]:
 
 
 def split_data(X, X2, X3, Y, ratio): #TODO Make Better
@@ -197,7 +197,7 @@ def split_data(X, X2, X3, Y, ratio): #TODO Make Better
     return trainX, trainX2, trainX3, trainY, testX, testX2, testX3, testY
 
 
-# In[7]:
+# In[ ]:
 
 
 def get_embedding_matrix(tokenizer, use_glove=True, pretrained_file='glove.840B.300d.txt', purge=False):
@@ -397,7 +397,7 @@ if __name__ == "__main__":
     
 
 
-# In[ ]:
+# In[18]:
 
 # TEST MODEL
 
@@ -415,10 +415,10 @@ if __name__ == "__main__":
     
     ## **This Test May Overlap w/Train Data** ##
     
-    pretick_date = '2018-02-21'
-    current_date = '2018-02-23'
-    predict_date = '2018-02-24'
-    stock = 'AMD'
+    pretick_date = '2018-02-20'
+    current_date = '2018-02-22'
+    predict_date = '2018-02-23'
+    stock = 'INTC'
     
     with db() as (conn, cur):
         
@@ -499,7 +499,7 @@ if __name__ == "__main__":
             
 
 
-# In[ ]:
+# In[20]:
 
 # TEST MODEL
 
@@ -517,10 +517,10 @@ if __name__ == "__main__":
     
     ## **This Test May Overlap w/Train Data** ##
     
-    current_date = '2017-11-01'
-    past_days = 80
-    predict_days = 110
-    stock = 'AAPL'
+    current_date = '2017-12-10'
+    past_days = 40
+    predict_days = 60
+    stock = 'INTC'
     
     with db() as (conn, cur):
         

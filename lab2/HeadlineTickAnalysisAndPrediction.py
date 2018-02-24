@@ -23,9 +23,10 @@ from keras.layers import Input, concatenate, SpatialDropout1D, GRU
 from keras.layers import Dense, Flatten, Embedding, LSTM, Activation, BatchNormalization, Dropout, Conv1D, MaxPooling1D
 from keras.callbacks import ReduceLROnPlateau, EarlyStopping, ModelCheckpoint, TensorBoard
 import keras.backend as K
+from keras.utils import plot_model
 
 
-# In[11]:
+# In[2]:
 
 # Options
 
@@ -39,11 +40,11 @@ emb_size    = 300
 
 model_type  = 'regression'
 
-epochs      = 200
-batch_size  = 32
+epochs      = 1
+batch_size  = 64
 
 
-# In[12]:
+# In[3]:
 
 
 def make_headline_to_effect_data():
@@ -134,7 +135,7 @@ def make_headline_to_effect_data():
     return meta, headlines, np.array(tick_hists), np.array(effects)
 
 
-# In[13]:
+# In[4]:
 
 
 def encode_sentences(meta, sentences, tokenizer=None, max_length=100, vocab_size=100):
@@ -172,7 +173,7 @@ def encode_sentences(meta, sentences, tokenizer=None, max_length=100, vocab_size
     return meta_matrix, padded_headlines, tokenizer
 
 
-# In[14]:
+# In[5]:
 
 
 def split_data(X, X2, X3, Y, ratio): #TODO Make Better
@@ -197,7 +198,7 @@ def split_data(X, X2, X3, Y, ratio): #TODO Make Better
     return trainX, trainX2, trainX3, trainY, testX, testX2, testX3, testY
 
 
-# In[ ]:
+# In[6]:
 
 
 def get_embedding_matrix(tokenizer, use_glove=True, pretrained_file='glove.840B.300d.txt', purge=False):
@@ -261,7 +262,7 @@ def get_model(emb_matrix):
     
     ## Headline ##
     
-    headline_input = Input(shape=(max_length,))
+    headline_input = Input(shape=(max_length,), name="headlines")
     
     emb = Embedding(vocab_size + 1, emb_size, input_length=max_length, weights=[emb_matrix], trainable=True)(headline_input)
     emb = SpatialDropout1D(.2)(emb)
@@ -279,15 +280,18 @@ def get_model(emb_matrix):
     
     ## Ticks ##
     
-    tick_input = Input(shape=(tick_window, 5))
+    tick_input = Input(shape=(tick_window, 5), name="stockticks")
     
-    tick_rnn = LSTM(200, dropout=0.4, recurrent_dropout=0.4, return_sequences=False)(tick_input)
+    tick_conv = Conv1D(filters=64, kernel_size=4, padding='same', activation='selu')(tick_input)
+    tick_conv = MaxPooling1D(pool_size=2)(tick_conv)
+    
+    tick_rnn = LSTM(200, dropout=0.4, recurrent_dropout=0.4, return_sequences=False)(tick_conv)
     tick_rnn = Activation('selu')(tick_rnn)
     tick_rnn = BatchNormalization()(tick_rnn)
     
     ## Meta ##
     
-    meta_input = Input(shape=(len(all_sources) + 7,))
+    meta_input = Input(shape=(len(all_sources) + 7,), name="metadata")
     
     ## Combined ##
     
@@ -324,7 +328,7 @@ def get_model(emb_matrix):
     return model
 
 
-# In[ ]:
+# In[7]:
 
 
 if __name__ == "__main__":
@@ -346,7 +350,7 @@ if __name__ == "__main__":
     print(trainX.shape, trainX2.shape, trainX3.shape, testY.shape)
 
 
-# In[ ]:
+# In[8]:
 
 # TRAIN MODEL
 
@@ -373,6 +377,8 @@ if __name__ == "__main__":
                                  verbose=0,
                                  save_best_only=True)
     
+    plot_model(model, to_file='model.png', show_shapes=True)
+    
     ## Train ##
     
     history = model.fit([trainX, trainX2, trainX3],
@@ -397,7 +403,7 @@ if __name__ == "__main__":
     
 
 
-# In[18]:
+# In[9]:
 
 # TEST MODEL
 
@@ -415,9 +421,9 @@ if __name__ == "__main__":
     
     ## **This Test May Overlap w/Train Data** ##
     
-    pretick_date = '2018-02-20'
-    current_date = '2018-02-22'
-    predict_date = '2018-02-23'
+    pretick_date = '2018-02-21'
+    current_date = '2018-02-23'
+    predict_date = '2018-02-24'
     stock = 'INTC'
     
     with db() as (conn, cur):
@@ -499,7 +505,7 @@ if __name__ == "__main__":
             
 
 
-# In[20]:
+# In[10]:
 
 # TEST MODEL
 
@@ -517,7 +523,7 @@ if __name__ == "__main__":
     
     ## **This Test May Overlap w/Train Data** ##
     
-    current_date = '2017-12-10'
+    current_date = '2017-12-20'
     past_days = 40
     predict_days = 60
     stock = 'INTC'
@@ -598,7 +604,7 @@ if __name__ == "__main__":
             
 
 
-# In[ ]:
+# In[11]:
 
 # # TEST MODEL
 

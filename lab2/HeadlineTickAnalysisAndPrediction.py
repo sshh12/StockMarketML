@@ -30,7 +30,7 @@ from keras.utils import plot_model
 
 # Options
 
-stocks      = ['AAPL', 'AMD', 'AMZN', 'INTC', 'GOOG', 'MSFT']
+stocks      = ['AAPL', 'AMD', 'AMZN', 'GOOG', 'MSFT']
 all_sources = ['reddit', 'reuters', 'twitter', 'seekingalpha', 'fool']
 
 tick_window = 15
@@ -403,7 +403,7 @@ if __name__ == "__main__":
     
 
 
-# In[13]:
+# In[15]:
 
 # TEST MODEL
 
@@ -424,7 +424,7 @@ if __name__ == "__main__":
     pretick_date = '2018-02-23'
     current_date = '2018-02-25'
     predict_date = '2018-02-26'
-    stock = 'AMD'
+    stock = 'INTC'
     
     with db() as (conn, cur):
         
@@ -505,7 +505,7 @@ if __name__ == "__main__":
             
 
 
-# In[10]:
+# In[22]:
 
 # TEST MODEL
 
@@ -525,8 +525,8 @@ if __name__ == "__main__":
     
     current_date = '2017-12-20'
     past_days = 40
-    predict_days = 60
-    stock = 'INTC'
+    predict_days = 67
+    stock = 'AMD'
     
     with db() as (conn, cur):
         
@@ -595,11 +595,15 @@ if __name__ == "__main__":
             
             fake_ticks[pred_date] = pred_price
         
-        plt.plot([real_ticks[date] for date in dates])
-        plt.plot([fake_ticks[date] for date in dates])
+        real_ticks = np.array([real_ticks[date] for date in dates])
+        fake_ticks = np.array([fake_ticks[date] for date in dates])
+        
+        plt.plot(real_ticks)
+        plt.plot(fake_ticks)
         plt.show()
         
-        plt.plot(np.array([fake_ticks[date] for date in dates]) - np.array([real_ticks[date] for date in dates]))
+        plt.plot(np.sign(fake_ticks[1:] - fake_ticks[:-1]) == np.sign(real_ticks[1:] - real_ticks[:-1]))
+        plt.plot(fake_ticks - real_ticks)
         plt.show()
             
 

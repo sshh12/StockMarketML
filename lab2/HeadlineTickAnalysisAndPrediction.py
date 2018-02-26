@@ -40,7 +40,7 @@ emb_size    = 300
 
 model_type  = 'regression'
 
-epochs      = 1
+epochs      = 200
 batch_size  = 64
 
 
@@ -403,7 +403,7 @@ if __name__ == "__main__":
     
 
 
-# In[9]:
+# In[13]:
 
 # TEST MODEL
 
@@ -421,10 +421,10 @@ if __name__ == "__main__":
     
     ## **This Test May Overlap w/Train Data** ##
     
-    pretick_date = '2018-02-21'
-    current_date = '2018-02-23'
-    predict_date = '2018-02-24'
-    stock = 'INTC'
+    pretick_date = '2018-02-23'
+    current_date = '2018-02-25'
+    predict_date = '2018-02-26'
+    stock = 'AMD'
     
     with db() as (conn, cur):
         

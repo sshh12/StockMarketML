@@ -40,7 +40,7 @@ emb_size    = 300
 
 model_type  = 'regression'
 
-epochs      = 200
+epochs      = 250
 batch_size  = 64
 
 
@@ -328,7 +328,7 @@ def get_model(emb_matrix):
     return model
 
 
-# In[7]:
+# In[ ]:
 
 
 if __name__ == "__main__":
@@ -403,7 +403,7 @@ if __name__ == "__main__":
     
 
 
-# In[ ]:
+# In[9]:
 
 # Predict (TEST)
 
@@ -418,7 +418,7 @@ def predict(stock, model=None, toke=None, current_date=None, predict_date=None, 
         
         with open(os.path.join('..', 'models', 'toke-tick.pkl'), 'rb') as toke_file:
             toke = pickle.load(toke_file)
-            vocab_si ze = len(toke.word_counts)
+            vocab_size = len(toke.word_counts)
     
         model = load_model(os.path.join('..', 'models', 'media-headlines-ticks-' + model_type + '.h5'))
         
@@ -586,7 +586,7 @@ if __name__ == "__main__":
             
 
 
-# In[10]:
+# In[ ]:
 
 # TEST MODEL
 
@@ -607,7 +607,7 @@ if __name__ == "__main__":
     current_date = '2017-12-20'
     past_days = 40
     predict_days = 67
-    stock = 'AMD'
+    stock = 'INTC'
     
     with db() as (conn, cur):
         
@@ -689,7 +689,7 @@ if __name__ == "__main__":
             
 
 
-# In[11]:
+# In[ ]:
 
 # # TEST MODEL
 

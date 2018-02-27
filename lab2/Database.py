@@ -115,7 +115,7 @@ def do_labeling():
         
 
 
-# In[6]:
+# In[ ]:
 
 
 if __name__ == "__main__":
@@ -123,7 +123,7 @@ if __name__ == "__main__":
     create_tables()
 
 
-# In[7]:
+# In[ ]:
 
 
 if __name__ == "__main__":
@@ -143,6 +143,7 @@ if __name__ == "__main__":
         ["**COMPANY**made"],
         ["madeby**COMPANY**"],
         ["**COMPANY**com"],
+        ["**COMPANY**coms"],
         ["r**COMPANY**stock"],
         ["non**COMPANY**"],
         ["**COMPANY**insider"],
@@ -156,6 +157,11 @@ if __name__ == "__main__":
         ["**COMPANY**esque"],
         ["**COMPANY**ed"],
         ["**COMPANY**backed"],
+        ["fbi**COMPANY**"],
+        ["**COMPANY**incs"],
+        ["**COMPANY**crippled"],
+        ["**COMPANY**orations"],
+        ["**COMPANY**oration"],
         ### Product ###
         ["**PRODUCT**phones"],
         ["**PRODUCT**com"],
@@ -176,6 +182,7 @@ if __name__ == "__main__":
         ["**PRODUCT**s"],
         ["non**PRODUCT**"],
         ["**PRODUCT**style"],
+        ["**PRODUCT**focused"],
         ### Member ###
         ["**MEMBER**"],
         ["**MEMBER**s"],
@@ -378,15 +385,47 @@ if __name__ == "__main__":
         ["allcore"],
         ["nasdaqs"],
         ["dividendgrowers"],
+        ["aramco"],
+        ["wsj"],
+        ["nm"],
+        ["globalfoundries"],
+        ["applemusic"],
+        ["ipodbased"],
+        ["stockpure"],
+        ["accentures"],
+        ["latestacquisition"],
+        ["microcenters"],
+        ["nokita"],
+        ["customstock"],
+        ["finfet"],
+        ["highestconviction"],
+        ["madebygoogle"],
+        ["stockarriving"],
+        ["nolongerupdated"],
+        ["truedepth"],
+        ["phonecases"],
+        ["chromecasts"],
+        ["nraboycott"],
+        ["unibail"],
+        ["profitkilling"],
+        ["touchbar"],
+        ["releveraging"],
+        ["iwatches"],
+        ["lumentums"],
         ## Specialized Tokens ##
         ### MSFT ###
         ["onedrive", "MSFT", "**PRODUCT**"],
         ["bing", "MSFT", "**PRODUCT**"],
         ["xbox one x", "MSFT", "**PRODUCT**"],
         ["satya nadella", "MSFT", "**MEMBER**"],
+        ["satyanadella", "MSFT", "**MEMBER**"],
+        ["nadella", "MSFT", "**MEMBER**"],
         ["microsoft", "MSFT", "**COMPANY**"],
+        ["microsoft corporation", "MSFT", "**COMPANY**"],
         ["microsoft corp", "MSFT", "**COMPANY**"],
+        ["microsoft corporate", "MSFT", "**COMPANY**"],
         ["outlook", "MSFT", "**PRODUCT**"],
+        ["hololens", "MSFT", "**PRODUCT**"],
         ["xbox one", "MSFT", "**PRODUCT**"],
         ["windows", "MSFT", "**PRODUCT**"],
         ["xbox", "MSFT", "**PRODUCT**"],
@@ -419,6 +458,7 @@ if __name__ == "__main__":
         ["prime", "AMZN", "**PRODUCT**"],
         [" dash", "AMZN", " **PRODUCT**"],
         ["smileamazoncom", "AMZN", "**PRODUCT**"],
+        ["amazonsmile", "AMZN", "**PRODUCT**"],
         ### AAPL ###
         ["lightningpin", "AAPL", "**PRODUCT**"],
         ["siri", "AAPL", "**PRODUCT**"],
@@ -432,7 +472,9 @@ if __name__ == "__main__":
         ["applepay", "AAPL", "**PRODUCT**"],
         ["apple", "AAPL", "**COMPANY**"],
         ["imessage", "AAPL", "**PRODUCT**"],
+        ["iwatch", "AAPL", "**PRODUCT**"],
         ["macbook air", "AAPL", "**PRODUCT**"],
+        ["mac ", "AAPL", "**PRODUCT** "],
         ["icloud", "AAPL", "**PRODUCT**"],
         ["applewatch", "AAPL", "**PRODUCT**"],
         ["facetime", "AAPL", "**PRODUCT**"],
@@ -441,8 +483,8 @@ if __name__ == "__main__":
         ["face id", "AAPL", "**PRODUCT**"],
         ["imac", "AAPL", "**PRODUCT**"],
         ["ios", "AAPL", "**PRODUCT**"],
-        ["d touch", "AAPL", "**PRODUCT**"],
-        ["dtouch", "AAPL", "**PRODUCT**"],
+        [" d touch", "AAPL", " **PRODUCT**"],
+        [" dtouch", "AAPL", " **PRODUCT**"],
         ["ipad", "AAPL", "**PRODUCT**"],
         ["touchid", "AAPL", "**PRODUCT**"],
         ["tim cook", "AAPL", "**MEMBER**"],
@@ -477,6 +519,7 @@ if __name__ == "__main__":
         ["sundarpichai", "GOOG", "**MEMBER**"],
         ["materialdesign", "GOOG", "**PRODUCT**"],
         ["google", "GOOG", "**COMPANY**"],
+        ["waymos", "GOOG", "**COMPANY**"],
         ### INTC ###
         ["intel", "INTC", "**COMPANY**"],
         ["core i cpu", "INTC", "**PRODUCT**"],

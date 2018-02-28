@@ -1,14 +1,14 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[2]:
 
 # Imports
 
 from datetime import datetime, timedelta
 
 from Database import db
-
+ 
 import numpy as np
 import pickle
 import os
@@ -26,11 +26,11 @@ import keras.backend as K
 from keras.utils import plot_model
 
 
-# In[2]:
+# In[3]:
 
 # Options
 
-stocks      = ['AAPL', 'AMD', 'AMZN', 'GOOG', 'MSFT']
+stocks      = ['AAPL', 'AMD', 'AMZN', 'GOOG', 'MSFT', 'INTC']
 all_sources = ['reddit', 'reuters', 'twitter', 'seekingalpha', 'fool']
 
 tick_window = 15
@@ -44,7 +44,7 @@ epochs      = 250
 batch_size  = 64
 
 
-# In[36]:
+# In[4]:
 
 
 def add_time(date, days):
@@ -112,10 +112,10 @@ def make_headline_to_effect_data():
                     if model_type == 'regression':
                         
                         # Percent Diff (+Normalization Constant)
-                        effect = [(result_tick - previous_tick) / previous_tick / 0.15]
+                        effect = [(result_tick - previous_tick) / previous_tick / 0.023]
                         
                         # Use labels to adjust effect
-                        if label != -999:
+                        if label in [-1, 0, 1]:
                             if np.sign(label) == np.sign(effect[0]):
                                 effect = [effect[0] * 2]
                             else:
@@ -140,7 +140,7 @@ def make_headline_to_effect_data():
     return meta, headlines, np.array(tick_hists), np.array(effects)
 
 
-# In[4]:
+# In[5]:
 
 
 def encode_sentences(meta, sentences, tokenizer=None, max_length=100, vocab_size=100):
@@ -178,7 +178,7 @@ def encode_sentences(meta, sentences, tokenizer=None, max_length=100, vocab_size
     return meta_matrix, padded_headlines, tokenizer
 
 
-# In[5]:
+# In[6]:
 
 
 def split_data(X, X2, X3, Y, ratio): #TODO Make Better
@@ -203,7 +203,7 @@ def split_data(X, X2, X3, Y, ratio): #TODO Make Better
     return trainX, trainX2, trainX3, trainY, testX, testX2, testX3, testY
 
 
-# In[37]:
+# In[7]:
 
 
 def get_embedding_matrix(tokenizer, use_glove=True, pretrained_file='glove.840B.300d.txt', purge=False):
@@ -287,7 +287,7 @@ def get_model(emb_matrix):
     
     tick_input = Input(shape=(tick_window, 5), name="stockticks")
     
-    tick_conv = Conv1D(filters=64, kernel_size=4, padding='same', activation='selu')(tick_input)
+    tick_conv = Conv1D(filters=64, kernel_size=3, padding='same', activation='selu')(tick_input)
     tick_conv = MaxPooling1D(pool_size=2)(tick_conv)
     
     tick_rnn = LSTM(200, dropout=0.4, recurrent_dropout=0.4, return_sequences=False)(tick_conv)
@@ -333,7 +333,7 @@ def get_model(emb_matrix):
     return model
 
 
-# In[ ]:
+# In[7]:
 
 
 if __name__ == "__main__":
@@ -350,7 +350,7 @@ if __name__ == "__main__":
     
     emb_matrix, glove_db = get_embedding_matrix(toke, purge=True)
     
-    trainX, trainX2, trainX3, trainY, testX, testX2, testX3, testY = split_data(encoded_headlines, tick_hists, encoded_meta, effects, .8)
+    trainX, trainX2, trainX3, trainY, testX, testX2, testX3, testY = split_data(encoded_headlines, tick_hists, encoded_meta, effects, .9)
     
     print(trainX.shape, trainX2.shape, trainX3.shape, testY.shape)
 
@@ -408,7 +408,7 @@ if __name__ == "__main__":
     
 
 
-# In[38]:
+# In[8]:
 
 # Predict (TEST)
 
@@ -484,15 +484,15 @@ def predict(stock, model=None, toke=None, current_date=None, predict_date=None, 
         
         predictions = model.predict([test_encoded, tick_hists, encoded_meta])[:, 0]
         
-        prices = predictions * 0.02 * actual_current + actual_current
+        prices = predictions * 0.023 * actual_current + actual_current
         
         return predictions, prices 
         
 
 
-# In[45]:
+# In[10]:
 
-# TEST MODEL
+# [TEST] Spot Testing
 
 if __name__ == "__main__":
     
@@ -500,7 +500,7 @@ if __name__ == "__main__":
     
     ## Options ##
     
-    stock = 'INTC'
+    stock = 'AMD'
     look_back = 3
     current_date = '2018-02-27'
     predict_date = '2018-02-28'
@@ -537,9 +537,9 @@ if __name__ == "__main__":
             
 
 
-# In[46]:
+# In[11]:
 
-# TEST MODEL
+# [TEST] Range Test
 
 if __name__ == "__main__":
     
@@ -557,7 +557,7 @@ if __name__ == "__main__":
     
     ## Settings ##
     
-    stock = 'INTC'
+    stock = 'GOOG'
     start_date = '2017-02-25'
     end_date = '2018-02-25'
     
@@ -567,8 +567,8 @@ if __name__ == "__main__":
         
         cur.execute("""SELECT date, adjclose FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date ASC""", 
                     [stock, 
-                    datetime.strptime(start_date, '%Y-%m-%d'), 
-                    datetime.strptime(end_date, '%Y-%m-%d')])
+                     datetime.strptime(start_date, '%Y-%m-%d'), 
+                     datetime.strptime(end_date, '%Y-%m-%d')])
         
         real_ticks = cur.fetchall()
         dates = sorted([ date for date, _ in real_ticks])
@@ -596,19 +596,19 @@ if __name__ == "__main__":
     plt.show()
         
     plt.plot(fake_ticks - real_ticks)
-    plt.show()
+    plt.show() 
     
-    # acc_image = np.array([np.sign(fake_ticks[1:] - fake_ticks[:-1]) == np.sign(real_ticks[1:] - real_ticks[:-1])]) * 1.0
-    # acc_image = acc_image.reshape((25, 10))
+    acc_image = np.array([np.sign(fake_ticks[1:] - fake_ticks[:-1]) == np.sign(real_ticks[1:] - real_ticks[:-1])]) * 1.0
+    acc_image = acc_image.reshape((25, 10))
 
-    # plt.imshow(acc_image, interpolation='none', cmap='RdBu')
-    # plt.show()
+    plt.imshow(acc_image, interpolation='none', cmap='RdBu')
+    plt.show()
             
 
 
-# In[ ]:
+# In[12]:
 
-# # TEST MODEL
+# [TEST] Caeteris Paribus
 
 # if __name__ == "__main__":
      

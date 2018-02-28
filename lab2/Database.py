@@ -115,7 +115,7 @@ def do_labeling():
         
 
 
-# In[ ]:
+# In[6]:
 
 
 if __name__ == "__main__":
@@ -123,7 +123,7 @@ if __name__ == "__main__":
     create_tables()
 
 
-# In[ ]:
+# In[7]:
 
 
 if __name__ == "__main__":
@@ -162,6 +162,8 @@ if __name__ == "__main__":
         ["**COMPANY**crippled"],
         ["**COMPANY**orations"],
         ["**COMPANY**oration"],
+        ["**COMPANY**powered"],
+        ["postspectre"],
         ### Product ###
         ["**PRODUCT**phones"],
         ["**PRODUCT**com"],
@@ -412,6 +414,12 @@ if __name__ == "__main__":
         ["releveraging"],
         ["iwatches"],
         ["lumentums"],
+        ["costpertransistor"],
+        ["zenphones"],
+        ["highertiered"],
+        ["zenbased"],
+        ["stressrun"],
+        ["pcieslot"],
         ## Specialized Tokens ##
         ### MSFT ###
         ["onedrive", "MSFT", "**PRODUCT**"],
@@ -526,10 +534,12 @@ if __name__ == "__main__":
         ["coffee lake", "INTC", "**PRODUCT**"],
         ["coffeelake", "INTC", "**PRODUCT**"],
         ["kaby lake", "INTC", "**PRODUCT**"],
+        ["thgen cpu", "INTC", "**PRODUCT**"],
         ["corei", "INTC", "**PRODUCT**"],
         ["intel cpu", "INTC", "**PRODUCT**"],
         ["i cpu", "INTC", "**PRODUCT**"],
         [" i ", "INTC", " **PRODUCT** "],
+        ["igpus", "INTC", "**PRODUCT**"],
         ["zeon", "INTC", "**PRODUCT**"],
         ["zeon phi", "INTC", "**PRODUCT**"],
         ["xseries", "INTC", "**PRODUCT**"],
@@ -538,7 +548,10 @@ if __name__ == "__main__":
         ["skylake", "INTC", "**PRODUCT**"],
         ["haswell", "INTC", "**PRODUCT**"],
         ["brain krzabnich", "INTC", "**MEMBER**"],
-        ["krzabnich", "INTC", "**MEMBER**"]
+        ["otellini", "INTC", "**MEMBER**"],
+        ["paul otellini", "INTC", "**MEMBER**"],
+        ["krzabnich", "INTC", "**MEMBER**"],
+        ["kabylake", "INTC", "**PRODUCT**"]
     ]
     
     for item in hardcoded_dict:

@@ -44,7 +44,7 @@ epochs      = 250
 batch_size  = 64
 
 
-# In[15]:
+# In[36]:
 
 
 def add_time(date, days):
@@ -69,10 +69,13 @@ def make_headline_to_effect_data():
             
             ## Go through all the headlines ##
             
-            cur.execute("SELECT date, source, content, sentimentlabel FROM headlines WHERE stock=? AND LENGTH(content) >= 16", [stock])
+            cur.execute("SELECT date, source, content, sentimentlabel FROM headlines WHERE stock=?", [stock])
             headline_query = cur.fetchall()
             
             for (date, source, content, label) in headline_query:
+                
+                if not (5 <= content.count(' ') <= 50):
+                    continue
                 
                 event_date = datetime.strptime(date, '%Y-%m-%d') # The date of headline
                 
@@ -200,7 +203,7 @@ def split_data(X, X2, X3, Y, ratio): #TODO Make Better
     return trainX, trainX2, trainX3, trainY, testX, testX2, testX3, testY
 
 
-# In[6]:
+# In[37]:
 
 
 def get_embedding_matrix(tokenizer, use_glove=True, pretrained_file='glove.840B.300d.txt', purge=False):
@@ -405,7 +408,7 @@ if __name__ == "__main__":
     
 
 
-# In[30]:
+# In[38]:
 
 # Predict (TEST)
 
@@ -487,7 +490,7 @@ def predict(stock, model=None, toke=None, current_date=None, predict_date=None, 
         
 
 
-# In[31]:
+# In[45]:
 
 # TEST MODEL
 
@@ -497,10 +500,10 @@ if __name__ == "__main__":
     
     ## Options ##
     
-    stock = 'AMD'
+    stock = 'INTC'
     look_back = 3
-    current_date = '2018-02-26'
-    predict_date = '2018-02-27'
+    current_date = '2018-02-27'
+    predict_date = '2018-02-28'
     
     ## Run ##
     
@@ -515,7 +518,7 @@ if __name__ == "__main__":
     
         cur.execute("""SELECT adjclose FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date ASC LIMIT 1""", 
                         [stock, 
-                        add_time(datetime.strptime(predict_date, '%Y-%m-%d'), 1), 
+                        add_time(datetime.strptime(predict_date, '%Y-%m-%d'), 0), 
                         add_time(datetime.strptime(predict_date, '%Y-%m-%d'), 6)])
 
         after_headline_ticks = cur.fetchall()
@@ -534,7 +537,7 @@ if __name__ == "__main__":
             
 
 
-# In[33]:
+# In[46]:
 
 # TEST MODEL
 
@@ -554,9 +557,9 @@ if __name__ == "__main__":
     
     ## Settings ##
     
-    stock = 'AMD'
-    start_date = '2017-12-20'
-    end_date = '2018-02-28'
+    stock = 'INTC'
+    start_date = '2017-02-25'
+    end_date = '2018-02-25'
     
     ## Run ##
     
@@ -594,6 +597,12 @@ if __name__ == "__main__":
         
     plt.plot(fake_ticks - real_ticks)
     plt.show()
+    
+    # acc_image = np.array([np.sign(fake_ticks[1:] - fake_ticks[:-1]) == np.sign(real_ticks[1:] - real_ticks[:-1])]) * 1.0
+    # acc_image = acc_image.reshape((25, 10))
+
+    # plt.imshow(acc_image, interpolation='none', cmap='RdBu')
+    # plt.show()
             
 
 

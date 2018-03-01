@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[14]:
+# In[1]:
 
 # Imports
 
@@ -26,7 +26,7 @@ import keras.backend as K
 from keras.utils import plot_model
 
 
-# In[40]:
+# In[2]:
 
 # Options
 
@@ -44,7 +44,7 @@ epochs      = 250
 batch_size  = 64
 
 
-# In[41]:
+# In[3]:
 
 
 def add_time(date, days):
@@ -140,7 +140,7 @@ def make_headline_to_effect_data():
     return meta, headlines, np.array(tick_hists), np.array(effects)
 
 
-# In[42]:
+# In[4]:
 
 
 def encode_sentences(meta, sentences, tokenizer=None, max_length=100, vocab_size=100):
@@ -178,7 +178,7 @@ def encode_sentences(meta, sentences, tokenizer=None, max_length=100, vocab_size
     return meta_matrix, padded_headlines, tokenizer
 
 
-# In[43]:
+# In[5]:
 
 
 def split_data(X, X2, X3, Y, ratio): #TODO Make Better
@@ -203,7 +203,7 @@ def split_data(X, X2, X3, Y, ratio): #TODO Make Better
     return trainX, trainX2, trainX3, trainY, testX, testX2, testX3, testY
 
 
-# In[ ]:
+# In[6]:
 
 
 def get_embedding_matrix(tokenizer, use_glove=True, pretrained_file='glove.840B.300d.txt', purge=False):
@@ -287,7 +287,7 @@ def get_model(emb_matrix):
     
     tick_input = Input(shape=(tick_window, 5), name="stockticks")
     
-    tick_conv = Conv1D(filters=64, kernel_size=3, padding='same', activation='selu')(tick_input)
+    tick_conv = Conv1D(filters=128, kernel_size=5, padding='same', activation='selu')(tick_input)
     tick_conv = MaxPooling1D(pool_size=2)(tick_conv)
     
     tick_rnn = LSTM(200, dropout=0.4, recurrent_dropout=0.4, return_sequences=False)(tick_conv)
@@ -302,12 +302,12 @@ def get_model(emb_matrix):
     
     merged = concatenate([text_rnn, tick_rnn, meta_input])
     
-    final_dense = Dense(300)(merged)
+    final_dense = Dense(400)(merged)
     final_dense = Activation('selu')(final_dense)
     final_dense = BatchNormalization()(final_dense)
     final_dense = Dropout(0.5)(final_dense)
     
-    final_dense = Dense(100)(merged)
+    final_dense = Dense(200)(merged)
     final_dense = Activation('selu')(final_dense)
     final_dense = BatchNormalization()(final_dense)
     final_dense = Dropout(0.5)(final_dense)
@@ -333,7 +333,7 @@ def get_model(emb_matrix):
     return model
 
 
-# In[ ]:
+# In[7]:
 
 
 if __name__ == "__main__":
@@ -408,7 +408,7 @@ if __name__ == "__main__":
     
 
 
-# In[8]:
+# In[9]:
 
 # Predict (TEST)
 
@@ -443,7 +443,7 @@ def predict(stock, model=None, toke=None, current_date=None, predict_date=None, 
                 
         cur.execute("""SELECT open, high, low, adjclose, volume FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date DESC""", 
                     [stock, 
-                    add_time(current_date, -10 - tick_window), 
+                    add_time(current_date, -30 - tick_window), 
                     add_time(current_date, 0)])
                 
         before_headline_ticks = cur.fetchall()[:tick_window]

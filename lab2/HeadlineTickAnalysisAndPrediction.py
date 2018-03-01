@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[2]:
+# In[14]:
 
 # Imports
 
@@ -26,14 +26,14 @@ import keras.backend as K
 from keras.utils import plot_model
 
 
-# In[3]:
+# In[40]:
 
 # Options
 
 stocks      = ['AAPL', 'AMD', 'AMZN', 'GOOG', 'MSFT', 'INTC']
-all_sources = ['reddit', 'reuters', 'twitter', 'seekingalpha', 'fool']
+all_sources = ['reddit', 'reuters', 'twitter', 'seekingalpha', 'fool', 'wsj', 'thestreet']
 
-tick_window = 15
+tick_window = 30
 max_length  = 50
 vocab_size  = None # Set by tokenizer
 emb_size    = 300
@@ -44,7 +44,7 @@ epochs      = 250
 batch_size  = 64
 
 
-# In[4]:
+# In[41]:
 
 
 def add_time(date, days):
@@ -74,7 +74,7 @@ def make_headline_to_effect_data():
             
             for (date, source, content, label) in headline_query:
                 
-                if not (5 <= content.count(' ') <= 50):
+                if not (3 <= content.count(' ') <= 40):
                     continue
                 
                 event_date = datetime.strptime(date, '%Y-%m-%d') # The date of headline
@@ -83,7 +83,7 @@ def make_headline_to_effect_data():
                 
                 cur.execute("""SELECT open, high, low, adjclose, volume FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date DESC""", 
                             [stock, 
-                             add_time(event_date, -8 - tick_window), 
+                             add_time(event_date, -30 - tick_window), 
                              add_time(event_date, 0)])
                 
                 before_headline_ticks = cur.fetchall()[:tick_window]
@@ -140,7 +140,7 @@ def make_headline_to_effect_data():
     return meta, headlines, np.array(tick_hists), np.array(effects)
 
 
-# In[5]:
+# In[42]:
 
 
 def encode_sentences(meta, sentences, tokenizer=None, max_length=100, vocab_size=100):
@@ -178,7 +178,7 @@ def encode_sentences(meta, sentences, tokenizer=None, max_length=100, vocab_size
     return meta_matrix, padded_headlines, tokenizer
 
 
-# In[6]:
+# In[43]:
 
 
 def split_data(X, X2, X3, Y, ratio): #TODO Make Better
@@ -203,7 +203,7 @@ def split_data(X, X2, X3, Y, ratio): #TODO Make Better
     return trainX, trainX2, trainX3, trainY, testX, testX2, testX3, testY
 
 
-# In[7]:
+# In[ ]:
 
 
 def get_embedding_matrix(tokenizer, use_glove=True, pretrained_file='glove.840B.300d.txt', purge=False):
@@ -250,8 +250,8 @@ def get_embedding_matrix(tokenizer, use_glove=True, pretrained_file='glove.840B.
                     
                     print("Purge..." + word)
 
-                    cur.execute("DELETE FROM headlines WHERE content LIKE ?", ["%" + word + "%"])
-                    conn.commit()
+                    #cur.execute("DELETE FROM headlines WHERE content LIKE ?", ["%" + word + "%"])
+                    #conn.commit()
             
     return embedding_matrix, glove_db
 
@@ -333,7 +333,7 @@ def get_model(emb_matrix):
     return model
 
 
-# In[7]:
+# In[ ]:
 
 
 if __name__ == "__main__":
@@ -376,7 +376,7 @@ if __name__ == "__main__":
         monitor_mode = 'val_acc'
     
     tensorboard = TensorBoard(log_dir="logs/{}".format(datetime.now().strftime("%Y,%m,%d-%H,%M,%S,tick," + model_type)))
-    e_stopping = EarlyStopping(monitor=monitor_mode, patience=50)
+    e_stopping = EarlyStopping(monitor='val_loss', patience=50)
     checkpoint = ModelCheckpoint(os.path.join('..', 'models', 'media-headlines-ticks-' + model_type + '.h5'), 
                                  monitor=monitor_mode,
                                  verbose=0,

@@ -74,7 +74,7 @@ def make_headline_to_effect_data():
             
             for (date, source, content, label) in headline_query:
                 
-                if not (3 <= content.count(' ') <= 40):
+                if not (5 <= content.count(' ') <= 40):
                     continue
                 
                 event_date = datetime.strptime(date, '%Y-%m-%d') # The date of headline
@@ -115,9 +115,9 @@ def make_headline_to_effect_data():
                         effect = [(result_tick - previous_tick) / previous_tick / 0.023]
                         
                         # Use labels to adjust effect
-                        if label in [-1, 0, 1]:
-                            if np.sign(label) == np.sign(effect[0]):
-                                effect = [effect[0] * 2]
+                        if label in [-1, 1]:
+                            if label == np.sign(effect[0]):
+                                effect = [effect[0] * 4]
                             else:
                                 effect = [effect[0] / 4]
                     
@@ -128,7 +128,7 @@ def make_headline_to_effect_data():
                         else:
                             effect = [0., 1.]
                             
-                        if label != -999:
+                        if label in [-1, 1]:
                             if np.sign(label) != np.sign(effect[0]):
                                 effect = [.5, .5]
                         
@@ -206,13 +206,13 @@ def split_data(X, X2, X3, Y, ratio): #TODO Make Better
 # In[6]:
 
 
-def get_embedding_matrix(tokenizer, use_glove=True, pretrained_file='glove.840B.300d.txt', purge=False):
+def get_embedding_matrix(tokenizer, pretrained_file='glove.840B.300d.txt', purge=False):
     """Load Vectors from Glove File"""
     print("Loading WordVecs...")
     
     embedding_matrix = np.zeros((vocab_size + 1, emb_size))
     
-    if not use_glove:
+    if not pretrained_file:
         return embedding_matrix, None
     
     ## Load Glove File (Super Slow) ##
@@ -250,8 +250,8 @@ def get_embedding_matrix(tokenizer, use_glove=True, pretrained_file='glove.840B.
                     
                     print("Purge..." + word)
 
-                    #cur.execute("DELETE FROM headlines WHERE content LIKE ?", ["%" + word + "%"])
-                    #conn.commit()
+                    cur.execute("DELETE FROM headlines WHERE content LIKE ?", ["%" + word + "%"])
+                    conn.commit()
             
     return embedding_matrix, glove_db
 
@@ -275,22 +275,22 @@ def get_model(emb_matrix):
     # conv = Conv1D(filters=64, kernel_size=5, padding='same', activation='selu')(emb)
     # conv = MaxPooling1D(pool_size=3)(conv)
     
-    text_rnn = LSTM(200, dropout=0.3, recurrent_dropout=0.3, return_sequences=False)(emb)
+    text_rnn = LSTM(400, dropout=0.4, recurrent_dropout=0.4, return_sequences=False)(emb)
     text_rnn = Activation('selu')(text_rnn)
     text_rnn = BatchNormalization()(text_rnn)
     
-    # text_rnn = LSTM(300, dropout=0.3, recurrent_dropout=0.3)(text_rnn)
-    # text_rnn = Activation('relu')(text_rnn)
+    # text_rnn = LSTM(300, dropout=0.4, recurrent_dropout=0.4, return_sequences=False)(text_rnn)
+    # text_rnn = Activation('selu')(text_rnn)
     # text_rnn = BatchNormalization()(text_rnn)
     
     ## Ticks ##
     
     tick_input = Input(shape=(tick_window, 5), name="stockticks")
     
-    tick_conv = Conv1D(filters=128, kernel_size=5, padding='same', activation='selu')(tick_input)
+    tick_conv = Conv1D(filters=64, kernel_size=5, padding='same', activation='selu')(tick_input)
     tick_conv = MaxPooling1D(pool_size=2)(tick_conv)
     
-    tick_rnn = LSTM(200, dropout=0.4, recurrent_dropout=0.4, return_sequences=False)(tick_conv)
+    tick_rnn = LSTM(200, dropout=0.3, recurrent_dropout=0.3, return_sequences=False)(tick_conv)
     tick_rnn = Activation('selu')(tick_rnn)
     tick_rnn = BatchNormalization()(tick_rnn)
     
@@ -433,7 +433,7 @@ def predict(stock, model=None, toke=None, current_date=None, predict_date=None, 
         predict_date = current_date + timedelta(days=1)
         
     if not look_back:
-        look_back = 2
+        look_back = 3
     
     pretick_date = add_time(current_date, -look_back)
     
@@ -486,11 +486,11 @@ def predict(stock, model=None, toke=None, current_date=None, predict_date=None, 
         
         prices = predictions * 0.023 * actual_current + actual_current
         
-        return predictions, prices 
+        return predictions, prices
         
 
 
-# In[10]:
+# In[13]:
 
 # [TEST] Spot Testing
 
@@ -502,8 +502,8 @@ if __name__ == "__main__":
     
     stock = 'AMD'
     look_back = 3
-    current_date = '2018-02-27'
-    predict_date = '2018-02-28'
+    current_date = '2018-03-01'
+    predict_date = '2018-03-02'
     
     ## Run ##
     
@@ -513,7 +513,7 @@ if __name__ == "__main__":
                                   look_back=look_back)
     
     ## Find Actual Value ##
-    
+     
     with db() as (conn, cur):
     
         cur.execute("""SELECT adjclose FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date ASC LIMIT 1""", 
@@ -579,7 +579,7 @@ if __name__ == "__main__":
             
         predict_date = datetime.strptime(date, '%Y-%m-%d')
             
-        predictions, prices = predict(stock, 
+        predictions, prices = predict(stock,                    
                                       model=model,
                                       toke=toke,
                                       current_date=predict_date + timedelta(days=-1), 
@@ -603,7 +603,9 @@ if __name__ == "__main__":
 
     plt.imshow(acc_image, interpolation='none', cmap='RdBu')
     plt.show()
-            
+    
+    print("Acc: ", np.mean(acc_image))
+    
 
 
 # In[12]:

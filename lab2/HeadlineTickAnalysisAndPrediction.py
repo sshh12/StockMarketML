@@ -373,7 +373,7 @@ if __name__ == "__main__":
     if model_type == 'regression':
         monitor_mode = 'correct_sign_acc'
     else:
-        monitor_mode = 'val_acc'
+        monitor_mode = 'val_acc' 
     
     tensorboard = TensorBoard(log_dir="logs/{}".format(datetime.now().strftime("%Y,%m,%d-%H,%M,%S,tick," + model_type)))
     e_stopping = EarlyStopping(monitor='val_loss', patience=50)
@@ -502,8 +502,8 @@ if __name__ == "__main__":
     
     stock = 'AMD'
     look_back = 3
-    current_date = '2018-03-01'
-    predict_date = '2018-03-02'
+    current_date = '2018-03-04'
+    predict_date = '2018-03-05'
     
     ## Run ##
     
@@ -537,7 +537,7 @@ if __name__ == "__main__":
             
 
 
-# In[11]:
+# In[14]:
 
 # [TEST] Range Test
 

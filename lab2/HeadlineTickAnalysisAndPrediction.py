@@ -41,7 +41,7 @@ emb_size    = 300
 model_type  = 'regression'
 
 epochs      = 250
-batch_size  = 64
+batch_size  = 128
 
 
 # In[3]:
@@ -74,7 +74,7 @@ def make_headline_to_effect_data():
             
             for (date, source, content, label) in headline_query:
                 
-                if not (5 <= content.count(' ') <= 40):
+                if not content or not (5 <= content.count(' ') <= 40):
                     continue
                 
                 event_date = datetime.strptime(date, '%Y-%m-%d') # The date of headline
@@ -290,7 +290,7 @@ def get_model(emb_matrix):
     tick_conv = Conv1D(filters=64, kernel_size=5, padding='same', activation='selu')(tick_input)
     tick_conv = MaxPooling1D(pool_size=2)(tick_conv)
     
-    tick_rnn = LSTM(200, dropout=0.3, recurrent_dropout=0.3, return_sequences=False)(tick_conv)
+    tick_rnn = LSTM(300, dropout=0.3, recurrent_dropout=0.3, return_sequences=False)(tick_conv)
     tick_rnn = Activation('selu')(tick_rnn)
     tick_rnn = BatchNormalization()(tick_rnn)
     
@@ -302,7 +302,7 @@ def get_model(emb_matrix):
     
     merged = concatenate([text_rnn, tick_rnn, meta_input])
     
-    final_dense = Dense(400)(merged)
+    final_dense = Dense(420)(merged)
     final_dense = Activation('selu')(final_dense)
     final_dense = BatchNormalization()(final_dense)
     final_dense = Dropout(0.5)(final_dense)
@@ -490,7 +490,7 @@ def predict(stock, model=None, toke=None, current_date=None, predict_date=None, 
         
 
 
-# In[13]:
+# In[10]:
 
 # [TEST] Spot Testing
 
@@ -500,10 +500,10 @@ if __name__ == "__main__":
     
     ## Options ##
     
-    stock = 'AMD'
+    stock = 'INTC'
     look_back = 3
-    current_date = '2018-03-04'
-    predict_date = '2018-03-05'
+    current_date = '2018-03-05'
+    predict_date = '2018-03-06'
     
     ## Run ##
     
@@ -537,7 +537,7 @@ if __name__ == "__main__":
             
 
 
-# In[14]:
+# In[11]:
 
 # [TEST] Range Test
 

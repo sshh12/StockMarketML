@@ -30,7 +30,7 @@ from keras.utils import plot_model
 
 # Options
 
-stocks      = ['AAPL', 'AMD', 'AMZN', 'GOOG', 'MSFT', 'INTC']
+stocks      = ['AAPL', 'AMZN', 'GOOG', 'MSFT', 'INTC']
 all_sources = ['reddit', 'reuters', 'twitter', 'seekingalpha', 'fool', 'wsj', 'thestreet']
 
 tick_window = 30
@@ -275,7 +275,7 @@ def get_model(emb_matrix):
     # conv = Conv1D(filters=64, kernel_size=5, padding='same', activation='selu')(emb)
     # conv = MaxPooling1D(pool_size=3)(conv)
     
-    text_rnn = LSTM(400, dropout=0.4, recurrent_dropout=0.4, return_sequences=False)(emb)
+    text_rnn = LSTM(300, dropout=0.4, recurrent_dropout=0.4, return_sequences=False)(emb)
     text_rnn = Activation('selu')(text_rnn)
     text_rnn = BatchNormalization()(text_rnn)
     
@@ -290,7 +290,7 @@ def get_model(emb_matrix):
     tick_conv = Conv1D(filters=64, kernel_size=5, padding='same', activation='selu')(tick_input)
     tick_conv = MaxPooling1D(pool_size=2)(tick_conv)
     
-    tick_rnn = LSTM(300, dropout=0.3, recurrent_dropout=0.3, return_sequences=False)(tick_conv)
+    tick_rnn = LSTM(200, dropout=0.3, recurrent_dropout=0.3, return_sequences=False)(tick_conv)
     tick_rnn = Activation('selu')(tick_rnn)
     tick_rnn = BatchNormalization()(tick_rnn)
     
@@ -302,7 +302,7 @@ def get_model(emb_matrix):
     
     merged = concatenate([text_rnn, tick_rnn, meta_input])
     
-    final_dense = Dense(420)(merged)
+    final_dense = Dense(400)(merged)
     final_dense = Activation('selu')(final_dense)
     final_dense = BatchNormalization()(final_dense)
     final_dense = Dropout(0.5)(final_dense)
@@ -502,8 +502,8 @@ if __name__ == "__main__":
     
     stock = 'INTC'
     look_back = 3
-    current_date = '2018-03-05'
-    predict_date = '2018-03-06'
+    current_date = '2018-03-06'
+    predict_date = '2018-03-07'
     
     ## Run ##
     
@@ -537,7 +537,7 @@ if __name__ == "__main__":
             
 
 
-# In[11]:
+# In[13]:
 
 # [TEST] Range Test
 
@@ -557,7 +557,7 @@ if __name__ == "__main__":
     
     ## Settings ##
     
-    stock = 'GOOG'
+    stock = 'AMD'
     start_date = '2017-02-25'
     end_date = '2018-02-25'
     

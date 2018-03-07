@@ -641,7 +641,18 @@ if __name__ == "__main__":
         ["smartphonetablet"],
         ["dolbys"],
         ["sixcores"],
-        [""]
+        ["groupcentric"],
+        ["compressionfree"],
+        ["facebookowned"],
+        ["bitcoinmania"],
+        ["privatesectorstyle"],
+        ["profittakers"],
+        ["buffettinspired"],
+        ["bitcoinfutures"],
+        ["driverlessvehicle"],
+        ["stimulusstrengthened"],
+        ["needlemover"],
+        ["highperformer"],
         ## Specialized Tokens ##
         ### MSFT ###
         ["onedrive", "MSFT", "**PRODUCT**"],

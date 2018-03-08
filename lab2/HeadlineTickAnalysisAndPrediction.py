@@ -30,7 +30,7 @@ from keras.utils import plot_model
 
 # Options
 
-stocks      = ['AAPL', 'AMZN', 'GOOG', 'MSFT', 'INTC']
+stocks      = ['AAPL', 'AMD', 'AMZN', 'GOOG', 'MSFT', 'INTC']
 all_sources = ['reddit', 'reuters', 'twitter', 'seekingalpha', 'fool', 'wsj', 'thestreet']
 
 tick_window = 30
@@ -408,7 +408,7 @@ if __name__ == "__main__":
     
 
 
-# In[9]:
+# In[10]:
 
 # Predict (TEST)
 
@@ -490,7 +490,7 @@ def predict(stock, model=None, toke=None, current_date=None, predict_date=None, 
         
 
 
-# In[10]:
+# In[12]:
 
 # [TEST] Spot Testing
 
@@ -502,8 +502,8 @@ if __name__ == "__main__":
     
     stock = 'INTC'
     look_back = 3
-    current_date = '2018-03-06'
-    predict_date = '2018-03-07'
+    current_date = '2018-03-07'
+    predict_date = '2018-03-08'
     
     ## Run ##
     
@@ -608,7 +608,7 @@ if __name__ == "__main__":
     
 
 
-# In[12]:
+# In[ ]:
 
 # [TEST] Caeteris Paribus
 

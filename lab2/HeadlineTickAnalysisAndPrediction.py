@@ -408,7 +408,7 @@ if __name__ == "__main__":
     
 
 
-# In[10]:
+# In[9]:
 
 # Predict (TEST)
 
@@ -490,7 +490,7 @@ def predict(stock, model=None, toke=None, current_date=None, predict_date=None, 
         
 
 
-# In[12]:
+# In[10]:
 
 # [TEST] Spot Testing
 
@@ -537,7 +537,7 @@ if __name__ == "__main__":
             
 
 
-# In[13]:
+# In[11]:
 
 # [TEST] Range Test
 
@@ -606,65 +606,4 @@ if __name__ == "__main__":
     
     print("Acc: ", np.mean(acc_image))
     
-
-
-# In[ ]:
-
-# [TEST] Caeteris Paribus
-
-# if __name__ == "__main__":
-     
-#     ## Load Model For Manual Testing ##
-    
-#     import keras.metrics
-#     keras.metrics.correct_sign_acc = correct_sign_acc
-     
-#     with open(os.path.join('..', 'models', 'toke-tick.pkl'), 'rb') as toke_file:
-#         toke = pickle.load(toke_file)
-    
-#     model = load_model(os.path.join('..', 'models', 'media-headlines-ticks-' + model_type + '.h5'))
-      
-#     ## Fake Unique Test Data ##
-    
-#     headlines = [
-#         "**COMPANY** gains a ton of stock after creating **PRODUCT**",
-#         "**COMPANY** loses a ton of stock after killing **PRODUCT**"
-#     ]
-    
-#     test_sents, meta = [], []
-    
-#     for headline in headlines:
-    
-#         for source in all_sources:
-
-#             for weekday in range(7):
-            
-#                 test_sents.append(headline)
-#                 meta.append([source, weekday])
-    
-#     ## Process ##
-    
-#     encoded_meta, test_encoded, _ = encode_sentences(meta, 
-#                                                      test_sents, 
-#                                                      tokenizer=toke, 
-#                                                      max_length=max_length, 
-#                                                      vocab_size=vocab_size)
-    
-#     predictions = model.predict([test_encoded, encoded_meta])
-    
-#     predictions = predictions.reshape((len(headlines), len(all_sources), 7))
-    
-#     ## Display Predictions ##
-    
-#     from matplotlib.colors import Normalize
-    
-#     for i, headline in enumerate(headlines):
-        
-#         plt.imshow(predictions[i], interpolation='none', cmap='PRGn', norm=Normalize(vmin=-2, vmax=2))
-#         plt.title(headline)
-#         plt.xlabel('Weekday')
-#         plt.ylabel('Source')
-#         plt.xticks(np.arange(7), list('MTWTFSS'))
-#         plt.yticks(np.arange(len(all_sources)), all_sources)
-#         plt.show()
 

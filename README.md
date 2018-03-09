@@ -30,7 +30,7 @@ Creates and trains a model to predict stock prices based on headlines.
 
 Creates and trains a model to predict stock prices based on headlines and historical data.
 
-![model](https://user-images.githubusercontent.com/6625384/36633106-22cf7fb8-1955-11e8-8292-c92ef7b5dddd.png)
+![model](https://raw.githubusercontent.com/sshh12/StockMarketML/master/lab2/model.png)
 
 ## Lab 1
 

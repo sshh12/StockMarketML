@@ -15,6 +15,7 @@ import os
 import re
 
 import matplotlib.pyplot as plt
+from tqdm import tqdm_notebook
 
 from keras.optimizers import RMSprop
 from keras.models import Sequential, load_model, Model
@@ -69,13 +70,11 @@ def make_headline_to_effect_data():
     when analyzing/encoding headlines. Returns a list of headlines and
     a list of corresponding 'effects' which represent a change in the stock price.
     """
-    headlines, tick_hists, effects = [], [], []
+    all_headlines, all_tick_hist, all_effects = [], [], []
     
     with db() as (conn, cur):
         
         for stock in stocks:
-            
-            print("Fetching Stock..." + stock)
             
             ## Headline For Every Date ##
             
@@ -85,7 +84,7 @@ def make_headline_to_effect_data():
             cur.execute("SELECT DISTINCT date FROM ticks WHERE stock=? AND date >= ? ORDER BY date ASC", [stock, start_date])
             dates = [date[0] for date in cur.fetchall()]
             
-            for date in dates:
+            for date in tqdm_notebook(dates, desc=stock):
                 
                 ## Collect Headlines ##
                 
@@ -118,33 +117,124 @@ def make_headline_to_effect_data():
                 
                 after_headline_ticks = cur.fetchall()
                 
+                if len(after_headline_ticks) == 0:
+                    continue
+                
                 previous_tick = before_headline_ticks[0][3]
                 result_tick = after_headline_ticks[0][0]
+                
+                if not previous_tick or not result_tick:
+                    continue
                 
                 tick_hist = np.array(before_headline_ticks)
                 tick_hist -= np.mean(tick_hist, axis=0)
                 tick_hist /= np.std(tick_hist, axis=0)
                 
                 ## Create training example ##
-                
-                if previous_tick and result_tick and len(after_headline_ticks) > 0:
 
-                    probs = [1 / (headline[3] + 1) for headline in headlines]
-                    probs /= np.sum(probs)
+                probs = [1 / (headline[3] + 1) for headline in headlines]
+                probs /= np.sum(probs)
                     
-                    contents = [headline[2] for headline in headlines]
+                contents = [headline[2] for headline in headlines]
 
-                    num_samples = len(contents) // sample_size
+                num_samples = len(contents) // sample_size
                     
-                    effect = [(result_tick - previous_tick) / previous_tick]
+                effect = [(result_tick - previous_tick) / previous_tick]
 
-                    for i in range(num_samples):
+                for i in range(num_samples):
 
-                        sample = np.random.choice(contents, sample_size, p=probs)
-
-                        headlines.append(sample)
-                        tick_hists.append(tick_hist)
-                        effects.append(effect)
+                    indexes = np.random.choice(np.arange(len(headlines)), sample_size, replace=False, p=probs)
                     
-    return headlines, np.array(tick_hists), np.array(effects)
+                    sample = [headlines[i] for i in indexes]
+
+                    all_headlines.append(sample)
+                    all_tick_hist.append(tick_hist)
+                    all_effects.append(effect)
+                    
+            break ## REMOVE BEFORE FLIGHT
+                    
+    return all_headlines, np.array(all_tick_hist), np.array(all_effects)
+
+
+# In[4]:
+
+
+def encode_sentences(headlines, tokenizer=None, max_length=100, vocab_size=100):
+    """
+    Encoder
+    
+    Takes a list of headlines and converts them into vectors
+    """
+    ## Encoding Sentences
+    
+    sentences = []
+    
+    for example in headlines:
+        sentences.append(" ".join([data[2] for data in example]))
+    
+    if not tokenizer:
+        
+        tokenizer = Tokenizer(num_words=vocab_size, filters='', lower=False) # Already PreProcessed
+    
+        tokenizer.fit_on_texts(sentences)
+    
+    encoded_headlines = tokenizer.texts_to_sequences(sentences)
+    
+    padded_headlines = pad_sequences(encoded_headlines, maxlen=max_length, padding='post')
+    
+    ## Encoding Meta Data
+    
+    # TODO
+    
+    return padded_headlines, tokenizer
+
+
+# In[5]:
+
+
+def get_embedding_matrix(tokenizer, pretrained_file='glove.840B.300d.txt'):
+    
+    embedding_matrix = np.zeros((vocab_size + 1, emb_size))
+    
+    if not pretrained_file:
+        return embedding_matrix, None
+    
+    ## Load Glove File (Super Slow) ##
+    
+    glove_db = dict()
+    
+    with open(os.path.join('..', 'data', pretrained_file), 'r', encoding="utf-8") as glove:
+
+        for line in tqdm_notebook(glove, desc='Glove', total=2196017):
+
+            values = line.split(' ')
+            word = values[0].replace('-', '').lower()
+            coefs = np.asarray(values[1:], dtype='float32')
+            glove_db[word] = coefs
+    
+    ## Set Embeddings ##
+    
+    for word, i in tokenizer.word_index.items():
+        
+        embedding_vector = glove_db.get(word)
+        
+        if embedding_vector is not None:
+            
+            embedding_matrix[i] = embedding_vector
+            
+    return embedding_matrix, glove_db
+
+
+# In[6]:
+
+
+if __name__ == "__main__":
+    
+    headlines, tick_hists, effects = make_headline_to_effect_data()
+    
+    encoded_headlines, toke = encode_sentences(headlines, max_length=max_length, vocab_size=vocab_size)
+    
+    vocab_size = len(toke.word_counts)
+    
+    emb_matrix, glove_db = get_embedding_matrix(toke)
 

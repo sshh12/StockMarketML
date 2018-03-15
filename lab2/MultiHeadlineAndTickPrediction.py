@@ -46,7 +46,7 @@ model_type  = 'multireg'
 epochs      = 100
 batch_size  = 64
 
-test_cutoff = datetime(2018, 3, 1)
+test_cutoff = datetime(2018, 2, 14)
 
 
 # In[ ]:
@@ -158,8 +158,6 @@ def make_headline_to_effect_data():
                     all_tick_hist.append(tick_hist)
                     all_effects.append(effect)
                     
-            break ## REMOVE BEFORE FLIGHT
-                    
     return all_headlines, np.array(all_tick_hist), np.array(all_effects), np.array(test_indexes)
 
 
@@ -269,9 +267,7 @@ def get_model(emb_matrix):
     emb = Embedding(vocab_size + 1, emb_size, input_length=max_length, weights=[emb_matrix], trainable=True)(headline_input)
     emb = SpatialDropout1D(.2)(emb)
     
-    # MERGE META WITH EMBEDDINGS #
-    
-    # TODO
+    # (TODO) MERGE META WITH EMBEDDINGS
     
     text_rnn = LSTM(300, dropout=0.3, recurrent_dropout=0.3, return_sequences=True)(emb)
     text_rnn = Activation('selu')(text_rnn)
@@ -381,4 +377,131 @@ if __name__ == "__main__":
     plt.plot(history.history['val_' + monitor_mode])
     plt.legend(['TrainAcc', 'TestAcc'])
     plt.show()
+
+
+# In[24]:
+
+# Predict (TEST)
+
+def predict(stock, model=None, toke=None, current_date=None, predict_date=None):
+    
+    import keras.metrics
+    keras.metrics.correct_sign_acc = correct_sign_acc
+    
+    if not model or not toke:
+        
+        with open(os.path.join('..', 'models', 'toke2-tick.pkl'), 'rb') as toke_file:
+            toke = pickle.load(toke_file)
+    
+        model = load_model(os.path.join('..', 'models', 'media-headlines-ticks-' + model_type + '.h5'))
+        
+    vocab_size = len(toke.word_counts)
+        
+    if not current_date:
+        current_date = datetime.today()
+        
+    if not predict_date:
+        predict_date = current_date + timedelta(days=1)
+    
+    all_headlines, all_tick_hist = [], []
+    
+    with db() as (conn, cur):
+        
+        event_date = current_date
+        date = datetime.strftime(event_date, '%Y-%m-%d')
+                
+        cur.execute("SELECT date, source, rawcontent FROM headlines WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date DESC", 
+                    [stock, add_time(event_date, -14), date])
+        headlines = [(date, source, clean(content), (event_date - datetime.strptime(date, '%Y-%m-%d')).days) 
+                        for (date, source, content) in cur.fetchall() if content]
+                    
+        ## Find corresponding tick data ## 
+                
+        cur.execute("""SELECT open, high, low, adjclose, volume FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date DESC""", 
+                    [stock, 
+                     add_time(event_date, -30 - tick_window), 
+                     add_time(event_date, 0)])
+                
+        before_headline_ticks = cur.fetchall()[:tick_window]
+        actual_current = before_headline_ticks[0][3]
+                
+        tick_hist = np.array(before_headline_ticks)
+        tick_hist -= np.mean(tick_hist, axis=0)
+        tick_hist /= np.std(tick_hist, axis=0)
+                
+        ## Create training example ##
+
+        probs = [1 / (headline[3] + 1) for headline in headlines]
+        probs /= np.sum(probs)
+                    
+        contents = [headline[2] for headline in headlines]
+
+        num_samples = len(contents) // sample_size
+
+        for i in range(num_samples):
+
+            indexes = np.random.choice(np.arange(len(headlines)), sample_size, replace=False, p=probs)
+                    
+            sample = [headlines[i] for i in indexes]
+
+            all_headlines.append(sample)
+            all_tick_hist.append(tick_hist)
+        
+        ## Process ##
+    
+        encoded_headlines, toke = encode_sentences(all_headlines, tokenizer=toke, max_length=max_length)
+        
+        tick_hists = np.array(all_tick_hist)
+        
+        predictions = model.predict([encoded_headlines, tick_hists])[:, 0]
+        
+        prices = predictions * 0.023 * actual_current + actual_current
+        
+        return predictions, prices
+    
+
+
+# In[27]:
+
+# [TEST] Spot Testing
+
+if __name__ == "__main__":
+    
+    ## **This Test May Overlap w/Train Data** ##
+    
+    ## Options ##
+    
+    stock = 'INTC'
+    current_date = '2018-03-08'
+    predict_date = '2018-03-09'
+    
+    ## Run ##
+    
+    predictions, prices = predict(stock, 
+                                  current_date=datetime.strptime(current_date, '%Y-%m-%d'), 
+                                  predict_date=datetime.strptime(predict_date, '%Y-%m-%d'))
+    
+    ## Find Actual Value ##
+     
+    with db() as (conn, cur):
+    
+        cur.execute("""SELECT adjclose FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date ASC LIMIT 1""", 
+                        [stock, 
+                        add_time(datetime.strptime(predict_date, '%Y-%m-%d'), 0), 
+                        add_time(datetime.strptime(predict_date, '%Y-%m-%d'), 6)])
+
+        after_headline_ticks = cur.fetchall()
+        try:
+            actual_result = after_headline_ticks[0][0]
+        except:
+            actual_result = -1
+            
+    ## Display ##
+            
+    parse = lambda num: str(round(num, 2))
+    
+    print("Predicting Change Coef: " + parse(np.mean(predictions)))
+    print("Predicting Price: " + parse(np.mean(prices)))
+    print("Actual Price: " + parse(actual_result))
+            
 

@@ -231,7 +231,13 @@ def get_fool_news(stock, pages=40):
         else:
             url = "https://www.fool.com/quote/nasdaq/apple/{}/content/more?page={}".format(stock, i)
             
-        text = requests.get(url).text
+        try:
+            
+            text = requests.get(url).text
+            
+        except: # Timeout or something...
+            
+            pass
         
         headlines = [(match.group(1), match.group(2)) for match in re_headline.finditer(text)]
         

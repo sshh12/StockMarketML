@@ -37,11 +37,13 @@ all_sources = ['reddit', 'reuters', 'twitter', 'seekingalpha', 'fool', 'wsj', 't
 
 sample_size = 5
 tick_window = 30
-max_length  = 50
+max_length  = 600
 vocab_size  = None # Set by tokenizer
 emb_size    = 300
 
-epochs      = 120
+model_type  = 'multireg'
+
+epochs      = 50
 batch_size  = 64
 
 
@@ -159,7 +161,7 @@ def make_headline_to_effect_data():
 # In[4]:
 
 
-def encode_sentences(headlines, tokenizer=None, max_length=100, vocab_size=100):
+def encode_sentences(headlines, tokenizer=None, max_length=100):
     """
     Encoder
     
@@ -170,11 +172,13 @@ def encode_sentences(headlines, tokenizer=None, max_length=100, vocab_size=100):
     sentences = []
     
     for example in headlines:
-        sentences.append(" ".join([data[2] for data in example]))
+        sentences.append(" ".join([data[2] for data in example])) # Merge headlines into one long headline
+        
+    # print(np.mean(sizes))
     
     if not tokenizer:
         
-        tokenizer = Tokenizer(num_words=vocab_size, filters='', lower=False) # Already PreProcessed
+        tokenizer = Tokenizer(filters='', lower=False) # Already PreProcessed
     
         tokenizer.fit_on_texts(sentences)
     
@@ -190,6 +194,29 @@ def encode_sentences(headlines, tokenizer=None, max_length=100, vocab_size=100):
 
 
 # In[5]:
+
+
+def split_data(X, X2, Y, ratio): #TODO Make Better
+    """
+    Splits X/Y to Train/Test
+    """
+    indexes = np.arange(X.shape[0])
+    np.random.shuffle(indexes)
+    
+    X  = X[indexes]
+    X2 = X2[indexes]
+    Y  = Y[indexes]
+    
+    train_size = int(len(X) * ratio)
+    
+    trainX,  testX  = X[:train_size],  X[train_size:]
+    trainX2, testX2 = X2[:train_size], X2[train_size:]
+    trainY,  testY  = Y[:train_size],  Y[train_size:]
+    
+    return trainX, trainX2, trainY, testX, testX2, testY
+
+
+# In[11]:
 
 
 def get_embedding_matrix(tokenizer, pretrained_file='glove.840B.300d.txt'):
@@ -224,17 +251,134 @@ def get_embedding_matrix(tokenizer, pretrained_file='glove.840B.300d.txt'):
             
     return embedding_matrix, glove_db
 
+def correct_sign_acc(y_true, y_pred):
+    """
+    Accuracy of Being Positive or Negative
+    """
+    diff = K.equal(y_true > 0, y_pred > 0)
+    
+    return K.mean(diff, axis=-1)
 
-# In[6]:
+def get_model(emb_matrix):
+    
+    ## Headline ##
+    
+    headline_input = Input(shape=(max_length,), name="headlines")
+    
+    emb = Embedding(vocab_size + 1, emb_size, input_length=max_length, weights=[emb_matrix], trainable=True)(headline_input)
+    emb = SpatialDropout1D(.2)(emb)
+    
+    # MERGE META WITH EMBEDDINGS #
+    
+    # TODO
+    
+    text_rnn = LSTM(300, dropout=0.3, recurrent_dropout=0.3, return_sequences=True)(emb)
+    text_rnn = Activation('selu')(text_rnn)
+    text_rnn = BatchNormalization()(text_rnn)
+    
+    text_rnn = LSTM(300, dropout=0.3, recurrent_dropout=0.3, return_sequences=False)(text_rnn)
+    text_rnn = Activation('selu')(text_rnn)
+    text_rnn = BatchNormalization()(text_rnn)
+    
+    ## Ticks ##
+    
+    tick_input = Input(shape=(tick_window, 5), name="stockticks")
+    
+    tick_conv = Conv1D(filters=64, kernel_size=5, padding='same', activation='selu')(tick_input)
+    tick_conv = MaxPooling1D(pool_size=2)(tick_conv)
+    
+    tick_rnn = LSTM(200, dropout=0.3, recurrent_dropout=0.3, return_sequences=False)(tick_conv)
+    tick_rnn = Activation('selu')(tick_rnn)
+    tick_rnn = BatchNormalization()(tick_rnn)
+    
+    ## Combined ##
+    
+    merged = concatenate([text_rnn, tick_rnn])
+    
+    final_dense = Dense(400)(merged)
+    final_dense = Activation('selu')(final_dense)
+    final_dense = BatchNormalization()(final_dense)
+    final_dense = Dropout(0.5)(final_dense)
+    
+    final_dense = Dense(200)(merged)
+    final_dense = Activation('selu')(final_dense)
+    final_dense = BatchNormalization()(final_dense)
+    final_dense = Dropout(0.5)(final_dense)
+        
+    pred_dense = Dense(1)(final_dense)
+    out = pred_dense
+        
+    model = Model(inputs=[headline_input, tick_input], outputs=out)
+    
+    model.compile(optimizer=RMSprop(lr=0.001), loss='mse', metrics=[correct_sign_acc])
+    
+    return model
+
+
+# In[7]:
 
 
 if __name__ == "__main__":
     
     headlines, tick_hists, effects = make_headline_to_effect_data()
     
-    encoded_headlines, toke = encode_sentences(headlines, max_length=max_length, vocab_size=vocab_size)
+    encoded_headlines, toke = encode_sentences(headlines, max_length=max_length)
     
     vocab_size = len(toke.word_counts)
     
     emb_matrix, glove_db = get_embedding_matrix(toke)
+    
+    trainX, trainX2, trainY, testX, testX2, testY = split_data(encoded_headlines, tick_hists, effects, .9)
+    
+    print(trainX.shape, trainX2.shape, testY.shape)
+
+
+# In[ ]:
+
+
+# TRAIN MODEL
+
+if __name__ == "__main__":  
+    
+    ## Save Tokenizer ##
+    
+    with open(os.path.join('..', 'models', 'toke2-tick.pkl'), 'wb') as toke_file:
+        pickle.dump(toke, toke_file, protocol=pickle.HIGHEST_PROTOCOL)
+        
+    ## Create Model ##
+    
+    model = get_model(emb_matrix)
+    
+    monitor_mode = 'correct_sign_acc'
+    
+    tensorboard = TensorBoard(log_dir="logs/{}".format(datetime.now().strftime("%Y,%m,%d-%H,%M,%S,tick," + model_type)))
+    e_stopping = EarlyStopping(monitor='val_loss', patience=50)
+    checkpoint = ModelCheckpoint(os.path.join('..', 'models', 'media-headlines-ticks-' + model_type + '.h5'), 
+                                 monitor=monitor_mode,
+                                 verbose=0,
+                                 save_best_only=True)
+    
+    plot_model(model, to_file='model.png', show_shapes=True)
+    
+    ## Train ##
+    
+    history = model.fit([trainX, trainX2],
+                        trainY,
+                        epochs=epochs, 
+                        batch_size=batch_size,
+                        validation_data=([testX, testX2], testY),
+                        verbose=0,
+                        callbacks=[e_stopping, checkpoint, tensorboard])
+    
+    ## Display Train History ##
+    
+    plt.plot(np.log(history.history['loss']))
+    plt.plot(np.log(history.history['val_loss']))
+    plt.legend(['LogTrainLoss', 'LogTestLoss'])
+    plt.show()
+    
+    plt.plot(history.history[monitor_mode])
+    plt.plot(history.history['val_' + monitor_mode])
+    plt.legend(['TrainAcc', 'TestAcc'])
+    plt.show()
 

@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 # Imports
 
@@ -28,7 +28,7 @@ import keras.backend as K
 from keras.utils import plot_model
 
 
-# In[2]:
+# In[ ]:
 
 # Options
 
@@ -43,11 +43,13 @@ emb_size    = 300
 
 model_type  = 'multireg'
 
-epochs      = 50
+epochs      = 100
 batch_size  = 64
 
+test_cutoff = datetime(2018, 3, 1)
 
-# In[3]:
+
+# In[ ]:
 
 
 def add_time(date, days):
@@ -72,7 +74,7 @@ def make_headline_to_effect_data():
     when analyzing/encoding headlines. Returns a list of headlines and
     a list of corresponding 'effects' which represent a change in the stock price.
     """
-    all_headlines, all_tick_hist, all_effects = [], [], []
+    all_headlines, all_tick_hist, all_effects, test_indexes = [], [], [], []
     
     with db() as (conn, cur):
         
@@ -148,6 +150,9 @@ def make_headline_to_effect_data():
                     indexes = np.random.choice(np.arange(len(headlines)), sample_size, replace=False, p=probs)
                     
                     sample = [headlines[i] for i in indexes]
+                    
+                    if event_date > test_cutoff: # Mark as Test Example
+                        test_indexes.append(len(all_headlines))
 
                     all_headlines.append(sample)
                     all_tick_hist.append(tick_hist)
@@ -155,10 +160,10 @@ def make_headline_to_effect_data():
                     
             break ## REMOVE BEFORE FLIGHT
                     
-    return all_headlines, np.array(all_tick_hist), np.array(all_effects)
+    return all_headlines, np.array(all_tick_hist), np.array(all_effects), np.array(test_indexes)
 
 
-# In[4]:
+# In[ ]:
 
 
 def encode_sentences(headlines, tokenizer=None, max_length=100):
@@ -193,30 +198,26 @@ def encode_sentences(headlines, tokenizer=None, max_length=100):
     return padded_headlines, tokenizer
 
 
-# In[5]:
+# In[ ]:
 
 
-def split_data(X, X2, Y, ratio): #TODO Make Better
+def split_data(X, X2, Y, test_indexes):
     """
     Splits X/Y to Train/Test
     """
     indexes = np.arange(X.shape[0])
     np.random.shuffle(indexes)
     
-    X  = X[indexes]
-    X2 = X2[indexes]
-    Y  = Y[indexes]
+    train_indexes = np.setdiff1d(indexes, test_indexes, assume_unique=True)
     
-    train_size = int(len(X) * ratio)
-    
-    trainX,  testX  = X[:train_size],  X[train_size:]
-    trainX2, testX2 = X2[:train_size], X2[train_size:]
-    trainY,  testY  = Y[:train_size],  Y[train_size:]
+    trainX,  testX  = X[train_indexes],  X[test_indexes]
+    trainX2, testX2 = X2[train_indexes], X2[test_indexes]
+    trainY,  testY  = Y[train_indexes],  Y[test_indexes]
     
     return trainX, trainX2, trainY, testX, testX2, testY
 
 
-# In[11]:
+# In[ ]:
 
 
 def get_embedding_matrix(tokenizer, pretrained_file='glove.840B.300d.txt'):
@@ -315,12 +316,12 @@ def get_model(emb_matrix):
     return model
 
 
-# In[7]:
+# In[ ]:
 
 
 if __name__ == "__main__":
     
-    headlines, tick_hists, effects = make_headline_to_effect_data()
+    headlines, tick_hists, effects, test_indexes = make_headline_to_effect_data()
     
     encoded_headlines, toke = encode_sentences(headlines, max_length=max_length)
     
@@ -328,13 +329,12 @@ if __name__ == "__main__":
     
     emb_matrix, glove_db = get_embedding_matrix(toke)
     
-    trainX, trainX2, trainY, testX, testX2, testY = split_data(encoded_headlines, tick_hists, effects, .9)
+    trainX, trainX2, trainY, testX, testX2, testY = split_data(encoded_headlines, tick_hists, effects, test_indexes)
     
     print(trainX.shape, trainX2.shape, testY.shape)
 
 
 # In[ ]:
-
 
 # TRAIN MODEL
 

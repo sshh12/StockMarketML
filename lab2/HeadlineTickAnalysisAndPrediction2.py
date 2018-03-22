@@ -44,7 +44,7 @@ model_type  = 'regression'
 epochs      = 250
 batch_size  = 128
 
-test_cutoff = datetime(2018, 2, 14)
+test_cutoff = datetime(2018, 3, 1)
 
 
 # In[3]:
@@ -82,10 +82,10 @@ def make_headline_to_effect_data():
             
             ## Go through all the headlines ##
             
-            cur.execute("SELECT date, source, rawcontent, sentimentlabel FROM headlines WHERE stock=?", [stock])
+            cur.execute("SELECT date, source, rawcontent FROM headlines WHERE stock=?", [stock])
             headline_query = cur.fetchall()
             
-            for (date, source, content, label) in headline_query:
+            for (date, source, content) in headline_query:
                 
                 if not content:
                     continue
@@ -112,7 +112,7 @@ def make_headline_to_effect_data():
                 cur.execute("""SELECT AVG(adjclose) FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date""", 
                             [stock, 
                              add_time(event_date, 1), 
-                             add_time(event_date, 4)])
+                             add_time(event_date, 3)])
                 
                 after_headline_ticks = cur.fetchall()
                 
@@ -131,13 +131,6 @@ def make_headline_to_effect_data():
                         
                         # Percent Diff (+Normalization Constant)
                         effect = [(result_tick - previous_tick) / previous_tick / 0.023]
-                        
-                        # Use labels to adjust effect
-                        if label in [-1, 1]:
-                            if label == np.sign(effect[0]):
-                                effect = [effect[0] * 4]
-                            else:
-                                effect = [effect[0] / 4]
                     
                     else:
                 
@@ -145,10 +138,6 @@ def make_headline_to_effect_data():
                             effect = [1., 0.]
                         else:
                             effect = [0., 1.]
-                            
-                        if label in [-1, 1]:
-                            if np.sign(label) != np.sign(effect[0]):
-                                effect = [.5, .5]
                                 
                     if event_date > test_cutoff: # Mark as Test Example
                         test_indexes.append(len(headlines))
@@ -290,27 +279,28 @@ def get_model(emb_matrix):
     
     text_conv = Conv1D(filters=128, kernel_size=3, padding='same', activation='selu')(emb)
     text_conv = MaxPooling1D(pool_size=2)(text_conv)
-    text_conv = Dropout(0.25)(text_conv)
+    text_conv = Dropout(0.3)(text_conv)
     
-    text_conv = Conv1D(filters=64, kernel_size=3, padding='valid', activation='selu')(text_conv)
-    text_conv = MaxPooling1D(pool_size=2)(text_conv)
-    text_conv = Dropout(0.25)(text_conv)
-    
-    text_rnn = LSTM(200, dropout=0.3, recurrent_dropout=0.3, return_sequences=False)(emb)
+    text_rnn = LSTM(200, recurrent_dropout=0.3, return_sequences=False)(emb)
     text_rnn = Activation('selu')(text_rnn)
     text_rnn = BatchNormalization()(text_rnn)
+    text_rnn = Dropout(0.5)(text_rnn)
     
     ## Ticks ##
     
     tick_input = Input(shape=(tick_window, 5), name="stockticks")
     
-    tick_conv = Conv1D(filters=128, kernel_size=5, padding='same', activation='selu')(tick_input)
+    tick_conv = Conv1D(filters=64, kernel_size=5, padding='same', activation='selu')(tick_input)
     tick_conv = MaxPooling1D(pool_size=2)(tick_conv)
-    tick_conv = Dropout(0.25)(tick_conv)
+    tick_conv = Dropout(0.3)(tick_conv)
+    
+    tick_conv = Conv1D(filters=64, kernel_size=4, padding='valid', activation='selu')(tick_conv)
+    tick_conv = MaxPooling1D(pool_size=2)(tick_conv)
+    tick_conv = Dropout(0.3)(tick_conv)
     
     tick_conv = Conv1D(filters=64, kernel_size=3, padding='valid', activation='selu')(tick_conv)
     tick_conv = MaxPooling1D(pool_size=2)(tick_conv)
-    tick_conv = Dropout(0.25)(tick_conv)
+    tick_conv = Dropout(0.3)(tick_conv)
     
     tick_rnn = LSTM(200, dropout=0.3, recurrent_dropout=0.3, return_sequences=False)(tick_conv)
     tick_rnn = Activation('selu')(tick_rnn)
@@ -512,7 +502,7 @@ def predict(stock, model=None, toke=None, current_date=None, predict_date=None, 
         
 
 
-# In[12]:
+# In[13]:
 
 # [TEST] Spot Testing
 
@@ -524,8 +514,8 @@ if __name__ == "__main__":
     
     stock = 'AMD'
     look_back = 3
-    current_date = '2018-03-20'
-    predict_date = '2018-03-21'
+    current_date = '2018-03-22'
+    predict_date = '2018-03-23'
     
     ## Run ##
     
@@ -559,7 +549,7 @@ if __name__ == "__main__":
             
 
 
-# In[ ]:
+# In[11]:
 
 # [TEST] Range Test
 

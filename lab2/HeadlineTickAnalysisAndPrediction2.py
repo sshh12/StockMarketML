@@ -116,6 +116,13 @@ def make_headline_to_effect_data():
                 
                 after_headline_ticks = cur.fetchall()
                 
+                cur.execute("SELECT adjclose FROM ticks WHERE stock=? AND date BETWEEN ? and ? ORDER BY date DESC LIMIT 50", 
+                            [stock, 
+                             add_time(event_date, -100 - tick_window), 
+                             add_time(event_date, 0)])
+    
+                fifty_day = np.array([x[0] for x in cur.fetchall()])
+                
                 ## Create training example ##
                 
                 previous_tick = before_headline_ticks[0][3]
@@ -124,20 +131,11 @@ def make_headline_to_effect_data():
                 if previous_tick and result_tick and len(after_headline_ticks) > 0:
                     
                     tick_hist = np.array(before_headline_ticks)
-                    tick_hist -= np.mean(tick_hist, axis=0)
-                    tick_hist /= np.std(tick_hist, axis=0)
+                    tick_hist -= np.mean(fifty_day, axis=0)
+                    tick_hist /= np.std(fifty_day, axis=0)
                     
-                    if model_type == 'regression':
-                        
-                        # Percent Diff (+Normalization Constant)
-                        effect = [(result_tick - previous_tick) / previous_tick / 0.023]
-                    
-                    else:
-                
-                        if result_tick > previous_tick:
-                            effect = [1., 0.]
-                        else:
-                            effect = [0., 1.]
+                    # Percent Diff (+Normalization Constant)
+                    effect = [(result_tick - previous_tick) / previous_tick / 0.023]
                                 
                     if event_date > test_cutoff: # Mark as Test Example
                         test_indexes.append(len(headlines))
@@ -290,15 +288,11 @@ def get_model(emb_matrix):
     
     tick_input = Input(shape=(tick_window, 5), name="stockticks")
     
-    tick_conv = Conv1D(filters=64, kernel_size=5, padding='same', activation='selu')(tick_input)
+    tick_conv = Conv1D(filters=128, kernel_size=3, padding='same', activation='selu')(tick_input)
     tick_conv = MaxPooling1D(pool_size=2)(tick_conv)
     tick_conv = Dropout(0.3)(tick_conv)
     
-    tick_conv = Conv1D(filters=64, kernel_size=4, padding='valid', activation='selu')(tick_conv)
-    tick_conv = MaxPooling1D(pool_size=2)(tick_conv)
-    tick_conv = Dropout(0.3)(tick_conv)
-    
-    tick_conv = Conv1D(filters=64, kernel_size=3, padding='valid', activation='selu')(tick_conv)
+    tick_conv = Conv1D(filters=128, kernel_size=3, padding='same', activation='selu')(tick_input)
     tick_conv = MaxPooling1D(pool_size=2)(tick_conv)
     tick_conv = Dropout(0.3)(tick_conv)
     
@@ -324,23 +318,17 @@ def get_model(emb_matrix):
     final_dense = BatchNormalization()(final_dense)
     final_dense = Dropout(0.5)(final_dense)
     
-    if model_type == 'regression':
+    final_dense = Dense(200)(merged)
+    final_dense = Activation('selu')(final_dense)
+    final_dense = BatchNormalization()(final_dense)
+    final_dense = Dropout(0.5)(final_dense)
         
-        pred_dense = Dense(1)(final_dense)
-        out = pred_dense
+    pred_dense = Dense(1)(final_dense)
+    out = pred_dense
         
-        model = Model(inputs=[headline_input, tick_input, meta_input], outputs=out)
+    model = Model(inputs=[headline_input, tick_input, meta_input], outputs=out)
     
-        model.compile(optimizer=RMSprop(lr=0.001), loss='mse', metrics=[correct_sign_acc])
-    
-    else:
-    
-        pred_dense = Dense(2)(final_dense)
-        out = Activation('softmax')(pred_dense)
-        
-        model = Model(inputs=[headline_input, tick_input, meta_input], outputs=out)
-    
-        model.compile(optimizer=RMSprop(lr=0.001), loss='categorical_crossentropy', metrics=['acc'])
+    model.compile(optimizer=RMSprop(lr=0.001), loss='mse', metrics=[correct_sign_acc])
     
     return model
 
@@ -382,10 +370,7 @@ if __name__ == "__main__":
     
     model = get_model(emb_matrix)
     
-    if model_type == 'regression':
-        monitor_mode = 'correct_sign_acc'
-    else:
-        monitor_mode = 'val_acc' 
+    monitor_mode = 'correct_sign_acc'
     
     tensorboard = TensorBoard(log_dir="logs/{}".format(datetime.now().strftime("%Y,%m,%d-%H,%M,%S,tick," + model_type)))
     e_stopping = EarlyStopping(monitor='val_loss', patience=50)
@@ -468,9 +453,16 @@ def predict(stock, model=None, toke=None, current_date=None, predict_date=None, 
         
         after_headline_ticks = cur.fetchall()
         
+        cur.execute("SELECT adjclose FROM ticks WHERE stock=? AND date BETWEEN ? and ? ORDER BY date DESC LIMIT 50", 
+                    [stock, 
+                    add_time(current_date, -100 - tick_window),
+                    add_time(current_date, 0)])
+    
+        fifty_day = np.array([x[0] for x in cur.fetchall()])
+        
         tick_hist = np.array(before_headline_ticks)
-        tick_hist -= np.mean(tick_hist, axis=0)
-        tick_hist /= np.std(tick_hist, axis=0)
+        tick_hist -= np.mean(fifty_day, axis=0)
+        tick_hist /= np.std(fifty_day, axis=0)
         
         ## Find Headlines ##
     
@@ -502,7 +494,28 @@ def predict(stock, model=None, toke=None, current_date=None, predict_date=None, 
         
 
 
-# In[13]:
+# In[10]:
+
+# [TEST] ROC
+
+if __name__ == "__main__":
+
+    from sklearn.metrics import roc_auc_score
+    
+    try:
+        
+        actualY = testY
+        predictY = model.predict([testX, testX2, testX3])
+        
+        print("ROC", roc_auc_score((actualY > 0) * 2 - 1, predictY))
+        
+    except NameError:
+        
+        print("Test Data and Model Required!")
+        
+
+
+# In[11]:
 
 # [TEST] Spot Testing
 
@@ -549,7 +562,7 @@ if __name__ == "__main__":
             
 
 
-# In[11]:
+# In[12]:
 
 # [TEST] Range Test
 

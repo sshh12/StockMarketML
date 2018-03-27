@@ -515,7 +515,7 @@ if __name__ == "__main__":
         
 
 
-# In[11]:
+# In[14]:
 
 # [TEST] Spot Testing
 
@@ -527,8 +527,8 @@ if __name__ == "__main__":
     
     stock = 'AMD'
     look_back = 3
-    current_date = '2018-03-22'
-    predict_date = '2018-03-23'
+    current_date = '2018-03-27'
+    predict_date = '2018-03-28'
     
     ## Run ##
     

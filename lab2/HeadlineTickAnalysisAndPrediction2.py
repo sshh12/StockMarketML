@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[13]:
 
 # Imports
 
@@ -27,7 +27,7 @@ import keras.backend as K
 from keras.utils import plot_model
 
 
-# In[2]:
+# In[14]:
 
 # Options
 
@@ -47,7 +47,7 @@ batch_size  = 128
 test_cutoff = datetime(2018, 3, 1)
 
 
-# In[3]:
+# In[15]:
 
 
 def add_time(date, days):
@@ -148,7 +148,7 @@ def make_headline_to_effect_data():
     return meta, headlines, np.array(tick_hists), np.array(effects), np.array(test_indexes)
 
 
-# In[4]:
+# In[16]:
 
 
 def encode_sentences(meta, sentences, tokenizer=None, max_length=100, vocab_size=100):
@@ -186,7 +186,7 @@ def encode_sentences(meta, sentences, tokenizer=None, max_length=100, vocab_size
     return meta_matrix, padded_headlines, tokenizer
 
 
-# In[5]:
+# In[17]:
 
 
 def split_data(X, X2, X3, Y, test_indexes):
@@ -206,7 +206,7 @@ def split_data(X, X2, X3, Y, test_indexes):
     return trainX, trainX2, trainX3, trainY, testX, testX2, testX3, testY
 
 
-# In[6]:
+# In[18]:
 
 
 def get_embedding_matrix(tokenizer, pretrained_file='glove.840B.300d.txt', purge=False):
@@ -273,13 +273,9 @@ def get_model(emb_matrix):
     headline_input = Input(shape=(max_length,), name="headlines")
     
     emb = Embedding(vocab_size + 1, emb_size, input_length=max_length, weights=[emb_matrix], trainable=True)(headline_input)
-    emb = SpatialDropout1D(.2)(emb)
+    emb = SpatialDropout1D(.1)(emb)
     
-    text_conv = Conv1D(filters=128, kernel_size=3, padding='same', activation='selu')(emb)
-    text_conv = MaxPooling1D(pool_size=2)(text_conv)
-    text_conv = Dropout(0.3)(text_conv)
-    
-    text_rnn = LSTM(200, recurrent_dropout=0.3, return_sequences=False)(emb)
+    text_rnn = LSTM(400, recurrent_dropout=0.4, return_sequences=False)(emb)
     text_rnn = Activation('selu')(text_rnn)
     text_rnn = BatchNormalization()(text_rnn)
     text_rnn = Dropout(0.5)(text_rnn)
@@ -288,15 +284,11 @@ def get_model(emb_matrix):
     
     tick_input = Input(shape=(tick_window, 5), name="stockticks")
     
-    tick_conv = Conv1D(filters=128, kernel_size=3, padding='same', activation='selu')(tick_input)
+    tick_conv = Conv1D(filters=256, kernel_size=6, padding='same', activation='selu')(tick_input)
     tick_conv = MaxPooling1D(pool_size=2)(tick_conv)
     tick_conv = Dropout(0.3)(tick_conv)
     
-    tick_conv = Conv1D(filters=128, kernel_size=3, padding='same', activation='selu')(tick_input)
-    tick_conv = MaxPooling1D(pool_size=2)(tick_conv)
-    tick_conv = Dropout(0.3)(tick_conv)
-    
-    tick_rnn = LSTM(200, dropout=0.3, recurrent_dropout=0.3, return_sequences=False)(tick_conv)
+    tick_rnn = LSTM(300, dropout=0.3, recurrent_dropout=0.3, return_sequences=False)(tick_conv)
     tick_rnn = Activation('selu')(tick_rnn)
     tick_rnn = BatchNormalization()(tick_rnn)
     
@@ -313,7 +305,7 @@ def get_model(emb_matrix):
     final_dense = BatchNormalization()(final_dense)
     final_dense = Dropout(0.5)(final_dense)
     
-    final_dense = Dense(200)(merged)
+    final_dense = Dense(400)(merged)
     final_dense = Activation('selu')(final_dense)
     final_dense = BatchNormalization()(final_dense)
     final_dense = Dropout(0.5)(final_dense)
@@ -333,7 +325,7 @@ def get_model(emb_matrix):
     return model
 
 
-# In[7]:
+# In[19]:
 
 
 if __name__ == "__main__":
@@ -355,7 +347,7 @@ if __name__ == "__main__":
     print(trainX.shape, trainX2.shape, trainX3.shape, testY.shape)
 
 
-# In[8]:
+# In[20]:
 
 # TRAIN MODEL
 
@@ -405,7 +397,7 @@ if __name__ == "__main__":
     
 
 
-# In[9]:
+# In[21]:
 
 # Predict (TEST)
 
@@ -494,20 +486,24 @@ def predict(stock, model=None, toke=None, current_date=None, predict_date=None, 
         
 
 
-# In[10]:
+# In[22]:
 
-# [TEST] ROC
+# [TEST] Metrics
 
 if __name__ == "__main__":
 
     from sklearn.metrics import roc_auc_score
+    from sklearn.metrics import confusion_matrix
     
     try:
         
-        actualY = testY
+        actualY = (testY > 0) * 2 - 1
         predictY = model.predict([testX, testX2, testX3])
         
-        print("ROC", roc_auc_score((actualY > 0) * 2 - 1, predictY))
+        print("ROC", roc_auc_score(actualY, predictY))
+        
+        print(confusion_matrix(actualY > 0, predictY > 0))
+        
         
     except NameError:
         
@@ -515,7 +511,7 @@ if __name__ == "__main__":
         
 
 
-# In[14]:
+# In[23]:
 
 # [TEST] Spot Testing
 
@@ -527,8 +523,8 @@ if __name__ == "__main__":
     
     stock = 'AMD'
     look_back = 3
-    current_date = '2018-03-27'
-    predict_date = '2018-03-28'
+    current_date = '2018-03-29'
+    predict_date = '2018-03-30'
     
     ## Run ##
     
@@ -562,7 +558,7 @@ if __name__ == "__main__":
             
 
 
-# In[12]:
+# In[24]:
 
 # [TEST] Range Test
 

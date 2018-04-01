@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[13]:
+# In[1]:
 
 # Imports
 
@@ -27,14 +27,14 @@ import keras.backend as K
 from keras.utils import plot_model
 
 
-# In[14]:
+# In[2]:
 
 # Options
 
 stocks      = ['AMD', 'INTC']
 all_sources = ['reddit', 'reuters', 'twitter', 'seekingalpha', 'fool', 'wsj', 'thestreet']
 
-tick_window = 30
+tick_window = 20
 max_length  = 50
 vocab_size  = None # Set by tokenizer
 emb_size    = 300
@@ -47,7 +47,7 @@ batch_size  = 128
 test_cutoff = datetime(2018, 3, 1)
 
 
-# In[15]:
+# In[3]:
 
 
 def add_time(date, days):
@@ -72,7 +72,7 @@ def make_headline_to_effect_data():
     when analyzing/encoding headlines. Returns a list of headlines and
     a list of corresponding 'effects' which represent a change in the stock price.
     """
-    meta, headlines, tick_hists, effects, test_indexes = [], [], [], [], []
+    meta, headlines, tick_hists, effects, test_indices = [], [], [], [], []
     
     with db() as (conn, cur):
         
@@ -99,56 +99,54 @@ def make_headline_to_effect_data():
                 
                 ## Find corresponding tick data ## 
                 
-                cur.execute("""SELECT open, high, low, adjclose, volume FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date DESC""", 
+                cur.execute("""SELECT open, high, low, adjclose, volume FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date DESC LIMIT 50""", 
                             [stock, 
-                             add_time(event_date, -30 - tick_window), 
+                             add_time(event_date, -80), 
                              add_time(event_date, 0)])
                 
-                before_headline_ticks = cur.fetchall()[:tick_window]
+                before_headline_ticks = cur.fetchall()
                 
-                if len(before_headline_ticks) != tick_window:
+                if len(before_headline_ticks) < tick_window:
                     continue
                 
-                cur.execute("""SELECT AVG(adjclose) FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date""", 
+                cur.execute("""SELECT adjclose FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date ASC LIMIT 1""", 
                             [stock, 
                              add_time(event_date, 1), 
-                             add_time(event_date, 3)])
+                             add_time(event_date, 4)])
                 
                 after_headline_ticks = cur.fetchall()
                 
-                cur.execute("SELECT adjclose FROM ticks WHERE stock=? AND date BETWEEN ? and ? ORDER BY date DESC LIMIT 50", 
-                            [stock, 
-                             add_time(event_date, -100 - tick_window), 
-                             add_time(event_date, 0)])
-    
-                fifty_day = np.array([x[0] for x in cur.fetchall()])
-                
                 ## Create training example ##
+                
+                if len(after_headline_ticks) == 0:
+                    continue
+                    
+                window_ticks = np.array(list(reversed(before_headline_ticks[:tick_window]))) # Flip so in chron. order
+                fifty_ticks = np.array(before_headline_ticks) # Use last 50 ticks to normalize
                 
                 previous_tick = before_headline_ticks[0][3]
                 result_tick = after_headline_ticks[0][0]
                 
-                if previous_tick and result_tick and len(after_headline_ticks) > 0:
+                if previous_tick and result_tick:
                     
-                    tick_hist = np.array(before_headline_ticks)
-                    tick_hist -= np.mean(fifty_day, axis=0)
-                    tick_hist /= np.std(fifty_day, axis=0)
+                    window_ticks -= np.mean(fifty_ticks, axis=0)
+                    window_ticks /= np.std(fifty_ticks, axis=0)
                     
-                    # Percent Diff (+Normalization Constant)
+                    # Percent Diff (/ Normalization Constant)
                     effect = [(result_tick - previous_tick) / previous_tick / 0.023]
                                 
                     if event_date > test_cutoff: # Mark as Test Example
-                        test_indexes.append(len(headlines))
+                        test_indices.append(len(headlines))
                         
                     meta.append((source, event_date.weekday()))
                     headlines.append(content)
-                    tick_hists.append(tick_hist)
+                    tick_hists.append(window_ticks)
                     effects.append(effect)
                     
-    return meta, headlines, np.array(tick_hists), np.array(effects), np.array(test_indexes)
+    return meta, headlines, np.array(tick_hists), np.array(effects), np.array(test_indices)
 
 
-# In[16]:
+# In[4]:
 
 
 def encode_sentences(meta, sentences, tokenizer=None, max_length=100, vocab_size=100):
@@ -186,27 +184,27 @@ def encode_sentences(meta, sentences, tokenizer=None, max_length=100, vocab_size
     return meta_matrix, padded_headlines, tokenizer
 
 
-# In[17]:
+# In[5]:
 
 
-def split_data(X, X2, X3, Y, test_indexes):
+def split_data(X, X2, X3, Y, test_indices):
     """
     Splits X/Y to Train/Test
     """
-    indexes = np.arange(X.shape[0])
-    np.random.shuffle(indexes)
+    indices = np.arange(X.shape[0])
+    np.random.shuffle(indices)
     
-    train_indexes = np.setdiff1d(indexes, test_indexes, assume_unique=True)
+    train_indices = np.setdiff1d(indices, test_indices, assume_unique=True)
     
-    trainX,  testX  = X[train_indexes],  X[test_indexes]
-    trainX2, testX2 = X2[train_indexes], X2[test_indexes]
-    trainX3, testX3 = X3[train_indexes], X3[test_indexes]
-    trainY,  testY  = Y[train_indexes],  Y[test_indexes]
+    trainX,  testX  = X[train_indices],  X[test_indices]
+    trainX2, testX2 = X2[train_indices], X2[test_indices]
+    trainX3, testX3 = X3[train_indices], X3[test_indices]
+    trainY,  testY  = Y[train_indices],  Y[test_indices]
     
     return trainX, trainX2, trainX3, trainY, testX, testX2, testX3, testY
 
 
-# In[18]:
+# In[6]:
 
 
 def get_embedding_matrix(tokenizer, pretrained_file='glove.840B.300d.txt', purge=False):
@@ -229,7 +227,9 @@ def get_embedding_matrix(tokenizer, pretrained_file='glove.840B.300d.txt', purge
             values = line.split(' ')
             word = values[0].replace('-', '').lower()
             coefs = np.asarray(values[1:], dtype='float32')
-            glove_db[word] = coefs
+            
+            if word.isalpha():
+                glove_db[word] = coefs
 
     print('Loaded WordVectors...' + str(len(glove_db)))
     
@@ -275,7 +275,7 @@ def get_model(emb_matrix):
     emb = Embedding(vocab_size + 1, emb_size, input_length=max_length, weights=[emb_matrix], trainable=True)(headline_input)
     emb = SpatialDropout1D(.1)(emb)
     
-    text_rnn = LSTM(400, recurrent_dropout=0.4, return_sequences=False)(emb)
+    text_rnn = LSTM(300, recurrent_dropout=0.4, return_sequences=False)(emb)
     text_rnn = Activation('selu')(text_rnn)
     text_rnn = BatchNormalization()(text_rnn)
     text_rnn = Dropout(0.5)(text_rnn)
@@ -284,7 +284,7 @@ def get_model(emb_matrix):
     
     tick_input = Input(shape=(tick_window, 5), name="stockticks")
     
-    tick_conv = Conv1D(filters=256, kernel_size=6, padding='same', activation='selu')(tick_input)
+    tick_conv = Conv1D(filters=128, kernel_size=6, padding='same', activation='selu')(tick_input)
     tick_conv = MaxPooling1D(pool_size=2)(tick_conv)
     tick_conv = Dropout(0.3)(tick_conv)
     
@@ -300,12 +300,12 @@ def get_model(emb_matrix):
     
     merged = concatenate([text_rnn, tick_rnn, meta_input])
     
-    final_dense = Dense(400)(merged)
+    final_dense = Dense(200)(merged)
     final_dense = Activation('selu')(final_dense)
     final_dense = BatchNormalization()(final_dense)
     final_dense = Dropout(0.5)(final_dense)
     
-    final_dense = Dense(400)(merged)
+    final_dense = Dense(200)(merged)
     final_dense = Activation('selu')(final_dense)
     final_dense = BatchNormalization()(final_dense)
     final_dense = Dropout(0.5)(final_dense)
@@ -325,12 +325,12 @@ def get_model(emb_matrix):
     return model
 
 
-# In[19]:
+# In[7]:
 
 
 if __name__ == "__main__":
     
-    meta, headlines, tick_hists, effects, test_indexes = make_headline_to_effect_data()
+    meta, headlines, tick_hists, effects, test_indices = make_headline_to_effect_data()
     
     encoded_meta, encoded_headlines, toke = encode_sentences(meta, 
                                                              headlines, 
@@ -342,12 +342,12 @@ if __name__ == "__main__":
     
     emb_matrix, glove_db = get_embedding_matrix(toke, purge=False)
     
-    trainX, trainX2, trainX3, trainY, testX, testX2, testX3, testY = split_data(encoded_headlines, tick_hists, encoded_meta, effects, test_indexes)
+    trainX, trainX2, trainX3, trainY, testX, testX2, testX3, testY = split_data(encoded_headlines, tick_hists, encoded_meta, effects, test_indices)
     
     print(trainX.shape, trainX2.shape, trainX3.shape, testY.shape)
 
 
-# In[20]:
+# In[8]:
 
 # TRAIN MODEL
 
@@ -397,7 +397,7 @@ if __name__ == "__main__":
     
 
 
-# In[21]:
+# In[9]:
 
 # Predict (TEST)
 
@@ -430,31 +430,27 @@ def predict(stock, model=None, toke=None, current_date=None, predict_date=None, 
         
         ## Select Actual Stock Values ##
                 
-        cur.execute("""SELECT open, high, low, adjclose, volume FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date DESC""", 
+        cur.execute("""SELECT open, high, low, adjclose, volume FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date DESC LIMIT 50""", 
                     [stock, 
-                    add_time(current_date, -30 - tick_window), 
-                    add_time(current_date, 0)])
+                     add_time(current_date, -80), 
+                     add_time(current_date, 0)])
                 
-        before_headline_ticks = cur.fetchall()[:tick_window]
-        actual_current = before_headline_ticks[0][3]
+        before_headline_ticks = cur.fetchall()
+
+        window_ticks = np.array(list(reversed(before_headline_ticks[:tick_window])))
+        fifty_ticks = np.array(before_headline_ticks)
+                    
+        window_ticks -= np.mean(fifty_ticks, axis=0)
+        window_ticks /= np.std(fifty_ticks, axis=0)
         
         cur.execute("""SELECT adjclose FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date ASC LIMIT 1""", 
-                    [stock, 
+                   [stock, 
                     add_time(predict_date, 1), 
                     add_time(predict_date, 5)])
         
         after_headline_ticks = cur.fetchall()
         
-        cur.execute("SELECT adjclose FROM ticks WHERE stock=? AND date BETWEEN ? and ? ORDER BY date DESC LIMIT 50", 
-                    [stock, 
-                    add_time(current_date, -100 - tick_window),
-                    add_time(current_date, 0)])
-    
-        fifty_day = np.array([x[0] for x in cur.fetchall()])
-        
-        tick_hist = np.array(before_headline_ticks)
-        tick_hist -= np.mean(fifty_day, axis=0)
-        tick_hist /= np.std(fifty_day, axis=0)
+        actual_current = before_headline_ticks[0][3]
         
         ## Find Headlines ##
     
@@ -476,7 +472,7 @@ def predict(stock, model=None, toke=None, current_date=None, predict_date=None, 
                                                          max_length=max_length,
                                                          vocab_size=vocab_size)
         
-        tick_hists = np.array([tick_hist] * len(headlines))
+        tick_hists = np.array([window_ticks] * len(headlines))
         
         predictions = model.predict([test_encoded, tick_hists, encoded_meta])[:, 0]
         
@@ -486,7 +482,7 @@ def predict(stock, model=None, toke=None, current_date=None, predict_date=None, 
         
 
 
-# In[22]:
+# In[10]:
 
 # [TEST] Metrics
 
@@ -511,7 +507,7 @@ if __name__ == "__main__":
         
 
 
-# In[23]:
+# In[11]:
 
 # [TEST] Spot Testing
 
@@ -523,8 +519,8 @@ if __name__ == "__main__":
     
     stock = 'AMD'
     look_back = 3
-    current_date = '2018-03-29'
-    predict_date = '2018-03-30'
+    current_date = '2018-04-01'
+    predict_date = '2018-04-02'
     
     ## Run ##
     
@@ -558,7 +554,7 @@ if __name__ == "__main__":
             
 
 
-# In[24]:
+# In[12]:
 
 # [TEST] Range Test
 

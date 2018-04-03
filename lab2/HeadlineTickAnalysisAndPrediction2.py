@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 # Imports
 
@@ -27,14 +27,14 @@ import keras.backend as K
 from keras.utils import plot_model
 
 
-# In[2]:
+# In[ ]:
 
 # Options
 
 stocks      = ['AMD', 'INTC']
 all_sources = ['reddit', 'reuters', 'twitter', 'seekingalpha', 'fool', 'wsj', 'thestreet']
 
-tick_window = 20
+tick_window = 25
 max_length  = 50
 vocab_size  = None # Set by tokenizer
 emb_size    = 300
@@ -44,10 +44,10 @@ model_type  = 'regression'
 epochs      = 250
 batch_size  = 128
 
-test_cutoff = datetime(2018, 3, 1)
+test_cutoff = datetime(2018, 3, 10)
 
 
-# In[3]:
+# In[ ]:
 
 
 def add_time(date, days):
@@ -56,9 +56,13 @@ def add_time(date, days):
 
 def clean(sentence):
     
+    if not sentence:
+        return ""
+    
     sentence = sentence.lower()
     sentence = sentence.replace('-', ' ').replace('_', ' ').replace('&', ' ')
     sentence = re.sub('\$?\d+%?\w?', 'numbertoken', sentence)
+    sentence = sentence.replace('numbertokennumbertoken', 'numbertoken')
     sentence = ''.join(c for c in sentence if c in "abcdefghijklmnopqrstuvwxyz ")
     sentence = re.sub('\s+', ' ', sentence)
     
@@ -99,7 +103,7 @@ def make_headline_to_effect_data():
                 
                 ## Find corresponding tick data ## 
                 
-                cur.execute("""SELECT open, high, low, adjclose, volume FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date DESC LIMIT 50""", 
+                cur.execute("""SELECT open, high, low, adjclose, volume FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date DESC LIMIT 52""", 
                             [stock, 
                              add_time(event_date, -80), 
                              add_time(event_date, 0)])
@@ -146,7 +150,7 @@ def make_headline_to_effect_data():
     return meta, headlines, np.array(tick_hists), np.array(effects), np.array(test_indices)
 
 
-# In[4]:
+# In[ ]:
 
 
 def encode_sentences(meta, sentences, tokenizer=None, max_length=100, vocab_size=100):
@@ -184,7 +188,7 @@ def encode_sentences(meta, sentences, tokenizer=None, max_length=100, vocab_size
     return meta_matrix, padded_headlines, tokenizer
 
 
-# In[5]:
+# In[ ]:
 
 
 def split_data(X, X2, X3, Y, test_indices):
@@ -204,7 +208,7 @@ def split_data(X, X2, X3, Y, test_indices):
     return trainX, trainX2, trainX3, trainY, testX, testX2, testX3, testY
 
 
-# In[6]:
+# In[ ]:
 
 
 def get_embedding_matrix(tokenizer, pretrained_file='glove.840B.300d.txt', purge=False):
@@ -225,7 +229,7 @@ def get_embedding_matrix(tokenizer, pretrained_file='glove.840B.300d.txt', purge
         for line in glove:
 
             values = line.split(' ')
-            word = values[0].replace('-', '').lower()
+            word = values[0].replace('-', '').replace('_', '').lower()
             coefs = np.asarray(values[1:], dtype='float32')
             
             if word.isalpha():
@@ -275,7 +279,7 @@ def get_model(emb_matrix):
     emb = Embedding(vocab_size + 1, emb_size, input_length=max_length, weights=[emb_matrix], trainable=True)(headline_input)
     emb = SpatialDropout1D(.1)(emb)
     
-    text_rnn = LSTM(300, recurrent_dropout=0.4, return_sequences=False)(emb)
+    text_rnn = LSTM(200, recurrent_dropout=0.4, return_sequences=False)(emb)
     text_rnn = Activation('selu')(text_rnn)
     text_rnn = BatchNormalization()(text_rnn)
     text_rnn = Dropout(0.5)(text_rnn)
@@ -288,7 +292,7 @@ def get_model(emb_matrix):
     tick_conv = MaxPooling1D(pool_size=2)(tick_conv)
     tick_conv = Dropout(0.3)(tick_conv)
     
-    tick_rnn = LSTM(300, dropout=0.3, recurrent_dropout=0.3, return_sequences=False)(tick_conv)
+    tick_rnn = LSTM(360, dropout=0.3, recurrent_dropout=0.3, return_sequences=False)(tick_conv)
     tick_rnn = Activation('selu')(tick_rnn)
     tick_rnn = BatchNormalization()(tick_rnn)
     
@@ -325,7 +329,7 @@ def get_model(emb_matrix):
     return model
 
 
-# In[7]:
+# In[ ]:
 
 
 if __name__ == "__main__":
@@ -347,7 +351,7 @@ if __name__ == "__main__":
     print(trainX.shape, trainX2.shape, trainX3.shape, testY.shape)
 
 
-# In[8]:
+# In[ ]:
 
 # TRAIN MODEL
 
@@ -397,11 +401,11 @@ if __name__ == "__main__":
     
 
 
-# In[9]:
+# In[ ]:
 
 # Predict (TEST)
 
-def predict(stock, model=None, toke=None, current_date=None, predict_date=None, look_back=None):
+def predict(stock, model=None, toke=None, current_date=None, predict_date=None, look_back=None, debug=False):
     
     import keras.metrics
     keras.metrics.correct_sign_acc = correct_sign_acc
@@ -430,7 +434,7 @@ def predict(stock, model=None, toke=None, current_date=None, predict_date=None, 
         
         ## Select Actual Stock Values ##
                 
-        cur.execute("""SELECT open, high, low, adjclose, volume FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date DESC LIMIT 50""", 
+        cur.execute("""SELECT open, high, low, adjclose, volume FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date DESC LIMIT 52""", 
                     [stock, 
                      add_time(current_date, -80), 
                      add_time(current_date, 0)])
@@ -454,7 +458,7 @@ def predict(stock, model=None, toke=None, current_date=None, predict_date=None, 
         
         ## Find Headlines ##
     
-        cur.execute("SELECT date, source, content FROM headlines WHERE date BETWEEN ? AND ? AND stock=?", [pretick_date, current_date, stock])
+        cur.execute("SELECT date, source, rawcontent FROM headlines WHERE date BETWEEN ? AND ? AND stock=?", [pretick_date, current_date, stock])
         headlines = cur.fetchall()
         
         ## Process ##
@@ -464,7 +468,10 @@ def predict(stock, model=None, toke=None, current_date=None, predict_date=None, 
         for (date, source, content) in headlines:
             
             meta.append([source, datetime.strptime(date, '%Y-%m-%d').weekday()])
-            test_sents.append(content)
+            test_sents.append(clean(content))
+            
+        if debug:
+            print(test_sents)
             
         encoded_meta, test_encoded, _ = encode_sentences(meta, 
                                                          test_sents, 
@@ -476,13 +483,16 @@ def predict(stock, model=None, toke=None, current_date=None, predict_date=None, 
         
         predictions = model.predict([test_encoded, tick_hists, encoded_meta])[:, 0]
         
+        if debug:
+            print(predictions)
+        
         prices = predictions * 0.023 * actual_current + actual_current
         
         return predictions, prices
         
 
 
-# In[10]:
+# In[ ]:
 
 # [TEST] Metrics
 
@@ -500,20 +510,17 @@ if __name__ == "__main__":
         
         print(confusion_matrix(actualY > 0, predictY > 0))
         
-        
     except NameError:
         
         print("Test Data and Model Required!")
         
 
 
-# In[11]:
+# In[ ]:
 
 # [TEST] Spot Testing
 
 if __name__ == "__main__":
-    
-    ## **This Test May Overlap w/Train Data** ##
     
     ## Options ##
     
@@ -527,7 +534,7 @@ if __name__ == "__main__":
     predictions, prices = predict(stock, 
                                   current_date=datetime.strptime(current_date, '%Y-%m-%d'), 
                                   predict_date=datetime.strptime(predict_date, '%Y-%m-%d'), 
-                                  look_back=look_back)
+                                  look_back=look_back, debug=True)
     
     ## Find Actual Value ##
      
@@ -554,7 +561,7 @@ if __name__ == "__main__":
             
 
 
-# In[12]:
+# In[ ]:
 
 # [TEST] Range Test
 

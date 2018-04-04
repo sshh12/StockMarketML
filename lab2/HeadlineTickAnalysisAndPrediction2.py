@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 # Imports
 
@@ -27,7 +27,7 @@ import keras.backend as K
 from keras.utils import plot_model
 
 
-# In[ ]:
+# In[2]:
 
 # Options
 
@@ -47,7 +47,7 @@ batch_size  = 128
 test_cutoff = datetime(2018, 3, 10)
 
 
-# In[ ]:
+# In[3]:
 
 
 def add_time(date, days):
@@ -150,7 +150,7 @@ def make_headline_to_effect_data():
     return meta, headlines, np.array(tick_hists), np.array(effects), np.array(test_indices)
 
 
-# In[ ]:
+# In[4]:
 
 
 def encode_sentences(meta, sentences, tokenizer=None, max_length=100, vocab_size=100):
@@ -188,7 +188,7 @@ def encode_sentences(meta, sentences, tokenizer=None, max_length=100, vocab_size
     return meta_matrix, padded_headlines, tokenizer
 
 
-# In[ ]:
+# In[5]:
 
 
 def split_data(X, X2, X3, Y, test_indices):
@@ -208,7 +208,7 @@ def split_data(X, X2, X3, Y, test_indices):
     return trainX, trainX2, trainX3, trainY, testX, testX2, testX3, testY
 
 
-# In[ ]:
+# In[6]:
 
 
 def get_embedding_matrix(tokenizer, pretrained_file='glove.840B.300d.txt', purge=False):
@@ -281,20 +281,18 @@ def get_model(emb_matrix):
     
     text_rnn = LSTM(200, recurrent_dropout=0.4, return_sequences=False)(emb)
     text_rnn = Activation('selu')(text_rnn)
-    text_rnn = BatchNormalization()(text_rnn)
     text_rnn = Dropout(0.5)(text_rnn)
     
     ## Ticks ##
     
     tick_input = Input(shape=(tick_window, 5), name="stockticks")
     
-    tick_conv = Conv1D(filters=128, kernel_size=6, padding='same', activation='selu')(tick_input)
+    tick_conv = Conv1D(filters=64, kernel_size=8, padding='valid', activation='selu')(tick_input)
     tick_conv = MaxPooling1D(pool_size=2)(tick_conv)
-    tick_conv = Dropout(0.3)(tick_conv)
+    tick_conv = Dropout(0.4)(tick_conv)
     
-    tick_rnn = LSTM(360, dropout=0.3, recurrent_dropout=0.3, return_sequences=False)(tick_conv)
+    tick_rnn = LSTM(300, dropout=0.4, recurrent_dropout=0.4, return_sequences=False)(tick_conv)
     tick_rnn = Activation('selu')(tick_rnn)
-    tick_rnn = BatchNormalization()(tick_rnn)
     
     ## Meta ##
     
@@ -304,15 +302,7 @@ def get_model(emb_matrix):
     
     merged = concatenate([text_rnn, tick_rnn, meta_input])
     
-    final_dense = Dense(200)(merged)
-    final_dense = Activation('selu')(final_dense)
-    final_dense = BatchNormalization()(final_dense)
-    final_dense = Dropout(0.5)(final_dense)
-    
-    final_dense = Dense(200)(merged)
-    final_dense = Activation('selu')(final_dense)
-    final_dense = BatchNormalization()(final_dense)
-    final_dense = Dropout(0.5)(final_dense)
+    merged = BatchNormalization()(merged)
     
     final_dense = Dense(200)(merged)
     final_dense = Activation('selu')(final_dense)
@@ -329,7 +319,7 @@ def get_model(emb_matrix):
     return model
 
 
-# In[ ]:
+# In[7]:
 
 
 if __name__ == "__main__":
@@ -351,7 +341,7 @@ if __name__ == "__main__":
     print(trainX.shape, trainX2.shape, trainX3.shape, testY.shape)
 
 
-# In[ ]:
+# In[8]:
 
 # TRAIN MODEL
 
@@ -401,7 +391,7 @@ if __name__ == "__main__":
     
 
 
-# In[ ]:
+# In[9]:
 
 # Predict (TEST)
 
@@ -492,7 +482,7 @@ def predict(stock, model=None, toke=None, current_date=None, predict_date=None, 
         
 
 
-# In[ ]:
+# In[10]:
 
 # [TEST] Metrics
 
@@ -516,7 +506,7 @@ if __name__ == "__main__":
         
 
 
-# In[ ]:
+# In[11]:
 
 # [TEST] Spot Testing
 
@@ -561,7 +551,7 @@ if __name__ == "__main__":
             
 
 
-# In[ ]:
+# In[12]:
 
 # [TEST] Range Test
 
@@ -582,8 +572,8 @@ if __name__ == "__main__":
     ## Settings ##
     
     stock = 'AMD'
-    start_date = '2017-02-25'
-    end_date = '2018-02-25'
+    start_date = '2017-01-01'
+    end_date = '2018-04-02'
     
     ## Run ##
     
@@ -623,7 +613,7 @@ if __name__ == "__main__":
     plt.show() 
     
     acc_image = np.array([np.sign(fake_ticks[1:] - fake_ticks[:-1]) == np.sign(real_ticks[1:] - real_ticks[:-1])]) * 1.0
-    acc_image = acc_image.reshape((25, 10))
+    acc_image = acc_image.reshape((24, 13))
 
     plt.imshow(acc_image, interpolation='none', cmap='RdBu')
     plt.show()

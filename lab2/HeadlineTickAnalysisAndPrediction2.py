@@ -42,7 +42,7 @@ emb_size    = 300
 model_type  = 'regression'
 
 epochs      = 250
-batch_size  = 128
+batch_size  = 64
 
 test_cutoff = datetime(2018, 3, 10)
 
@@ -277,21 +277,21 @@ def get_model(emb_matrix):
     headline_input = Input(shape=(max_length,), name="headlines")
     
     emb = Embedding(vocab_size + 1, emb_size, input_length=max_length, weights=[emb_matrix], trainable=True)(headline_input)
-    emb = SpatialDropout1D(.1)(emb)
+    emb = SpatialDropout1D(.2)(emb)
     
-    text_rnn = LSTM(200, recurrent_dropout=0.4, return_sequences=False)(emb)
+    text_rnn = LSTM(200, recurrent_dropout=0.2, return_sequences=False)(emb)
     text_rnn = Activation('selu')(text_rnn)
-    text_rnn = Dropout(0.5)(text_rnn)
+    text_rnn = Dropout(0.3)(text_rnn)
     
     ## Ticks ##
     
     tick_input = Input(shape=(tick_window, 5), name="stockticks")
     
-    tick_conv = Conv1D(filters=64, kernel_size=8, padding='valid', activation='selu')(tick_input)
+    tick_conv = Conv1D(filters=64, kernel_size=8, padding='same', activation='selu')(tick_input)
     tick_conv = MaxPooling1D(pool_size=2)(tick_conv)
     tick_conv = Dropout(0.4)(tick_conv)
     
-    tick_rnn = LSTM(300, dropout=0.4, recurrent_dropout=0.4, return_sequences=False)(tick_conv)
+    tick_rnn = LSTM(60, dropout=0.2, recurrent_dropout=0.2, return_sequences=False)(tick_conv)
     tick_rnn = Activation('selu')(tick_rnn)
     
     ## Meta ##
@@ -307,7 +307,7 @@ def get_model(emb_matrix):
     final_dense = Dense(200)(merged)
     final_dense = Activation('selu')(final_dense)
     final_dense = BatchNormalization()(final_dense)
-    final_dense = Dropout(0.5)(final_dense)
+    final_dense = Dropout(0.3)(final_dense)
         
     pred_dense = Dense(1)(final_dense)
     out = pred_dense
@@ -516,8 +516,8 @@ if __name__ == "__main__":
     
     stock = 'AMD'
     look_back = 3
-    current_date = '2018-04-01'
-    predict_date = '2018-04-02'
+    current_date = '2018-04-05'
+    predict_date = '2018-04-06'
     
     ## Run ##
     

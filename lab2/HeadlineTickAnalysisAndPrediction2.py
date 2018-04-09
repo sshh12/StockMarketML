@@ -31,7 +31,7 @@ from keras.utils import plot_model
 
 # Options
 
-stocks      = ['AMD', 'INTC']
+stocks      = ['AAPL', 'AMD', 'GOOG', 'INTC']
 all_sources = ['reddit', 'reuters', 'twitter', 'seekingalpha', 'fool', 'wsj', 'thestreet']
 
 tick_window = 25
@@ -291,7 +291,13 @@ def get_model(emb_matrix):
     tick_conv = MaxPooling1D(pool_size=2)(tick_conv)
     tick_conv = Dropout(0.4)(tick_conv)
     
-    tick_rnn = LSTM(60, dropout=0.2, recurrent_dropout=0.2, return_sequences=False)(tick_conv)
+    for i in range(3):
+        
+        tick_conv = Conv1D(filters=2**(i+7), kernel_size=3, padding='same', activation='selu')(tick_conv)
+        tick_conv = MaxPooling1D(pool_size=2)(tick_conv)
+        tick_conv = Dropout(0.4)(tick_conv)
+    
+    tick_rnn = LSTM(200, dropout=0.2, recurrent_dropout=0.2, return_sequences=False)(tick_conv)
     tick_rnn = Activation('selu')(tick_rnn)
     
     ## Meta ##
@@ -308,6 +314,13 @@ def get_model(emb_matrix):
     final_dense = Activation('selu')(final_dense)
     final_dense = BatchNormalization()(final_dense)
     final_dense = Dropout(0.3)(final_dense)
+    
+    for i in range(5):
+        
+        final_dense = Dense(200)(final_dense)
+        final_dense = Activation('selu')(final_dense)
+        final_dense = BatchNormalization()(final_dense)
+        final_dense = Dropout(0.3)(final_dense)
         
     pred_dense = Dense(1)(final_dense)
     out = pred_dense

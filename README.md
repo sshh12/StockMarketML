@@ -34,11 +34,11 @@ Creates and trains a model to predict stock prices based on headlines and histor
 
 Creates and trains a model to predict stock prices based on headlines and historical data with a slightly different configuration.
 
+![model](https://raw.githubusercontent.com/sshh12/StockMarketML/master/lab2/model.png?)
+
 ##### MultiHeadlineAndTickPrediction
 
 Creates and trains a model to predict stock prices based on multiple headlines and historical data.
-
-![model](https://raw.githubusercontent.com/sshh12/StockMarketML/master/lab2/model.png)
 
 ## Lab 1
 

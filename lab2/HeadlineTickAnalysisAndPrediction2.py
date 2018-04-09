@@ -42,7 +42,7 @@ emb_size    = 300
 model_type  = 'regression'
 
 epochs      = 250
-batch_size  = 64
+batch_size  = 128
 
 test_cutoff = datetime(2018, 3, 10)
 
@@ -96,7 +96,7 @@ def make_headline_to_effect_data():
                 
                 content = clean(content)
                 
-                if  not (5 <= content.count(' ') <= 40):
+                if  not (5 <= content.count(' ') <= 35):
                     continue
                 
                 event_date = datetime.strptime(date, '%Y-%m-%d') # The date of headline
@@ -291,7 +291,7 @@ def get_model(emb_matrix):
     tick_conv = MaxPooling1D(pool_size=2)(tick_conv)
     tick_conv = Dropout(0.4)(tick_conv)
     
-    for i in range(3):
+    for i in range(2):
         
         tick_conv = Conv1D(filters=2**(i+7), kernel_size=3, padding='same', activation='selu')(tick_conv)
         tick_conv = MaxPooling1D(pool_size=2)(tick_conv)
@@ -315,7 +315,7 @@ def get_model(emb_matrix):
     final_dense = BatchNormalization()(final_dense)
     final_dense = Dropout(0.3)(final_dense)
     
-    for i in range(5):
+    for i in range(4):
         
         final_dense = Dense(200)(final_dense)
         final_dense = Activation('selu')(final_dense)

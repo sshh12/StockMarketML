@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 # Imports
 
@@ -28,7 +28,7 @@ import keras.backend as K
 from keras.utils import plot_model
 
 
-# In[ ]:
+# In[2]:
 
 # Options
 
@@ -49,7 +49,7 @@ batch_size  = 64
 test_cutoff = datetime(2018, 2, 14)
 
 
-# In[ ]:
+# In[3]:
 
 
 def add_time(date, days):
@@ -143,7 +143,7 @@ def make_headline_to_effect_data():
 
                 num_samples = len(contents) // sample_size
                     
-                effect = [(result_tick - previous_tick) / previous_tick]
+                effect = [(result_tick - previous_tick) / previous_tick / 0.023]
 
                 for i in range(num_samples):
 
@@ -161,7 +161,7 @@ def make_headline_to_effect_data():
     return all_headlines, np.array(all_tick_hist), np.array(all_effects), np.array(test_indexes)
 
 
-# In[ ]:
+# In[4]:
 
 
 def encode_sentences(headlines, tokenizer=None, max_length=100):
@@ -196,7 +196,7 @@ def encode_sentences(headlines, tokenizer=None, max_length=100):
     return padded_headlines, tokenizer
 
 
-# In[ ]:
+# In[5]:
 
 
 def split_data(X, X2, Y, test_indexes):
@@ -215,7 +215,7 @@ def split_data(X, X2, Y, test_indexes):
     return trainX, trainX2, trainY, testX, testX2, testY
 
 
-# In[ ]:
+# In[6]:
 
 
 def get_embedding_matrix(tokenizer, pretrained_file='glove.840B.300d.txt'):
@@ -312,13 +312,13 @@ def get_model(emb_matrix):
     return model
 
 
-# In[ ]:
+# In[7]:
 
 
 if __name__ == "__main__":
     
     headlines, tick_hists, effects, test_indexes = make_headline_to_effect_data()
-    
+     
     encoded_headlines, toke = encode_sentences(headlines, max_length=max_length)
     
     vocab_size = len(toke.word_counts)
@@ -379,7 +379,7 @@ if __name__ == "__main__":
     plt.show()
 
 
-# In[24]:
+# In[9]:
 
 # Predict (TEST)
 
@@ -461,7 +461,7 @@ def predict(stock, model=None, toke=None, current_date=None, predict_date=None):
     
 
 
-# In[27]:
+# In[11]:
 
 # [TEST] Spot Testing
 
@@ -472,8 +472,8 @@ if __name__ == "__main__":
     ## Options ##
     
     stock = 'INTC'
-    current_date = '2018-03-08'
-    predict_date = '2018-03-09'
+    current_date = '2018-03-07'
+    predict_date = '2018-03-08'
     
     ## Run ##
     

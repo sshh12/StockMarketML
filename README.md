@@ -2,21 +2,19 @@
 
 Using the magic of machine learning to predict the trends of the stock market.
 
-## App
-
-Applying the Model
-
-#### Tools/libs Used
+### Tools/libs Used
 * [Keras](https://keras.io/)
 * [Numpy](http://www.numpy.org/)
 * [Praw](https://praw.readthedocs.io/en/latest/)
 * [Requests](http://docs.python-requests.org/en/master/)
 
-```#TODO```
+## App
+
+Applying the Model ```#TODO```
 
 ## Lab 2
 
-Current (Second) Attempt
+Second Attempt
 
 ##### CollectData
 
@@ -33,8 +31,6 @@ Creates and trains a model to predict stock prices based on headlines and histor
 ##### HeadlineTickAnalysisAndPrediction2
 
 Creates and trains a model to predict stock prices based on headlines and historical data with a slightly different configuration.
-
-![model](https://raw.githubusercontent.com/sshh12/StockMarketML/master/lab2/model.png?)
 
 ##### MultiHeadlineAndTickPrediction
 
@@ -67,3 +63,7 @@ This uses headlines processed through doc2vec to predict changes in close price.
 ##### HeadlineAndTickerClassification
 
 Using historic stock prices and headlines to predict close price.
+
+## Models
+
+![model](https://raw.githubusercontent.com/sshh12/StockMarketML/master/lab2/model.png?)

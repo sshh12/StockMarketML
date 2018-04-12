@@ -279,7 +279,7 @@ def get_model(emb_matrix):
     emb = Embedding(vocab_size + 1, emb_size, input_length=max_length, weights=[emb_matrix], trainable=True)(headline_input)
     emb = SpatialDropout1D(.2)(emb)
     
-    text_rnn = LSTM(200, recurrent_dropout=0.2, return_sequences=False)(emb)
+    text_rnn = LSTM(128, recurrent_dropout=0.2, return_sequences=False)(emb)
     text_rnn = Activation('selu')(text_rnn)
     text_rnn = Dropout(0.3)(text_rnn)
     
@@ -289,13 +289,13 @@ def get_model(emb_matrix):
     
     tick_conv = Conv1D(filters=64, kernel_size=8, padding='same', activation='selu')(tick_input)
     tick_conv = MaxPooling1D(pool_size=2)(tick_conv)
-    tick_conv = Dropout(0.4)(tick_conv)
+    tick_conv = Dropout(0.5)(tick_conv)
     
-    for i in range(2):
+    for i in range(1):
         
-        tick_conv = Conv1D(filters=2**(i+7), kernel_size=3, padding='same', activation='selu')(tick_conv)
+        tick_conv = Conv1D(filters=2**(i+7), kernel_size=4, padding='valid', activation='selu')(tick_conv)
         tick_conv = MaxPooling1D(pool_size=2)(tick_conv)
-        tick_conv = Dropout(0.4)(tick_conv)
+        tick_conv = Dropout(0.5)(tick_conv)
     
     tick_rnn = LSTM(200, dropout=0.2, recurrent_dropout=0.2, return_sequences=False)(tick_conv)
     tick_rnn = Activation('selu')(tick_rnn)
@@ -315,7 +315,7 @@ def get_model(emb_matrix):
     final_dense = BatchNormalization()(final_dense)
     final_dense = Dropout(0.3)(final_dense)
     
-    for i in range(4):
+    for i in range(1):
         
         final_dense = Dense(200)(final_dense)
         final_dense = Activation('selu')(final_dense)
@@ -342,7 +342,7 @@ if __name__ == "__main__":
     encoded_meta, encoded_headlines, toke = encode_sentences(meta, 
                                                              headlines, 
                                                              max_length=max_length, 
-                                                             vocab_size=vocab_size)
+                                                             vocab_size=12000)
     
     vocab_size = len(toke.word_counts)
     print("Found Words......" + str(vocab_size))

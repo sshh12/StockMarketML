@@ -12,9 +12,13 @@ Using the magic of machine learning to predict the trends of the stock market.
 
 Applying the Model ```#TODO```
 
+## Lab 3
+
+```soon!```
+
 ## Lab 2
 
-Second Attempt
+2nd Attempt
 
 ##### CollectData
 
@@ -38,7 +42,7 @@ Creates and trains a model to predict stock prices based on multiple headlines a
 
 ## Lab 1
 
-First Attempt
+1st Attempt
 
 ##### CollectData
 

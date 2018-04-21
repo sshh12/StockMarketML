@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[20]:
+# In[48]:
 
 # Imports
 
@@ -30,7 +30,7 @@ from keras.utils import plot_model
 from gensim.models.doc2vec import Doc2Vec, TaggedDocument
 
 
-# In[21]:
+# In[54]:
 
 # Options
 
@@ -39,10 +39,22 @@ all_sources = ['reddit', 'reuters', 'twitter', 'seekingalpha', 'fool', 'wsj', 't
 
 model_type  = 'multiheadline'
 
+doc2vec_options = dict(
+    size=300, 
+    window=10, 
+    min_count=5, 
+    workers=10,
+    alpha=0.025, 
+    min_alpha=0.025, 
+    max_vocab_size=15000
+)
+
+tick_window = 20
+
 test_cutoff = datetime(2018, 3, 20)
 
 
-# In[39]:
+# In[63]:
 
 
 def add_time(date, days):
@@ -106,14 +118,7 @@ def make_doc_embeddings():
             
     doc_iter = LabeledLineSentence(docs, labels)
             
-    vec_model = Doc2Vec(documents=doc_iter,  
-                        size=300, 
-                        window=10, 
-                        min_count=5, 
-                        workers=10,
-                        alpha=0.025, 
-                        min_alpha=0.025, 
-                        max_vocab_size=15000)
+    vec_model = Doc2Vec(documents=doc_iter, **doc2vec_options)
     
     vectors = {stock: {} for stock in stocks}
     
@@ -123,14 +128,132 @@ def make_doc_embeddings():
         
         vectors[stock][date] = vec_model.docvecs[label]
                     
-    return vec_model, (docs, labels)
+    return vec_model, vectors, (docs, labels)
 
-vec_model, vectors, data = make_doc_embeddings()
+def make_tick_data():
+    
+    tick_vecs = {stock: {} for stock in stocks}
+    effect_vecs = {stock: {} for stock in stocks}
+    
+    with db() as (conn, cur):
+        
+        for stock in stocks:
+            
+            cur.execute("SELECT DISTINCT date FROM headlines WHERE stock=? ORDER BY date ASC LIMIT 1", [stock])
+            start_date = cur.fetchall()[0][0]
+            
+            cur.execute("SELECT DISTINCT date FROM ticks WHERE stock=? AND date >= ? ORDER BY date ASC", [stock, start_date])
+            dates = [date[0] for date in cur.fetchall()]
+            
+            for date in dates:
+                
+                event_date = datetime.strptime(date, '%Y-%m-%d') # The date of headline
+
+                ## Find corresponding tick data ## 
+
+                cur.execute("""SELECT open, high, low, adjclose, volume FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date DESC LIMIT 52""", 
+                            [stock, 
+                             add_time(event_date, -80), 
+                             add_time(event_date, 0)])
+
+                before_headline_ticks = cur.fetchall()
+
+                if len(before_headline_ticks) < tick_window:
+                    continue
+
+                cur.execute("""SELECT adjclose FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date ASC LIMIT 1""", 
+                            [stock, 
+                            add_time(event_date, 1), 
+                            add_time(event_date, 4)])
+
+                after_headline_ticks = cur.fetchall()
+
+                ## Create ##
+
+                if len(after_headline_ticks) == 0:
+                    continue
+
+                window_ticks = np.array(list(reversed(before_headline_ticks[:tick_window]))) # Flip so in chron. order
+                fifty_ticks = np.array(before_headline_ticks) # Use last 50 ticks to normalize
+
+                previous_tick = before_headline_ticks[0][3]
+                result_tick = after_headline_ticks[0][0]
+
+                if previous_tick and result_tick:
+
+                    window_ticks -= np.mean(fifty_ticks, axis=0)
+                    window_ticks /= np.std(fifty_ticks, axis=0)
+
+                    # Percent Diff (/ Normalization Constant)
+                    effect = [(result_tick - previous_tick) / previous_tick / 0.023]
+                    
+                    tick_vecs[stock][date] = window_ticks
+                    effect_vecs[stock][date] = effect
+                    
+    return tick_vecs, effect_vecs
 
 
-# In[45]:
+# In[68]:
 
-vec_model.docvecs.most_similar("INTC 2016-04-20")
+
+def merge_data(doc_vecs, tick_vecs, effect_vecs):
+    
+    X, Y = [], []
+    
+    for stock in stocks:
+        
+        for date, tick_vec in tick_vecs[stock].items():
+            
+            x = []
+            y = effect_vecs[stock][date]
+            
+            event_date = datetime.strptime(date, '%Y-%m-%d')
+            
+            window_dates = [add_time(event_date, -i) for i in range(tick_window)]
+            
+            for i in range(tick_window):
+                
+                if window_dates[i] not in doc_vecs[stock]:
+                    break
+                    
+                x_i = np.concatenate([tick_vec[i], doc_vecs[stock][window_dates[i]]])
+                
+                x.append(x_i)
+                
+            if len(x) == tick_window:
+                X.append(x)
+                Y.append(y)
+        
+    return X, Y
+
+
+# In[ ]:
+
+
+def correct_sign_acc(y_true, y_pred):
+    """
+    Accuracy of Being Positive or Negative
+    """
+    diff = K.equal(y_true > 0, y_pred > 0)
+    
+    return K.mean(diff, axis=-1)
+
+def get_model():
+    
+    pass
+
+
+# In[64]:
+
+# Load Data
+
+if __name__ == "__main__":
+    
+    vec_model, doc_vecs, doc_data = make_doc_embeddings() #vec_model.docvecs.most_similar("INTC 2016-04-20")
+    
+    tick_vecs, effect_vecs = make_tick_data()
+    
+    X, Y = merge_data(doc_vecs, tick_vecs, effect_vecs)
 
 
 # In[ ]:
@@ -138,26 +261,21 @@ vec_model.docvecs.most_similar("INTC 2016-04-20")
 # TRAIN MODEL
 
 if __name__ == "__main__":  
-    
-    ## Save Tokenizer ##
-    
-    with open(os.path.join('..', 'models', 'toke2-tick.pkl'), 'wb') as toke_file:
-        pickle.dump(toke, toke_file, protocol=pickle.HIGHEST_PROTOCOL)
-        
+
     ## Create Model ##
     
-    model = get_model(emb_matrix)
+    model = get_model()
     
     monitor_mode = 'correct_sign_acc'
     
-    tensorboard = TensorBoard(log_dir="logs/{}".format(datetime.now().strftime("%Y,%m,%d-%H,%M,%S,tick," + model_type)))
+    #tensorboard = TensorBoard(log_dir="logs/{}".format(datetime.now().strftime("%Y,%m,%d-%H,%M,%S,tick," + model_type)))
     e_stopping = EarlyStopping(monitor='val_loss', patience=50)
-    checkpoint = ModelCheckpoint(os.path.join('..', 'models', 'media-headlines-ticks-' + model_type + '.h5'), 
-                                 monitor=monitor_mode,
-                                 verbose=0,
-                                 save_best_only=True)
+    #checkpoint = ModelCheckpoint(os.path.join('..', 'models', 'media-headlines-ticks-' + model_type + '.h5'), 
+    #                             monitor=monitor_mode,
+    #                             verbose=0,
+    #                             save_best_only=True)
     
-    plot_model(model, to_file='model.png', show_shapes=True)
+    #plot_model(model, to_file='model.png', show_shapes=True)
     
     ## Train ##
     

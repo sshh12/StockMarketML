@@ -67,7 +67,3 @@ This uses headlines processed through doc2vec to predict changes in close price.
 ##### HeadlineAndTickerClassification
 
 Using historic stock prices and headlines to predict close price.
-
-## Models
-
-![model](https://raw.githubusercontent.com/sshh12/StockMarketML/master/lab2/model.png?)

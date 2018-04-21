@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[48]:
+# In[1]:
 
 # Imports
 
@@ -30,11 +30,11 @@ from keras.utils import plot_model
 from gensim.models.doc2vec import Doc2Vec, TaggedDocument
 
 
-# In[54]:
+# In[2]:
 
 # Options
 
-stocks      = ['AMD', 'INTC']
+stocks      = ['AMD', 'INTC', 'AAPL', 'AMZN', 'MSFT', 'GOOG']
 all_sources = ['reddit', 'reuters', 'twitter', 'seekingalpha', 'fool', 'wsj', 'thestreet']
 
 model_type  = 'multiheadline'
@@ -49,12 +49,18 @@ doc2vec_options = dict(
     max_vocab_size=15000
 )
 
-tick_window = 20
+keras_options = dict(
+    epochs=200, 
+    batch_size=32,
+    verbose=0
+)
+
+tick_window = 20 # TODO use this for train/test split
 
 test_cutoff = datetime(2018, 3, 20)
 
 
-# In[63]:
+# In[3]:
 
 
 def add_time(date, days):
@@ -71,6 +77,8 @@ def clean(sentence):
     return sentence.strip()
 
 def make_doc_embeddings():
+    
+    print('Creating doc embeddings...')
 
     docs, labels = [], []
     
@@ -131,6 +139,8 @@ def make_doc_embeddings():
     return vec_model, vectors, (docs, labels)
 
 def make_tick_data():
+    
+    print('Creating tick data...')
     
     tick_vecs = {stock: {} for stock in stocks}
     effect_vecs = {stock: {} for stock in stocks}
@@ -193,10 +203,12 @@ def make_tick_data():
     return tick_vecs, effect_vecs
 
 
-# In[68]:
+# In[4]:
 
 
 def merge_data(doc_vecs, tick_vecs, effect_vecs):
+    
+    print('Creating X, Y...')
     
     X, Y = [], []
     
@@ -224,10 +236,10 @@ def merge_data(doc_vecs, tick_vecs, effect_vecs):
                 X.append(x)
                 Y.append(y)
         
-    return X, Y
+    return np.array(X), np.array(Y)
 
 
-# In[ ]:
+# In[5]:
 
 
 def correct_sign_acc(y_true, y_pred):
@@ -240,10 +252,26 @@ def correct_sign_acc(y_true, y_pred):
 
 def get_model():
     
-    pass
+    model_input = Input(shape=(tick_window, 305))
+    
+    rnn = LSTM(300, return_sequences=False)(model_input)
+    
+    dense = Dense(300)(rnn)
+    dense = Activation('selu')(dense)
+    
+    dense = Dense(300)(dense)
+    dense = Activation('selu')(dense)
+    
+    pred_output = Dense(1)(dense)
+    
+    model = Model(inputs=model_input, outputs=pred_output)
+    
+    model.compile(optimizer=RMSprop(), loss='mse', metrics=[correct_sign_acc])
+    
+    return model
 
 
-# In[64]:
+# In[6]:
 
 # Load Data
 
@@ -256,7 +284,7 @@ if __name__ == "__main__":
     X, Y = merge_data(doc_vecs, tick_vecs, effect_vecs)
 
 
-# In[ ]:
+# In[7]:
 
 # TRAIN MODEL
 
@@ -279,13 +307,11 @@ if __name__ == "__main__":
     
     ## Train ##
     
-    history = model.fit([trainX, trainX2],
-                        trainY,
-                        epochs=epochs, 
-                        batch_size=batch_size,
-                        validation_data=([testX, testX2], testY),
-                        verbose=0,
-                        callbacks=[e_stopping, checkpoint, tensorboard])
+    history = model.fit(X,
+                        Y,
+                        validation_split=.9,
+                        callbacks=[e_stopping],
+                        **keras_options)
     
     ## Display Train History ##
     
@@ -300,7 +326,7 @@ if __name__ == "__main__":
     plt.show()
 
 
-# In[9]:
+# In[8]:
 
 # Predict (TEST)
 
@@ -382,47 +408,47 @@ def predict(stock, model=None, toke=None, current_date=None, predict_date=None):
     
 
 
-# In[11]:
+# In[9]:
 
-# [TEST] Spot Testing
+# # [TEST] Spot Testing
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
     
-    ## **This Test May Overlap w/Train Data** ##
+#     ## **This Test May Overlap w/Train Data** ##
     
-    ## Options ##
+#     ## Options ##
     
-    stock = 'INTC'
-    current_date = '2018-03-07'
-    predict_date = '2018-03-08'
+#     stock = 'INTC'
+#     current_date = '2018-03-07'
+#     predict_date = '2018-03-08'
     
-    ## Run ##
+#     ## Run ##
     
-    predictions, prices = predict(stock, 
-                                  current_date=datetime.strptime(current_date, '%Y-%m-%d'), 
-                                  predict_date=datetime.strptime(predict_date, '%Y-%m-%d'))
+#     predictions, prices = predict(stock, 
+#                                   current_date=datetime.strptime(current_date, '%Y-%m-%d'), 
+#                                   predict_date=datetime.strptime(predict_date, '%Y-%m-%d'))
     
-    ## Find Actual Value ##
+#     ## Find Actual Value ##
      
-    with db() as (conn, cur):
+#     with db() as (conn, cur):
     
-        cur.execute("""SELECT adjclose FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date ASC LIMIT 1""", 
-                        [stock, 
-                        add_time(datetime.strptime(predict_date, '%Y-%m-%d'), 0), 
-                        add_time(datetime.strptime(predict_date, '%Y-%m-%d'), 6)])
+#         cur.execute("""SELECT adjclose FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date ASC LIMIT 1""", 
+#                         [stock, 
+#                         add_time(datetime.strptime(predict_date, '%Y-%m-%d'), 0), 
+#                         add_time(datetime.strptime(predict_date, '%Y-%m-%d'), 6)])
 
-        after_headline_ticks = cur.fetchall()
-        try:
-            actual_result = after_headline_ticks[0][0]
-        except:
-            actual_result = -1
+#         after_headline_ticks = cur.fetchall()
+#         try:
+#             actual_result = after_headline_ticks[0][0]
+#         except:
+#             actual_result = -1
             
-    ## Display ##
+#     ## Display ##
             
-    parse = lambda num: str(round(num, 2))
+#     parse = lambda num: str(round(num, 2))
     
-    print("Predicting Change Coef: " + parse(np.mean(predictions)))
-    print("Predicting Price: " + parse(np.mean(prices)))
-    print("Actual Price: " + parse(actual_result))
+#     print("Predicting Change Coef: " + parse(np.mean(predictions)))
+#     print("Predicting Price: " + parse(np.mean(prices)))
+#     print("Actual Price: " + parse(actual_result))
             
 

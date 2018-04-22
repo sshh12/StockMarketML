@@ -10,11 +10,17 @@ Using the magic of machine learning to predict the trends of the stock market.
 
 ## App
 
-Applying the Model ```#TODO```
+Applying the Model ```#WIP```
 
 ## Lab 3
 
-```soon!```
+##### CollectData
+
+This script gathers headlines/media data from various sources.
+
+##### MultiHeadlineTickForcasting
+
+Creates and trains a model to predict stock prices based on multiple headlines and historical tick data.
 
 ## Lab 2
 

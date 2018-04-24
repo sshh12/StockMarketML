@@ -109,7 +109,7 @@ def make_doc_embeddings():
                 event_date = datetime.strptime(date, '%Y-%m-%d')
                 
                 cur.execute("SELECT date, source, rawcontent FROM headlines WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date DESC", 
-                            [stock, add_time(event_date, -14), date])
+                            [stock, add_time(event_date, -12), date])
                 headlines = [(date, source, clean(content), (event_date - datetime.strptime(date, '%Y-%m-%d')).days) 
                                  for (date, source, content) in cur.fetchall() if content]
                 
@@ -194,9 +194,11 @@ def make_tick_data():
 
                     window_ticks -= np.mean(fifty_ticks, axis=0)
                     window_ticks /= np.std(fifty_ticks, axis=0)
-
-                    # Percent Diff (/ Normalization Constant)
-                    effect = [(result_tick - previous_tick) / previous_tick / 0.023]
+                    
+                    if result_tick > previous_tick:
+                        effect = [1., 0.]
+                    else:
+                        effect = [0., 1.]
                     
                     tick_vecs[stock][date] = window_ticks
                     effect_vecs[stock][date] = effect
@@ -275,7 +277,7 @@ def correct_sign_acc(y_true, y_pred):
 
 def get_model():
     
-    model_input = Input(shape=(tick_window, 305), name="(Batch, Days, Ticks + Headlines)")
+    model_input = Input(shape=(tick_window, 305), name="Input")
     
     rnn = LSTM(500, return_sequences=True)(model_input)
     rnn = Dropout(0.3)(rnn)
@@ -293,11 +295,12 @@ def get_model():
     dense = BatchNormalization()(dense)
     dense = Dropout(0.3)(dense)
     
-    pred_output = Dense(1)(dense)
+    dense = Dense(2)(dense)
+    pred_output = Activation('softmax')(dense)
     
     model = Model(inputs=model_input, outputs=pred_output)
     
-    model.compile(optimizer=RMSprop(), loss='mse', metrics=[correct_sign_acc])
+    model.compile(optimizer=RMSprop(), loss='categorical_crossentropy', metrics=['acc'])
     
     return model
 
@@ -321,6 +324,12 @@ if __name__ == "__main__":
 
 # In[8]:
 
+X, Y, test_indices = merge_data(doc_vecs, tick_vecs, effect_vecs)
+X.shape
+
+
+# In[9]:
+
 # TRAIN MODEL
 
 if __name__ == "__main__":  
@@ -329,7 +338,7 @@ if __name__ == "__main__":
     
     model = get_model()
     
-    monitor_mode = 'correct_sign_acc'
+    monitor_mode = 'acc'
     
     tensorboard = TensorBoard(log_dir="logs/{}".format(datetime.now().strftime("%Y,%m,%d-%H,%M,%S,tick," + model_type)))
     e_stopping = EarlyStopping(monitor='val_loss', patience=50)
@@ -344,7 +353,7 @@ if __name__ == "__main__":
     
     history = model.fit(X,
                         Y,
-                        validation_split=.9,
+                        validation_data=(testX, testY),
                         callbacks=[e_stopping, tensorboard],
                         **keras_options)
     
@@ -361,7 +370,7 @@ if __name__ == "__main__":
     plt.show()
 
 
-# In[9]:
+# In[10]:
 
 # AoC
 
@@ -372,12 +381,12 @@ if __name__ == "__main__":
     
     try:
         
-        actualY = (testY > 0) * 2 - 1
+        actualY = testY
         predictY = model.predict(testX)
         
         print("ROC", roc_auc_score(actualY, predictY))
         
-        print(confusion_matrix(actualY > 0, predictY > 0))
+        print(confusion_matrix(testY[:, 0] > .7, predictY[:, 0] > .7))
         
     except NameError:
         
@@ -385,7 +394,7 @@ if __name__ == "__main__":
     
 
 
-# In[10]:
+# In[ ]:
 
 # # Predict (TEST)
 
@@ -467,7 +476,7 @@ if __name__ == "__main__":
     
 
 
-# In[11]:
+# In[ ]:
 
 # # [TEST] Spot Testing
 

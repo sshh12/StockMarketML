@@ -324,12 +324,6 @@ if __name__ == "__main__":
 
 # In[8]:
 
-X, Y, test_indices = merge_data(doc_vecs, tick_vecs, effect_vecs)
-X.shape
-
-
-# In[9]:
-
 # TRAIN MODEL
 
 if __name__ == "__main__":  
@@ -351,8 +345,8 @@ if __name__ == "__main__":
     
     ## Train ##
     
-    history = model.fit(X,
-                        Y,
+    history = model.fit(trainX,
+                        trainY,
                         validation_data=(testX, testY),
                         callbacks=[e_stopping, tensorboard],
                         **keras_options)
@@ -370,7 +364,7 @@ if __name__ == "__main__":
     plt.show()
 
 
-# In[10]:
+# In[9]:
 
 # AoC
 
@@ -394,7 +388,7 @@ if __name__ == "__main__":
     
 
 
-# In[ ]:
+# In[10]:
 
 # # Predict (TEST)
 
@@ -476,7 +470,7 @@ if __name__ == "__main__":
     
 
 
-# In[ ]:
+# In[11]:
 
 # # [TEST] Spot Testing
 

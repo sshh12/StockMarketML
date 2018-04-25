@@ -38,7 +38,7 @@ from gensim.models.doc2vec import Doc2Vec, TaggedDocument
 stocks      = ['AMD', 'INTC', 'AAPL', 'AMZN', 'MSFT', 'GOOG']
 all_sources = ['reddit', 'reuters', 'twitter', 'seekingalpha', 'fool', 'wsj', 'thestreet']
 
-model_type  = 'multiheadline'
+model_type  = 'multiheadlineclf'
 
 doc2vec_options = dict(
     size=300, 
@@ -91,7 +91,7 @@ def make_doc_embeddings():
             
         def __iter__(self):
             for idx, doc in enumerate(self.docs):
-                yield TaggedDocument(doc.split(), [self.labels[idx]])
+                yield TaggedDocument(doc.split(), [self.labels[idx]]) # clean doc
     
     with db() as (conn, cur):
         
@@ -101,6 +101,12 @@ def make_doc_embeddings():
             
             cur.execute("SELECT DISTINCT date FROM headlines WHERE stock=? ORDER BY date ASC", [stock])
             dates = [date[0] for date in cur.fetchall()]
+            new_dates = []
+            for date in dates:
+                d = datetime.strptime(date, '%Y-%m-%d')
+                new_dates.append(add_time(d, -1))
+                new_dates.append(add_time(d, +1))
+            dates.extend(new_dates)
             
             for date in tqdm_notebook(dates, desc=stock):
                 
@@ -108,9 +114,9 @@ def make_doc_embeddings():
                 
                 event_date = datetime.strptime(date, '%Y-%m-%d')
                 
-                cur.execute("SELECT date, source, rawcontent FROM headlines WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date DESC", 
+                cur.execute("SELECT date, source, content FROM headlines WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date DESC", 
                             [stock, add_time(event_date, -12), date])
-                headlines = [(date, source, clean(content), (event_date - datetime.strptime(date, '%Y-%m-%d')).days) 
+                headlines = [(date, source, content, (event_date - datetime.strptime(date, '%Y-%m-%d')).days) 
                                  for (date, source, content) in cur.fetchall() if content]
                 
                 if len(headlines) == 0:
@@ -120,7 +126,7 @@ def make_doc_embeddings():
                     
                 contents = [headline[2] for headline in headlines]
 
-                doc = " !NEWHEADLINE! ".join(contents)
+                doc = " **NEXT** ".join(contents)
                 
                 docs.append(doc)
                 labels.append(stock + " " + date)
@@ -322,7 +328,7 @@ if __name__ == "__main__":
     print(trainX.shape, testY.shape)
 
 
-# In[8]:
+# In[10]:
 
 # TRAIN MODEL
 
@@ -336,10 +342,12 @@ if __name__ == "__main__":
     
     tensorboard = TensorBoard(log_dir="logs/{}".format(datetime.now().strftime("%Y,%m,%d-%H,%M,%S,tick," + model_type)))
     e_stopping = EarlyStopping(monitor='val_loss', patience=50)
-    #checkpoint = ModelCheckpoint(os.path.join('..', 'models', 'media-headlines-ticks-' + model_type + '.h5'), 
-    #                             monitor=monitor_mode,
-    #                             verbose=0,
-    #                             save_best_only=True)
+    checkpoint = ModelCheckpoint(os.path.join('..', 'models', 'media-headlines-ticks-' + model_type + '.h5'), 
+                                 monitor=monitor_mode,
+                                 verbose=0,
+                                 save_best_only=True)
+    
+    vec_model.save(os.path.join('..', 'models', 'doc2vec-' + model_type + '.doc2vec'))
     
     plot_model(model, to_file='model.png', show_shapes=True)
     
@@ -348,7 +356,7 @@ if __name__ == "__main__":
     history = model.fit(trainX,
                         trainY,
                         validation_data=(testX, testY),
-                        callbacks=[e_stopping, tensorboard],
+                        callbacks=[e_stopping, tensorboard, checkpoint],
                         **keras_options)
     
     ## Display Train History ##
@@ -364,7 +372,7 @@ if __name__ == "__main__":
     plt.show()
 
 
-# In[9]:
+# In[11]:
 
 # AoC
 
@@ -380,7 +388,7 @@ if __name__ == "__main__":
         
         print("ROC", roc_auc_score(actualY, predictY))
         
-        print(confusion_matrix(testY[:, 0] > .7, predictY[:, 0] > .7))
+        print(confusion_matrix(testY[:, 0] > .75, predictY[:, 0] > .75))
         
     except NameError:
         
@@ -388,7 +396,7 @@ if __name__ == "__main__":
     
 
 
-# In[10]:
+# In[ ]:
 
 # # Predict (TEST)
 
@@ -470,7 +478,7 @@ if __name__ == "__main__":
     
 
 
-# In[11]:
+# In[ ]:
 
 # # [TEST] Spot Testing
 

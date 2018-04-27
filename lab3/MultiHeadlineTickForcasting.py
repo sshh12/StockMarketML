@@ -47,7 +47,8 @@ doc2vec_options = dict(
     workers=10,
     alpha=0.025, 
     min_alpha=0.025, 
-    max_vocab_size=15000
+    max_vocab_size=15000,
+    dm=1
 )
 
 keras_options = dict(
@@ -116,7 +117,7 @@ def make_doc_embeddings():
                 
                 cur.execute("SELECT date, source, content FROM headlines WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date DESC", 
                             [stock, add_time(event_date, -12), date])
-                headlines = [(date, source, content, (event_date - datetime.strptime(date, '%Y-%m-%d')).days) 
+                headlines = [(date, source, clean(content), (event_date - datetime.strptime(date, '%Y-%m-%d')).days) 
                                  for (date, source, content) in cur.fetchall() if content]
                 
                 if len(headlines) == 0:
@@ -126,7 +127,7 @@ def make_doc_embeddings():
                     
                 contents = [headline[2] for headline in headlines]
 
-                doc = " **NEXT** ".join(contents)
+                doc = " ** ".join(contents)
                 
                 docs.append(doc)
                 labels.append(stock + " " + date)
@@ -134,6 +135,12 @@ def make_doc_embeddings():
     doc_iter = LabeledLineSentence(docs, labels)
             
     vec_model = Doc2Vec(documents=doc_iter, **doc2vec_options)
+    #vec_model.build_vocab(doc_iter)
+    
+    #for epoch in range(100):
+    #    vec_model.train(doc_iter, **doc2vec_options)
+    #    vec_model.alpha -= 0.002
+    #    vec_model.min_alpha = vec_model.alpha
     
     vectors = {stock: {} for stock in stocks}
     
@@ -328,7 +335,7 @@ if __name__ == "__main__":
     print(trainX.shape, testY.shape)
 
 
-# In[10]:
+# In[8]:
 
 # TRAIN MODEL
 
@@ -372,7 +379,7 @@ if __name__ == "__main__":
     plt.show()
 
 
-# In[11]:
+# In[9]:
 
 # AoC
 
@@ -396,89 +403,31 @@ if __name__ == "__main__":
     
 
 
-# In[ ]:
+# In[10]:
 
-# # Predict (TEST)
+# Predict (TEST)
 
-# def predict(stock, model=None, toke=None, current_date=None, predict_date=None):
+def predict(stock, model=None, vec_model=None, current_date=None, predict_date=None):
     
-#     import keras.metrics
-#     keras.metrics.correct_sign_acc = correct_sign_acc
+    if not model or not vec_model:
+        
+        vec_model = Doc2Vec.load(os.path.join('..', 'models', 'doc2vec-' + model_type + '.doc2vec'))
     
-#     if not model or not toke:
+        model = load_model(os.path.join('..', 'models', 'media-headlines-ticks-' + model_type + '.h5'))
         
-#         with open(os.path.join('..', 'models', 'toke2-tick.pkl'), 'rb') as toke_file:
-#             toke = pickle.load(toke_file)
+    if not current_date:
+        current_date = datetime.today()
+        
+    if not predict_date:
+        predict_date = current_date + timedelta(days=1)
     
-#         model = load_model(os.path.join('..', 'models', 'media-headlines-ticks-' + model_type + '.h5'))
+    ## PREDICT HERE ##
         
-#     vocab_size = len(toke.word_counts)
-        
-#     if not current_date:
-#         current_date = datetime.today()
-        
-#     if not predict_date:
-#         predict_date = current_date + timedelta(days=1)
-    
-#     all_headlines, all_tick_hist = [], []
-    
-#     with db() as (conn, cur):
-        
-#         event_date = current_date
-#         date = datetime.strftime(event_date, '%Y-%m-%d')
-                
-#         cur.execute("SELECT date, source, rawcontent FROM headlines WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date DESC", 
-#                     [stock, add_time(event_date, -14), date])
-#         headlines = [(date, source, clean(content), (event_date - datetime.strptime(date, '%Y-%m-%d')).days) 
-#                         for (date, source, content) in cur.fetchall() if content]
-                    
-#         ## Find corresponding tick data ## 
-                
-#         cur.execute("""SELECT open, high, low, adjclose, volume FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date DESC""", 
-#                     [stock, 
-#                      add_time(event_date, -30 - tick_window), 
-#                      add_time(event_date, 0)])
-                
-#         before_headline_ticks = cur.fetchall()[:tick_window]
-#         actual_current = before_headline_ticks[0][3]
-                
-#         tick_hist = np.array(before_headline_ticks)
-#         tick_hist -= np.mean(tick_hist, axis=0)
-#         tick_hist /= np.std(tick_hist, axis=0)
-                
-#         ## Create training example ##
-
-#         probs = [1 / (headline[3] + 1) for headline in headlines]
-#         probs /= np.sum(probs)
-                    
-#         contents = [headline[2] for headline in headlines]
-
-#         num_samples = len(contents) // sample_size
-
-#         for i in range(num_samples):
-
-#             indexes = np.random.choice(np.arange(len(headlines)), sample_size, replace=False, p=probs)
-                    
-#             sample = [headlines[i] for i in indexes]
-
-#             all_headlines.append(sample)
-#             all_tick_hist.append(tick_hist)
-        
-#         ## Process ##
-    
-#         encoded_headlines, toke = encode_sentences(all_headlines, tokenizer=toke, max_length=max_length)
-        
-#         tick_hists = np.array(all_tick_hist)
-        
-#         predictions = model.predict([encoded_headlines, tick_hists])[:, 0]
-        
-#         prices = predictions * 0.023 * actual_current + actual_current
-        
-#         return predictions, prices
+    return predictions
     
 
 
-# In[ ]:
+# In[11]:
 
 # # [TEST] Spot Testing
 

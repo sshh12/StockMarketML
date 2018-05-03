@@ -47,7 +47,7 @@ doc2vec_options = dict(
     workers=10,
     alpha=0.025, 
     min_alpha=0.025, 
-    max_vocab_size=15000,
+    max_vocab_size=13000,
     dm=1
 )
 
@@ -59,7 +59,7 @@ keras_options = dict(
 
 tick_window = 7
 
-test_cutoff = datetime(2018, 3, 20) # TODO use this for train/test split
+test_cutoff = datetime(2018, 4, 12) # TODO use this for train/test split
 
 
 # In[3]:
@@ -115,7 +115,7 @@ def make_doc_embeddings():
                 
                 event_date = datetime.strptime(date, '%Y-%m-%d')
                 
-                cur.execute("SELECT date, source, content FROM headlines WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date DESC", 
+                cur.execute("SELECT date, source, rawcontent FROM headlines WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date DESC", 
                             [stock, add_time(event_date, -12), date])
                 headlines = [(date, source, clean(content), (event_date - datetime.strptime(date, '%Y-%m-%d')).days) 
                                  for (date, source, content) in cur.fetchall() if content]
@@ -127,7 +127,7 @@ def make_doc_embeddings():
                     
                 contents = [headline[2] for headline in headlines]
 
-                doc = " ** ".join(contents)
+                doc = " **** ".join(contents)
                 
                 docs.append(doc)
                 labels.append(stock + " " + date)
@@ -298,15 +298,20 @@ def get_model():
     rnn = LSTM(300, return_sequences=False)(rnn)
     rnn = Dropout(0.3)(rnn)
     
-    dense = Dense(300)(rnn)
+    dense = Dense(400)(rnn)
     dense = Activation('selu')(dense)
     dense = BatchNormalization()(dense)
-    dense = Dropout(0.3)(dense)
+    dense = Dropout(0.5)(dense)
     
-    dense = Dense(300)(dense)
+    dense = Dense(400)(dense)
     dense = Activation('selu')(dense)
     dense = BatchNormalization()(dense)
-    dense = Dropout(0.3)(dense)
+    dense = Dropout(0.5)(dense)
+    
+    dense = Dense(400)(dense)
+    dense = Activation('selu')(dense)
+    dense = BatchNormalization()(dense)
+    dense = Dropout(0.5)(dense)
     
     dense = Dense(2)(dense)
     pred_output = Activation('softmax')(dense)
@@ -395,7 +400,7 @@ if __name__ == "__main__":
         
         print("ROC", roc_auc_score(actualY, predictY))
         
-        print(confusion_matrix(testY[:, 0] > .75, predictY[:, 0] > .75))
+        print(confusion_matrix(testY[:, 0] > .7, predictY[:, 0] > .7))
         
     except NameError:
         
@@ -427,7 +432,7 @@ def predict(stock, model=None, vec_model=None, current_date=None, predict_date=N
     
 
 
-# In[11]:
+# In[ ]:
 
 # # [TEST] Spot Testing
 

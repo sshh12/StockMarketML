@@ -277,7 +277,7 @@ def split_data(X, Y, test_indices):
     return trainX, trainY, testX, testY
 
 
-# In[6]:
+# In[12]:
 
 
 def correct_sign_acc(y_true, y_pred):
@@ -292,33 +292,28 @@ def get_model():
     
     model_input = Input(shape=(tick_window, 305), name="Input")
     
-    rnn = LSTM(500, return_sequences=True)(model_input)
+    rnn = LSTM(400, return_sequences=True)(model_input)
     rnn = Dropout(0.3)(rnn)
     
-    rnn = LSTM(300, return_sequences=False)(rnn)
+    rnn = LSTM(400, return_sequences=False)(rnn)
     rnn = Dropout(0.3)(rnn)
     
-    dense = Dense(400)(rnn)
+    dense = Dense(300)(rnn)
     dense = Activation('selu')(dense)
     dense = BatchNormalization()(dense)
-    dense = Dropout(0.5)(dense)
+    dense = Dropout(0.3)(dense)
     
-    dense = Dense(400)(dense)
+    dense = Dense(300)(dense)
     dense = Activation('selu')(dense)
     dense = BatchNormalization()(dense)
-    dense = Dropout(0.5)(dense)
-    
-    dense = Dense(400)(dense)
-    dense = Activation('selu')(dense)
-    dense = BatchNormalization()(dense)
-    dense = Dropout(0.5)(dense)
+    dense = Dropout(0.3)(dense)
     
     dense = Dense(2)(dense)
     pred_output = Activation('softmax')(dense)
     
     model = Model(inputs=model_input, outputs=pred_output)
     
-    model.compile(optimizer=RMSprop(), loss='categorical_crossentropy', metrics=['acc'])
+    model.compile(optimizer=RMSprop(), loss='mse', metrics=['acc'])
     
     return model
 
@@ -340,7 +335,7 @@ if __name__ == "__main__":
     print(trainX.shape, testY.shape)
 
 
-# In[8]:
+# In[13]:
 
 # TRAIN MODEL
 
@@ -384,7 +379,7 @@ if __name__ == "__main__":
     plt.show()
 
 
-# In[9]:
+# In[14]:
 
 # AoC
 
@@ -432,7 +427,7 @@ def predict(stock, model=None, vec_model=None, current_date=None, predict_date=N
     
 
 
-# In[ ]:
+# In[11]:
 
 # # [TEST] Spot Testing
 

@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 # Imports
 import warnings; warnings.simplefilter("ignore")
@@ -18,7 +18,7 @@ import re
 import matplotlib.pyplot as plt
 from tqdm import tqdm_notebook
 
-from keras.optimizers import RMSprop
+from keras.optimizers import RMSprop, Adam
 from keras.models import Sequential, load_model, Model
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
@@ -31,7 +31,7 @@ from keras.utils import plot_model
 from gensim.models.doc2vec import Doc2Vec, TaggedDocument
 
 
-# In[2]:
+# In[ ]:
 
 # Options
 
@@ -57,12 +57,14 @@ keras_options = dict(
     verbose=0
 )
 
-tick_window = 7
+tick_window = 12
+doc_query_days = 10
+combined_emb_size = 5 + doc2vec_options['size']
 
 test_cutoff = datetime(2018, 4, 12) # TODO use this for train/test split
 
 
-# In[3]:
+# In[ ]:
 
 
 def add_time(date, days):
@@ -70,16 +72,18 @@ def add_time(date, days):
     return (date + timedelta(days=days)).strftime('%Y-%m-%d')
 
 def clean(sentence):
-    
+
     sentence = sentence.lower()
     sentence = sentence.replace('-', ' ').replace('_', ' ').replace('&', ' ')
-    sentence = ''.join(c for c in sentence if c in "abcdefghijklmnopqrstuvwxyz ")
-    sentence = re.sub('\s+', ' ', sentence)
+    sentence = ''.join(char for char in sentence if char in "abcdefghijklmnopqrstuvwxyz.!? ")
+    sentence = re.sub('\s+', ' ', sentence).strip()
     
-    return sentence.strip()
+    return sentence
 
-def make_doc_embeddings():
-    
+def make_doc_embeddings(query_range=('1776-07-04', '3000-01-01'), use_extra_dates=True, vec_model=None):
+    """
+    Create document embeddings from headlines
+    """
     print('Creating doc embeddings...')
 
     docs, labels = [], []
@@ -100,14 +104,18 @@ def make_doc_embeddings():
             
             ## Headline For Every Date ##
             
-            cur.execute("SELECT DISTINCT date FROM headlines WHERE stock=? ORDER BY date ASC", [stock])
+            q_start, q_end = query_range
+            
+            cur.execute("SELECT DISTINCT date FROM headlines WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date ASC", [stock, q_start, q_end])
             dates = [date[0] for date in cur.fetchall()]
-            new_dates = []
-            for date in dates:
-                d = datetime.strptime(date, '%Y-%m-%d')
-                new_dates.append(add_time(d, -1))
-                new_dates.append(add_time(d, +1))
-            dates.extend(new_dates)
+            
+            if use_extra_dates: # True headline days not enough so we create additional querys
+                new_dates = []
+                for date in dates: 
+                    d = datetime.strptime(date, '%Y-%m-%d')
+                    new_dates.append(add_time(d, -1))
+                    new_dates.append(add_time(d, +1))
+                dates.extend(new_dates)
             
             for date in tqdm_notebook(dates, desc=stock):
                 
@@ -115,8 +123,8 @@ def make_doc_embeddings():
                 
                 event_date = datetime.strptime(date, '%Y-%m-%d')
                 
-                cur.execute("SELECT date, source, rawcontent FROM headlines WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date DESC", 
-                            [stock, add_time(event_date, -12), date])
+                cur.execute("SELECT date, source, rawcontent FROM headlines WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date ASC", 
+                            [stock, add_time(event_date, -doc_query_days), date])
                 headlines = [(date, source, clean(content), (event_date - datetime.strptime(date, '%Y-%m-%d')).days) 
                                  for (date, source, content) in cur.fetchall() if content]
                 
@@ -127,33 +135,51 @@ def make_doc_embeddings():
                     
                 contents = [headline[2] for headline in headlines]
 
-                doc = " **** ".join(contents)
+                doc = " **NEXT** ".join(contents)
                 
                 docs.append(doc)
                 labels.append(stock + " " + date)
+                
+    vectors = {stock: {} for stock in stocks}
             
     doc_iter = LabeledLineSentence(docs, labels)
+    
+    if not vec_model:
+        
+        vec_model = Doc2Vec(documents=doc_iter, **doc2vec_options)
+        #     vec_model = Doc2Vec(**doc2vec_options)
+        #     vec_model.build_vocab(doc_iter)
+
+        #     for epoch in range(100):
+        #         vec_model.train(doc_iter, **doc2vec_options)
+        #         vec_model.alpha -= 0.002
+        #         vec_model.min_alpha = vec_model.alpha
+        
+        for label in labels:
+        
+            stock, date = label.split(" ")
+
+            vectors[stock][date] = vec_model.docvecs[label]
+        
+    else:
+        
+        for tag_doc in doc_iter:
             
-    vec_model = Doc2Vec(documents=doc_iter, **doc2vec_options)
-    #vec_model.build_vocab(doc_iter)
-    
-    #for epoch in range(100):
-    #    vec_model.train(doc_iter, **doc2vec_options)
-    #    vec_model.alpha -= 0.002
-    #    vec_model.min_alpha = vec_model.alpha
-    
-    vectors = {stock: {} for stock in stocks}
-    
-    for label in labels:
-        
-        stock, date = label.split(" ")
-        
-        vectors[stock][date] = vec_model.docvecs[label]
-                    
+            vec = vec_model.infer_vector(tag_doc.words, 
+                                         alpha=doc2vec_options['alpha'], 
+                                         min_alpha=doc2vec_options['min_alpha'], 
+                                         steps=1000)
+            
+            stock, date = tag_doc.tags[0].split(" ")
+            
+            vectors[stock][date] = vec
+            
     return vec_model, vectors, (docs, labels)
 
-def make_tick_data():
-    
+def make_tick_data(query_range=('1776-07-04', '3000-01-01')):
+    """
+    Process historic tick data (high/low/close/etc..) into training examples
+    """
     print('Creating tick data...')
     
     tick_vecs = {stock: {} for stock in stocks}
@@ -163,10 +189,12 @@ def make_tick_data():
         
         for stock in stocks:
             
-            cur.execute("SELECT DISTINCT date FROM headlines WHERE stock=? ORDER BY date ASC LIMIT 1", [stock])
+            q_start, q_end = query_range
+            
+            cur.execute("SELECT DISTINCT date FROM headlines WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date ASC LIMIT 1", [stock, q_start, q_end])
             start_date = cur.fetchall()[0][0]
             
-            cur.execute("SELECT DISTINCT date FROM ticks WHERE stock=? AND date >= ? ORDER BY date ASC", [stock, start_date])
+            cur.execute("SELECT DISTINCT date FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date ASC", [stock, start_date, q_end])
             dates = [date[0] for date in cur.fetchall()]
             
             for date in dates:
@@ -219,11 +247,13 @@ def make_tick_data():
     return tick_vecs, effect_vecs
 
 
-# In[4]:
+# In[ ]:
 
 
 def merge_data(doc_vecs, tick_vecs, effect_vecs):
-    
+    """
+    Pairs document and tick vectors (both timeseries) to an effect vector (up/down)
+    """
     print('Creating X, Y...')
     
     X, Y, test_indices = [], [], []
@@ -244,7 +274,7 @@ def merge_data(doc_vecs, tick_vecs, effect_vecs):
                 if window_dates[i] not in doc_vecs[stock]:
                     break
                     
-                x_i = np.concatenate([tick_vec[i], doc_vecs[stock][window_dates[i]]])
+                x_i = np.concatenate([tick_vec[i], doc_vecs[stock][window_dates[i]]]) # Combine tick data and doc data
                 
                 x.append(x_i)
                 
@@ -253,13 +283,13 @@ def merge_data(doc_vecs, tick_vecs, effect_vecs):
                 X.append(x)
                 Y.append(y)
                 
-                if event_date > test_cutoff:
+                if event_date > test_cutoff: # Label as test data
                     test_indices.append(len(X) - 1)
         
     return np.array(X), np.array(Y), np.array(test_indices)
 
 
-# In[5]:
+# In[ ]:
 
 
 def split_data(X, Y, test_indices):
@@ -277,10 +307,10 @@ def split_data(X, Y, test_indices):
     return trainX, trainY, testX, testY
 
 
-# In[12]:
+# In[ ]:
 
 
-def correct_sign_acc(y_true, y_pred):
+def correct_sign_acc(y_true, y_pred): # Currently not used
     """
     Accuracy of Being Positive or Negative
     """
@@ -290,20 +320,17 @@ def correct_sign_acc(y_true, y_pred):
 
 def get_model():
     
-    model_input = Input(shape=(tick_window, 305), name="Input")
+    model_input = Input(shape=(tick_window, combined_emb_size), name="Input")
     
-    rnn = LSTM(400, return_sequences=True)(model_input)
+    rnn = LSTM(500, return_sequences=False)(model_input)
     rnn = Dropout(0.3)(rnn)
     
-    rnn = LSTM(400, return_sequences=False)(rnn)
-    rnn = Dropout(0.3)(rnn)
-    
-    dense = Dense(300)(rnn)
+    dense = Dense(500)(rnn)
     dense = Activation('selu')(dense)
     dense = BatchNormalization()(dense)
     dense = Dropout(0.3)(dense)
     
-    dense = Dense(300)(dense)
+    dense = Dense(500)(dense)
     dense = Activation('selu')(dense)
     dense = BatchNormalization()(dense)
     dense = Dropout(0.3)(dense)
@@ -313,12 +340,12 @@ def get_model():
     
     model = Model(inputs=model_input, outputs=pred_output)
     
-    model.compile(optimizer=RMSprop(), loss='mse', metrics=['acc'])
+    model.compile(optimizer=Adam(), loss='mse', metrics=['acc'])
     
     return model
 
 
-# In[7]:
+# In[ ]:
 
 # Load Data
 
@@ -335,7 +362,7 @@ if __name__ == "__main__":
     print(trainX.shape, testY.shape)
 
 
-# In[13]:
+# In[ ]:
 
 # TRAIN MODEL
 
@@ -379,7 +406,7 @@ if __name__ == "__main__":
     plt.show()
 
 
-# In[14]:
+# In[ ]:
 
 # AoC
 
@@ -403,7 +430,7 @@ if __name__ == "__main__":
     
 
 
-# In[10]:
+# In[ ]:
 
 # Predict (TEST)
 
@@ -427,7 +454,7 @@ def predict(stock, model=None, vec_model=None, current_date=None, predict_date=N
     
 
 
-# In[11]:
+# In[ ]:
 
 # # [TEST] Spot Testing
 

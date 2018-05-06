@@ -348,7 +348,7 @@ def clean_headline(headline, dictionary):
     return headline.strip()
 
 
-# In[ ]:
+# In[5]:
 
 
 def save_headlines(headlines):
@@ -377,7 +377,7 @@ def save_headlines(headlines):
     
 
 
-# In[ ]:
+# In[6]:
 
 
 if __name__ == "__main__":
@@ -440,7 +440,7 @@ if __name__ == "__main__":
     }
 
 
-# In[ ]:
+# In[7]:
 
 
 if __name__ == "__main__":
@@ -448,7 +448,7 @@ if __name__ == "__main__":
     save_headlines(headlines)
 
 
-# In[ ]:
+# In[8]:
 
 
 if __name__ == "__main__":

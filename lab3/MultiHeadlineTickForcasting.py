@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 # Imports
 import warnings; warnings.simplefilter("ignore")
@@ -31,7 +31,7 @@ from keras.utils import plot_model
 from gensim.models.doc2vec import Doc2Vec, TaggedDocument
 
 
-# In[ ]:
+# In[2]:
 
 # Options
 
@@ -64,7 +64,7 @@ combined_emb_size = 5 + doc2vec_options['size']
 test_cutoff = datetime(2018, 4, 12) # TODO use this for train/test split
 
 
-# In[ ]:
+# In[3]:
 
 
 def add_time(date, days):
@@ -247,7 +247,7 @@ def make_tick_data(query_range=('1776-07-04', '3000-01-01')):
     return tick_vecs, effect_vecs
 
 
-# In[ ]:
+# In[4]:
 
 
 def merge_data(doc_vecs, tick_vecs, effect_vecs):
@@ -289,7 +289,7 @@ def merge_data(doc_vecs, tick_vecs, effect_vecs):
     return np.array(X), np.array(Y), np.array(test_indices)
 
 
-# In[ ]:
+# In[5]:
 
 
 def split_data(X, Y, test_indices):
@@ -307,7 +307,7 @@ def split_data(X, Y, test_indices):
     return trainX, trainY, testX, testY
 
 
-# In[ ]:
+# In[6]:
 
 
 def correct_sign_acc(y_true, y_pred): # Currently not used
@@ -345,7 +345,7 @@ def get_model():
     return model
 
 
-# In[ ]:
+# In[7]:
 
 # Load Data
 
@@ -362,7 +362,7 @@ if __name__ == "__main__":
     print(trainX.shape, testY.shape)
 
 
-# In[ ]:
+# In[8]:
 
 # TRAIN MODEL
 
@@ -406,7 +406,7 @@ if __name__ == "__main__":
     plt.show()
 
 
-# In[ ]:
+# In[9]:
 
 # AoC
 
@@ -430,7 +430,7 @@ if __name__ == "__main__":
     
 
 
-# In[ ]:
+# In[10]:
 
 # Predict (TEST)
 
@@ -454,7 +454,7 @@ def predict(stock, model=None, vec_model=None, current_date=None, predict_date=N
     
 
 
-# In[ ]:
+# In[11]:
 
 # # [TEST] Spot Testing
 

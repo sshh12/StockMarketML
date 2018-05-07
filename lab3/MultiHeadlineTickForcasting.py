@@ -134,9 +134,9 @@ def make_doc_embeddings(query_range=(None, '1776-07-04', '3000-01-01'), use_extr
                 
                 event_date = datetime.strptime(date, '%Y-%m-%d')
                 
-                cur.execute("SELECT date, source, content FROM headlines WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date ASC", 
+                cur.execute("SELECT date, source, rawcontent FROM headlines WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date ASC", 
                             [stock, add_time(event_date, -doc_query_days), date])
-                headlines = [(date, source, clean2(content), (event_date - datetime.strptime(date, '%Y-%m-%d')).days) 
+                headlines = [(date, source, clean(content), (event_date - datetime.strptime(date, '%Y-%m-%d')).days) 
                                  for (date, source, content) in cur.fetchall() if content]
                 
                 if len(headlines) == 0:

@@ -80,11 +80,14 @@ def clean(sentence):
     
     return sentence
 
-def make_doc_embeddings(query_range=('1776-07-04', '3000-01-01'), use_extra_dates=True, vec_model=None):
+def clean2(sentence): # Clean already cleaned headline (aka return this)
+    return sentence
+
+def make_doc_embeddings(query_range=(None, '1776-07-04', '3000-01-01'), use_extra_dates=True, vec_model=None):
     """
     Create document embeddings from headlines
     """
-    print('Creating doc embeddings...')
+    if not vec_model: print('Creating doc embeddings...')
 
     docs, labels = [], []
     
@@ -100,11 +103,14 @@ def make_doc_embeddings(query_range=('1776-07-04', '3000-01-01'), use_extra_date
     
     with db() as (conn, cur):
         
+        q_stock, q_start, q_end = query_range
+        
         for stock in stocks:
             
             ## Headline For Every Date ##
             
-            q_start, q_end = query_range
+            if q_stock and q_stock != stock:
+                continue
             
             cur.execute("SELECT DISTINCT date FROM headlines WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date ASC", [stock, q_start, q_end])
             dates = [date[0] for date in cur.fetchall()]
@@ -116,16 +122,21 @@ def make_doc_embeddings(query_range=('1776-07-04', '3000-01-01'), use_extra_date
                     new_dates.append(add_time(d, -1))
                     new_dates.append(add_time(d, +1))
                 dates.extend(new_dates)
+                
+            if not vec_model: # Show loading bar only for training data
+                date_iter = tqdm_notebook(dates, desc=stock)
+            else:
+                date_iter = iter(dates)
             
-            for date in tqdm_notebook(dates, desc=stock):
+            for date in date_iter:
                 
                 ## Collect Headlines ##
                 
                 event_date = datetime.strptime(date, '%Y-%m-%d')
                 
-                cur.execute("SELECT date, source, rawcontent FROM headlines WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date ASC", 
+                cur.execute("SELECT date, source, content FROM headlines WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date ASC", 
                             [stock, add_time(event_date, -doc_query_days), date])
-                headlines = [(date, source, clean(content), (event_date - datetime.strptime(date, '%Y-%m-%d')).days) 
+                headlines = [(date, source, clean2(content), (event_date - datetime.strptime(date, '%Y-%m-%d')).days) 
                                  for (date, source, content) in cur.fetchall() if content]
                 
                 if len(headlines) == 0:
@@ -176,20 +187,23 @@ def make_doc_embeddings(query_range=('1776-07-04', '3000-01-01'), use_extra_date
             
     return vec_model, vectors, (docs, labels)
 
-def make_tick_data(query_range=('1776-07-04', '3000-01-01')):
+def make_tick_data(query_range=(None, '1776-07-04', '3000-01-01'), train=True):
     """
     Process historic tick data (high/low/close/etc..) into training examples
     """
-    print('Creating tick data...')
+    if train: print('Creating tick data...')
     
     tick_vecs = {stock: {} for stock in stocks}
     effect_vecs = {stock: {} for stock in stocks}
     
     with db() as (conn, cur):
         
+        q_stock, q_start, q_end = query_range
+        
         for stock in stocks:
             
-            q_start, q_end = query_range
+            if q_stock and q_stock != stock:
+                continue
             
             cur.execute("SELECT DISTINCT date FROM headlines WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date ASC LIMIT 1", [stock, q_start, q_end])
             start_date = cur.fetchall()[0][0]
@@ -212,37 +226,44 @@ def make_tick_data(query_range=('1776-07-04', '3000-01-01')):
 
                 if len(before_headline_ticks) < tick_window:
                     continue
+                    
+                if train:
 
-                cur.execute("""SELECT adjclose FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date ASC LIMIT 1""", 
-                            [stock, 
-                            add_time(event_date, 1), 
-                            add_time(event_date, 4)])
+                    cur.execute("""SELECT adjclose FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date ASC LIMIT 1""", 
+                                [stock, 
+                                add_time(event_date, 1), 
+                                add_time(event_date, 4)])
 
-                after_headline_ticks = cur.fetchall()
+                    after_headline_ticks = cur.fetchall()
 
+                    if len(after_headline_ticks) == 0 and train:
+                        continue
+                    
                 ## Create ##
-
-                if len(after_headline_ticks) == 0:
-                    continue
 
                 window_ticks = np.array(list(reversed(before_headline_ticks[:tick_window]))) # Flip so in chron. order
                 fifty_ticks = np.array(before_headline_ticks) # Use last 50 ticks to normalize
 
                 previous_tick = before_headline_ticks[0][3]
-                result_tick = after_headline_ticks[0][0]
+                
+                if train:
+                    result_tick = after_headline_ticks[0][0]
 
-                if previous_tick and result_tick:
+                if previous_tick:
 
                     window_ticks -= np.mean(fifty_ticks, axis=0)
                     window_ticks /= np.std(fifty_ticks, axis=0)
                     
-                    if result_tick > previous_tick:
-                        effect = [1., 0.]
-                    else:
-                        effect = [0., 1.]
-                    
                     tick_vecs[stock][date] = window_ticks
-                    effect_vecs[stock][date] = effect
+                    
+                    if train:
+                    
+                        if result_tick > previous_tick:
+                            effect = [1., 0.]
+                        else:
+                            effect = [0., 1.]
+
+                        effect_vecs[stock][date] = effect
                     
     return tick_vecs, effect_vecs
 
@@ -250,11 +271,11 @@ def make_tick_data(query_range=('1776-07-04', '3000-01-01')):
 # In[4]:
 
 
-def merge_data(doc_vecs, tick_vecs, effect_vecs):
+def merge_data(doc_vecs, tick_vecs, effect_vecs=None):
     """
     Pairs document and tick vectors (both timeseries) to an effect vector (up/down)
     """
-    print('Creating X, Y...')
+    if effect_vecs: print('Creating X, Y...')
     
     X, Y, test_indices = [], [], []
     
@@ -263,7 +284,9 @@ def merge_data(doc_vecs, tick_vecs, effect_vecs):
         for date, tick_vec in tick_vecs[stock].items():
             
             x = []
-            y = effect_vecs[stock][date]
+            
+            if effect_vecs:
+                y = effect_vecs[stock][date]
             
             event_date = datetime.strptime(date, '%Y-%m-%d')
             
@@ -281,10 +304,13 @@ def merge_data(doc_vecs, tick_vecs, effect_vecs):
             if len(x) == tick_window:
                 
                 X.append(x)
-                Y.append(y)
                 
-                if event_date > test_cutoff: # Label as test data
-                    test_indices.append(len(X) - 1)
+                if effect_vecs:
+                    
+                    Y.append(y)
+                
+                    if event_date > test_cutoff: # Label as test data
+                        test_indices.append(len(X) - 1)
         
     return np.array(X), np.array(Y), np.array(test_indices)
 
@@ -436,6 +462,8 @@ if __name__ == "__main__":
 
 def predict(stock, model=None, vec_model=None, current_date=None, predict_date=None):
     
+    ## Check Args ##
+    
     if not model or not vec_model:
         
         vec_model = Doc2Vec.load(os.path.join('..', 'models', 'doc2vec-' + model_type + '.doc2vec'))
@@ -447,14 +475,34 @@ def predict(stock, model=None, vec_model=None, current_date=None, predict_date=N
         
     if not predict_date:
         predict_date = current_date + timedelta(days=1)
-    
-    ## PREDICT HERE ##
         
-    return predictions
+    ## Predict ##
+    
+    query_range = stock, add_time(current_date, -tick_window-1), add_time(current_date, 0)
+    
+    vec_model, doc_vecs, _ = make_doc_embeddings(query_range=query_range, vec_model=vec_model)
+    
+    tick_vecs, _ = make_tick_data(query_range=query_range, train=False)
+    
+    X, _, _ = merge_data(doc_vecs, tick_vecs, None)
+    
+    pred = model.predict(X)
+        
+    return pred
     
 
 
 # In[11]:
+
+
+if __name__ == "__main__":
+    
+    pred = predict('AMD')
+    print(np.argmin(pred, axis=1))
+    print(np.mean(pred[:, 0]))
+
+
+# In[12]:
 
 # # [TEST] Spot Testing
 

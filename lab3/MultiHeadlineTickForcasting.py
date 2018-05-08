@@ -456,7 +456,7 @@ if __name__ == "__main__":
     
 
 
-# In[10]:
+# In[8]:
 
 # Predict (TEST)
 
@@ -492,57 +492,48 @@ def predict(stock, model=None, vec_model=None, current_date=None, predict_date=N
     
 
 
-# In[11]:
+# In[10]:
 
+# [TEST] Spot Testing
 
 if __name__ == "__main__":
     
-    pred = predict('AMD')
-    print(np.argmin(pred, axis=1))
-    print(np.mean(pred[:, 0]))
-
-
-# In[12]:
-
-# # [TEST] Spot Testing
-
-# if __name__ == "__main__":
+    ## **This Test May Overlap w/Train Data** ##
     
-#     ## **This Test May Overlap w/Train Data** ##
+    ## Options ##
     
-#     ## Options ##
+    stock = 'AMD'
+    current_date = '2018-05-07'
+    predict_date = '2018-05-08'
     
-#     stock = 'INTC'
-#     current_date = '2018-03-07'
-#     predict_date = '2018-03-08'
+    ## Run ##
     
-#     ## Run ##
+    predictions = predict(stock, 
+                          current_date=datetime.strptime(current_date, '%Y-%m-%d'), 
+                          predict_date=datetime.strptime(predict_date, '%Y-%m-%d'))
     
-#     predictions, prices = predict(stock, 
-#                                   current_date=datetime.strptime(current_date, '%Y-%m-%d'), 
-#                                   predict_date=datetime.strptime(predict_date, '%Y-%m-%d'))
-    
-#     ## Find Actual Value ##
+    ## Find Actual Value ##
      
-#     with db() as (conn, cur):
+    with db() as (conn, cur):
     
-#         cur.execute("""SELECT adjclose FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date ASC LIMIT 1""", 
-#                         [stock, 
-#                         add_time(datetime.strptime(predict_date, '%Y-%m-%d'), 0), 
-#                         add_time(datetime.strptime(predict_date, '%Y-%m-%d'), 6)])
+        cur.execute("""SELECT adjclose FROM ticks WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date ASC LIMIT 1""", 
+                        [stock, 
+                        add_time(datetime.strptime(predict_date, '%Y-%m-%d'), 0), 
+                        add_time(datetime.strptime(predict_date, '%Y-%m-%d'), 6)])
 
-#         after_headline_ticks = cur.fetchall()
-#         try:
-#             actual_result = after_headline_ticks[0][0]
-#         except:
-#             actual_result = -1
+        after_headline_ticks = cur.fetchall()
+        try:
+            actual_result = after_headline_ticks[0][0]
+        except:
+            actual_result = -1
             
-#     ## Display ##
+    ## Display ##
             
-#     parse = lambda num: str(round(num, 2))
+    parse = lambda num: str(round(num, 2))
     
-#     print("Predicting Change Coef: " + parse(np.mean(predictions)))
-#     print("Predicting Price: " + parse(np.mean(prices)))
-#     print("Actual Price: " + parse(actual_result))
+    print(np.argmin(pred, axis=1))
+    print(parse(np.mean(pred[:, 0])))
+    
+    print("Actual Price: " + parse(actual_result))
             
 

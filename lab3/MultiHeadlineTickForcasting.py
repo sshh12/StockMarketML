@@ -18,7 +18,7 @@ import re
 import matplotlib.pyplot as plt
 from tqdm import tqdm_notebook
 
-from keras.optimizers import RMSprop, Adam
+from keras.optimizers import RMSprop, Adam, Nadam
 from keras.models import Sequential, load_model, Model
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
@@ -57,8 +57,8 @@ keras_options = dict(
     verbose=0
 )
 
-tick_window = 12
-doc_query_days = 10
+tick_window = 10
+doc_query_days = 8
 combined_emb_size = 5 + doc2vec_options['size']
 
 test_cutoff = datetime(2018, 4, 12) # TODO use this for train/test split
@@ -351,12 +351,7 @@ def get_model():
     rnn = LSTM(500, return_sequences=False)(model_input)
     rnn = Dropout(0.3)(rnn)
     
-    dense = Dense(500)(rnn)
-    dense = Activation('selu')(dense)
-    dense = BatchNormalization()(dense)
-    dense = Dropout(0.3)(dense)
-    
-    dense = Dense(500)(dense)
+    dense = Dense(400)(rnn)
     dense = Activation('selu')(dense)
     dense = BatchNormalization()(dense)
     dense = Dropout(0.3)(dense)
@@ -366,7 +361,7 @@ def get_model():
     
     model = Model(inputs=model_input, outputs=pred_output)
     
-    model.compile(optimizer=Adam(), loss='mse', metrics=['acc'])
+    model.compile(optimizer=Nadam(), loss='categorical_crossentropy', metrics=['acc'])
     
     return model
 
@@ -456,7 +451,7 @@ if __name__ == "__main__":
     
 
 
-# In[8]:
+# In[10]:
 
 # Predict (TEST)
 
@@ -492,7 +487,7 @@ def predict(stock, model=None, vec_model=None, current_date=None, predict_date=N
     
 
 
-# In[10]:
+# In[11]:
 
 # [TEST] Spot Testing
 
@@ -508,9 +503,9 @@ if __name__ == "__main__":
     
     ## Run ##
     
-    predictions = predict(stock, 
-                          current_date=datetime.strptime(current_date, '%Y-%m-%d'), 
-                          predict_date=datetime.strptime(predict_date, '%Y-%m-%d'))
+    pred = predict(stock, 
+                   current_date=datetime.strptime(current_date, '%Y-%m-%d'), 
+                   predict_date=datetime.strptime(predict_date, '%Y-%m-%d'))
     
     ## Find Actual Value ##
      

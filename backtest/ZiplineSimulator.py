@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 # Imports
 
@@ -19,7 +19,7 @@ import numpy as np
 import pandas as pd
 
 
-# In[ ]:
+# In[2]:
 
 # Access Database
 
@@ -36,7 +36,7 @@ def db(db_filename='stock.db'):
     
 
 
-# In[ ]:
+# In[3]:
 
 # Custom Slippage Model
 
@@ -58,7 +58,7 @@ class TradeNearTheOpenSlippageModel(slippage.SlippageModel):
         return (new_price, order.amount)  
 
 
-# In[ ]:
+# In[4]:
 
 # Perfect Algo (aka already knows the future)
 
@@ -75,47 +75,54 @@ def predict_perfect(stock, date): # ~Perfect~ Predictor
         after = cur.fetchall()[0]
         
         if after[1] > before[1]:
-            return 999
+            return 1., 0.
         else:
-            return -999
+            return 0., 1.
         
 
 
-# In[ ]:
+# In[5]:
 
 # Load Stuff
 
-import pickle, os
-
-with open(os.path.join('..', 'models', 'toke-tick.pkl'), 'rb') as toke_file:
-    toke = pickle.load(toke_file)
-
-
-# In[ ]:
-
-# Load Stuff Part 2
-
-from algoA import predict, correct_sign_acc, model_type
+# import pickle, os
+# with open(os.path.join('..', 'models', 'toke-tick.pkl'), 'rb') as toke_file:
+#     toke = pickle.load(toke_file)
 
 from keras.models import load_model
-import keras.metrics
-keras.metrics.correct_sign_acc = correct_sign_acc
-    
+from gensim.models.doc2vec import Doc2Vec
+model_type  = 'multiheadlineclf'
+vec_model = Doc2Vec.load(os.path.join('..', 'models', 'doc2vec-' + model_type + '.doc2vec'))
 model = load_model(os.path.join('..', 'models', 'media-headlines-ticks-' + model_type + '.h5'))
 
 
-# In[ ]:
+# In[6]:
+
+# Load Stuff Part 2
+
+# from algoA import predict, correct_sign_acc, model_type
+# from keras.models import load_model
+# import keras.metrics
+# keras.metrics.correct_sign_acc = correct_sign_acc
+# model = load_model(os.path.join('..', 'models', 'media-headlines-ticks-' + model_type + '.h5'))
+
+from algoB import predict
+
+
+# In[7]:
 
 # Actual Algo
         
 def predict_deep_nn(stock, date):
     
-    preds, prices = predict(stock, model, toke, current_date=date)
+    # preds, prices = predict(stock, model, toke, current_date=date)
     
-    return np.mean(preds)
+    preds = predict(stock, model, vec_model, current_date=date)
+    
+    return np.mean(preds[:, 0]), np.mean(preds[:, 1])
 
 
-# In[ ]:
+# In[8]:
 
 stock = 'INTC'
 
@@ -127,17 +134,18 @@ def trade_logic(pred_func, context, data):
     
     date = data.current(symbol(stock), 'last_traded').to_datetime()
     
-    pred = pred_func(stock, date + timedelta(days=0))
-    
-    print(pred)
+    up, down = pred_func(stock, date + timedelta(days=0))
     
     shares = context.portfolio.positions[symbol(stock)].amount
     
-    if pred > 0:
+    if up > .6:
+        
         max_shares = context.portfolio.cash // data.current(symbol(stock), 'price')
         if max_shares > 0:
             order(symbol(stock), max_shares)
-    else:
+            
+    elif down > .6:
+        
         if shares > 0:
             order_target(symbol(stock), 0)
         
@@ -153,13 +161,13 @@ def handle_data_algo(context, data):
     trade_logic(predict_deep_nn, context, data)
 
 start = pd.to_datetime('2018-01-01').tz_localize('US/Eastern')
-end = pd.to_datetime('2018-03-25').tz_localize('US/Eastern')
+end = pd.to_datetime('2018-05-8').tz_localize('US/Eastern')
 
 perf_perfect = zipline.run_algorithm(start, end, initialize, 100, handle_data=handle_data_perfect)
 perf_algo = zipline.run_algorithm(start, end, initialize, 100, handle_data=handle_data_algo)
 
 
-# In[ ]:
+# In[9]:
 
 f, (ax1, ax2) = plt.subplots(2, 1, figsize=(20, 20), sharex=True)
 

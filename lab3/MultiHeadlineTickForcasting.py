@@ -38,6 +38,10 @@ from gensim.models.doc2vec import Doc2Vec, TaggedDocument
 stocks      = ['AMD', 'INTC', 'AAPL', 'AMZN', 'MSFT', 'GOOG']
 all_sources = ['reddit', 'reuters', 'twitter', 'seekingalpha', 'fool', 'wsj', 'thestreet']
 
+# Trying diff stuff
+stocks      = ['AMD', 'INTC']
+all_sources = ['reuters', 'seekingalpha', 'wsj', 'thestreet']
+
 model_type  = 'multiheadlineclf'
 
 doc2vec_options = dict(
@@ -47,7 +51,7 @@ doc2vec_options = dict(
     workers=10,
     alpha=0.025, 
     min_alpha=0.025, 
-    max_vocab_size=13000,
+    max_vocab_size=15000,
     dm=1
 )
 
@@ -333,7 +337,7 @@ def split_data(X, Y, test_indices):
     return trainX, trainY, testX, testY
 
 
-# In[6]:
+# In[12]:
 
 
 def correct_sign_acc(y_true, y_pred): # Currently not used
@@ -348,10 +352,15 @@ def get_model():
     
     model_input = Input(shape=(tick_window, combined_emb_size), name="Input")
     
-    rnn = LSTM(500, return_sequences=False)(model_input)
+    rnn = LSTM(200, return_sequences=False)(model_input)
     rnn = Dropout(0.3)(rnn)
     
-    dense = Dense(400)(rnn)
+    dense = Dense(200)(rnn)
+    dense = Activation('selu')(dense)
+    dense = BatchNormalization()(dense)
+    dense = Dropout(0.3)(dense)
+    
+    dense = Dense(200)(rnn)
     dense = Activation('selu')(dense)
     dense = BatchNormalization()(dense)
     dense = Dropout(0.3)(dense)
@@ -383,7 +392,7 @@ if __name__ == "__main__":
     print(trainX.shape, testY.shape)
 
 
-# In[8]:
+# In[13]:
 
 # TRAIN MODEL
 
@@ -427,7 +436,7 @@ if __name__ == "__main__":
     plt.show()
 
 
-# In[9]:
+# In[14]:
 
 # AoC
 
@@ -451,7 +460,7 @@ if __name__ == "__main__":
     
 
 
-# In[10]:
+# In[15]:
 
 # Predict (TEST)
 
@@ -487,7 +496,7 @@ def predict(stock, model=None, vec_model=None, current_date=None, predict_date=N
     
 
 
-# In[11]:
+# In[16]:
 
 # [TEST] Spot Testing
 

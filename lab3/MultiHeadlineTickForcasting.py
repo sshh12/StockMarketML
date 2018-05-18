@@ -38,10 +38,6 @@ from gensim.models.doc2vec import Doc2Vec, TaggedDocument
 stocks      = ['AMD', 'INTC', 'AAPL', 'AMZN', 'MSFT', 'GOOG']
 all_sources = ['reddit', 'reuters', 'twitter', 'seekingalpha', 'fool', 'wsj', 'thestreet']
 
-# Trying diff stuff
-stocks      = ['AMD', 'INTC']
-all_sources = ['reuters', 'seekingalpha', 'wsj', 'thestreet']
-
 model_type  = 'multiheadlineclf'
 
 doc2vec_options = dict(
@@ -61,11 +57,11 @@ keras_options = dict(
     verbose=0
 )
 
-tick_window = 10
-doc_query_days = 8
+tick_window = 20
+doc_query_days = 6
 combined_emb_size = 5 + doc2vec_options['size']
 
-test_cutoff = datetime(2018, 4, 12) # TODO use this for train/test split
+test_cutoff = datetime(2018, 4, 1)
 
 
 # In[3]:
@@ -352,25 +348,30 @@ def get_model():
     
     model_input = Input(shape=(tick_window, combined_emb_size), name="Input")
     
-    rnn = LSTM(200, return_sequences=False)(model_input)
-    rnn = Dropout(0.3)(rnn)
+    conv = Conv1D(filters=64, kernel_size=5, padding='same')(model_input)
+    conv = Activation('selu')(conv)
+    conv = MaxPooling1D(pool_size=2)(conv)
+    conv = Dropout(0.5)(conv)
+    
+    rnn = LSTM(200, return_sequences=False)(conv)
+    rnn = Dropout(0.5)(rnn)
     
     dense = Dense(200)(rnn)
     dense = Activation('selu')(dense)
     dense = BatchNormalization()(dense)
-    dense = Dropout(0.3)(dense)
+    dense = Dropout(0.5)(dense)
     
     dense = Dense(200)(rnn)
     dense = Activation('selu')(dense)
     dense = BatchNormalization()(dense)
-    dense = Dropout(0.3)(dense)
+    dense = Dropout(0.5)(dense)
     
     dense = Dense(2)(dense)
     pred_output = Activation('softmax')(dense)
     
     model = Model(inputs=model_input, outputs=pred_output)
     
-    model.compile(optimizer=Nadam(), loss='categorical_crossentropy', metrics=['acc'])
+    model.compile(optimizer=Nadam(), loss='mse', metrics=['acc'])
     
     return model
 

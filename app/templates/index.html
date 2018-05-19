@@ -153,30 +153,29 @@
                     <table class="table table-hover table-outline table-vcenter text-nowrap card-table">
                       <thead>
                         <tr>
-                          <th class="text-center w-1"><i class=""></i></th> <!-- companylogo -->
                           <th>Stock</th>
+                          <th>Sector</th>
                           <th>Status</th>
                           <th>Data</th>
                           <th class="text-center">Prediction</th>
                         </tr>
                       </thead>
                       <tbody>
+                        {% for stock in stocks %}
                         <tr>
-                          <td class="text-center">
-                            <div class="avatar d-block" style="">
-                              <span class="avatar-status bg-green"></span>
+                          <td>
+                            <div>{{ stock.shortname }}</div>
+                            <div class="small text-muted">
+                              {{ stock.fullname }} ({{ stock.symbol }})
                             </div>
                           </td>
                           <td>
-                            <div>Intel</div>
-                            <div class="small text-muted">
-                              Intel Corp. (INTC)
-                            </div>
+                            <i>{{ stock.sector }}<i>
                           </td>
                           <td>
                             <div class="clearfix">
                               <div class="float-left">
-                                <strong>50.00 @ -1.03 (-2%)</strong>
+                                <strong>{{ stock.price }} @ {{ stock.change }} ({{ stock.changepercent }})</strong>
                               </div>
                               <div class="float-right">
                                 <small class="text-muted">This Week</small>
@@ -187,15 +186,20 @@
                             </div>
                           </td>
                           <td>
-                            <div class="small text-muted">39 Headlines Analyzed</div>
-                            <div>1 hour ago</div>
+                            <div>n/a</div>
+                            <!--<div class="small text-muted">39 Headlines Analyzed</div>
+                            <div>1 hour ago</div>-->
                           </td>
                           <td class="text-center">
-                            <div class="mx-auto chart-circle chart-circle-xs" data-value="0.88" data-thickness="3" data-color="blue">
+                            <!--<div class="mx-auto chart-circle chart-circle-xs" data-value="0.88" data-thickness="3" data-color="blue">
                               <div class="chart-circle-value">88%</div>
+                            </div>-->
+                            <div class="mx-auto chart-circle chart-circle-xs" data-value="0" data-thickness="2" data-color="grey">
+                              <div class="chart-circle-value">n/a</div>
                             </div>
                           </td>
                         </tr>
+                        {% endfor %}
                       </tbody>
                     </table>
                   </div>

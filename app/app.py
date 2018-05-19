@@ -6,9 +6,15 @@ import info
 app = Flask(__name__, static_url_path='')
 sockets = Sockets(app)
 
+## Load Data ##
+
+main_data = info.main()
+
+###############
+
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html', **main_data)
 
 @app.route('/settings')
 def settings():

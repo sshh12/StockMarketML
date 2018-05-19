@@ -70,8 +70,8 @@
               <div class="col-sm-12 col-lg-12">
               <div class="card">
                 <div class="card-body">
-                  <div class="card-value float-right text-blue">+5%</div>
-                  <h3 class="mb-1">$20</h3>
+                  <div class="card-value float-right text-blue">+...%</div>
+                  <h3 class="mb-1">$...</h3>
                   <div class="text-muted">Portfolio</div>
                 </div>
                 <div class="card-chart-bg">
@@ -84,7 +84,7 @@
                     var chart = c3.generate({
                       bindto: '#chart-overall-portfolio',
                       padding: {
-                        bottom: -10,
+                        bottom: -1,
                         left: -1,
                         right: -1
                       },
@@ -93,15 +93,17 @@
                           data1: '$'
                         },
                         columns: [
-                          ['intc', 49.75, 49.99, 40.38, 48.79, 49.55, 51.27, 51.10, 52.72, 51.86, 52.40, 53.54, 53.61]
+                          {% for stock in stocks %}
+                          ['{{ stock.symbol }}', {{ stock.chartdata }}],
+                          {% endfor %}
                         ],
-                        type: 'area'
+                        type: 'line'
                       },
                       legend: {
-                        show: false
+                        show: true
                       },
                       transition: {
-                        duration: 0
+                        duration: 1
                       },
                       point: {
                         show: false
@@ -111,6 +113,13 @@
                           title: function (x) {
                             return '';
                           }
+                        }
+                      },
+                      grid: {
+                        y: {
+                          lines: [
+                            {value: 0, text: '0', axis: 'y'}
+                          ]
                         }
                       },
                       axis: {
@@ -132,7 +141,7 @@
                         }
                       },
                       color: {
-                        pattern: ['#467fcf']
+                        pattern: ['#AD1457', '#303F9F', '#00ACC1', '#4CAF50', '#FB8C00', '#424242', '#C62828', '#7B1FA2']
                       }
                     });
                   });
@@ -178,11 +187,11 @@
                                 <strong>{{ stock.price }} @ {{ stock.change }} ({{ stock.changepercent }})</strong>
                               </div>
                               <div class="float-right">
-                                <small class="text-muted">This Week</small>
+                                <small class="text-muted">Current</small>
                               </div>
                             </div>
                             <div class="progress progress-xs">
-                              <div class="progress-bar bg-red" role="progressbar" style="width: 21%"></div> <!-- compare w/stddev price change -->
+                              <div class="progress-bar bg-{{ stock.color }}" role="progressbar" style="width: {{ stock.barwidth }}%"></div>
                             </div>
                           </td>
                           <td>

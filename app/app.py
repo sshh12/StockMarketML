@@ -1,6 +1,9 @@
 from flask import Flask, render_template
 from flask_sockets import Sockets
 
+import random
+import json
+
 import info
 
 app = Flask(__name__, static_url_path='')
@@ -20,11 +23,39 @@ def index():
 def settings():
     return render_template('settings.html')
 
-@sockets.route('/echo')
-def echo_socket(ws):
+def send(ws, data):
+    ws.send(json.dumps(data))
+
+@sockets.route('/prediction')
+def prediction_socket(ws):
     while not ws.closed:
-        message = ws.receive()
-        ws.send(message)
+
+        stock = ws.receive().upper()
+
+        if stock in main_data["symbols"]:
+
+            send(ws, {
+                'status': 'loading',
+                'stock': stock
+            })
+
+            # todo prediction here
+
+            r = random.random()
+            prediction = [r, 1 - r]
+            num_headlines = random.randint(10, 40)
+
+            send(ws, {
+                'status': 'complete',
+                'stock': stock,
+                'prediction': prediction,
+                'numheadlines': num_headlines
+            })
+
+        else:
+            send(ws, {'status': 'error'})
+
+
 
 if __name__ == "__main__":
     app.debug = True

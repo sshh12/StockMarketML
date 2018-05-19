@@ -99,7 +99,8 @@ def main():
         })
 
     data = {
-        "stocks": stock_data
+        "stocks": stock_data,
+        "symbols": stocks
     }
 
     return data

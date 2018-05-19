@@ -29,8 +29,8 @@
     <!-- c3.js Charts Plugin -->
     <link href="./assets/plugins/charts-c3/plugin.css" rel="stylesheet" />
     <script src="./assets/plugins/charts-c3/plugin.js"></script>
-    <!-- Input Mask Plugin -->
-    <script src="./assets/plugins/input-mask/plugin.js"></script>
+    <!-- StockMarketML -->
+    <script src="./assets/js/stockmarketml.js" defer></script>
   </head>
   <body class="">
     <div class="page">
@@ -80,8 +80,16 @@
               </div>
               <script>
                 require(['c3', 'jquery'], function (c3, $) {
-                  $(document).ready(function() {
-                    var chart = c3.generate({
+
+                  $(document).ready(() => {
+
+                    let symbols = "{{ symbols }}".replace(/\&\#39;/g, "").replace(/[\[\]]/g, "").split(", ");
+
+                    for(let symb of symbols) {
+                      queryPrediction(symb);
+                    }
+
+                    let chart = c3.generate({
                       bindto: '#chart-overall-portfolio',
                       padding: {
                         bottom: -1,
@@ -194,15 +202,10 @@
                               <div class="progress-bar bg-{{ stock.color }}" role="progressbar" style="width: {{ stock.barwidth }}%"></div>
                             </div>
                           </td>
-                          <td>
-                            <div>n/a</div>
-                            <!--<div class="small text-muted">39 Headlines Analyzed</div>
-                            <div>1 hour ago</div>-->
+                          <td id="{{ stock.symbol }}-data">
+                            <div>--</div>
                           </td>
-                          <td class="text-center">
-                            <!--<div class="mx-auto chart-circle chart-circle-xs" data-value="0.88" data-thickness="3" data-color="blue">
-                              <div class="chart-circle-value">88%</div>
-                            </div>-->
+                          <td  id="{{ stock.symbol }}-circle" class="text-center">
                             <div class="mx-auto chart-circle chart-circle-xs" data-value="0" data-thickness="2" data-color="grey">
                               <div class="chart-circle-value">n/a</div>
                             </div>

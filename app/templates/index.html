@@ -70,8 +70,8 @@
               <div class="col-sm-12 col-lg-12">
               <div class="card">
                 <div class="card-body">
-                  <div class="card-value float-right text-blue">+...%</div>
-                  <h3 class="mb-1">$...</h3>
+                  <div class="card-value float-right text-green">+XX%</div>
+                  <h3 class="mb-1">$XX.XX</h3>
                   <div class="text-muted">Portfolio</div>
                 </div>
                 <div class="card-chart-bg">
@@ -126,7 +126,7 @@
                       grid: {
                         y: {
                           lines: [
-                            {value: 0, text: '0', axis: 'y'}
+                            {value: 1, text: 'Original Price', axis: 'y'}
                           ]
                         }
                       },
@@ -183,7 +183,7 @@
                           <td>
                             <div>{{ stock.shortname }}</div>
                             <div class="small text-muted">
-                              {{ stock.fullname }} ({{ stock.symbol }})
+                              {{ stock.symbol }}
                             </div>
                           </td>
                           <td>

@@ -94,7 +94,7 @@ def main():
             "change": yahoo.price["regularMarketChange"]["fmt"],
             "changepercent": yahoo.price["regularMarketChangePercent"]["fmt"],
             "color": ("green" if yahoo.price["regularMarketChange"]["raw"] > 0 else "red"),
-            "barwidth": math.log(abs(yahoo.price["regularMarketChangePercent"]["raw"]) * 100 + .1) * 30,
+            "barwidth": math.log(abs(yahoo.price["regularMarketChangePercent"]["raw"]) * 100 + 1) * 20,
             "chartdata": ",".join(str(v) for v in chart_data)
         })
 

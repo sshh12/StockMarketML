@@ -3,6 +3,7 @@ from flask_sockets import Sockets
 
 import random
 import json
+import algo
 
 import info
 
@@ -34,22 +35,28 @@ def prediction_socket(ws):
 
         if stock in main_data["symbols"]:
 
+            print('Loading ' + stock + '...')
+
             send(ws, {
                 'status': 'loading',
                 'stock': stock
             })
 
-            # todo prediction here
+            pred, data, time_taken = algo.algo_predict(stock)
 
-            r = random.random()
-            prediction = [r, 1 - r]
-            num_headlines = random.randint(10, 40)
+            pred_up = round(float(pred[0]), 3)
+            pred_down = round(float(pred[1]), 3)
+
+            raw_input = data[-1]
+            num_headlines = raw_input.count('**NEXT**')
 
             send(ws, {
                 'status': 'complete',
                 'stock': stock,
-                'prediction': prediction,
-                'numheadlines': num_headlines
+                'prediction': [pred_up, pred_down],
+                'rawinput': raw_input,
+                'numheadlines': num_headlines,
+                'time': time_taken
             })
 
         else:
@@ -58,7 +65,7 @@ def prediction_socket(ws):
 
 
 if __name__ == "__main__":
-    app.debug = True
+    app.debug = True # todo remove
     from gevent import pywsgi
     from geventwebsocket.handler import WebSocketHandler
     server = pywsgi.WSGIServer(('', 5000), app, handler_class=WebSocketHandler)

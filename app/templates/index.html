@@ -53,11 +53,11 @@
               <div class="col-lg order-lg-first">
                 <ul class="nav nav-tabs border-0 flex-column flex-lg-row">
                   <li class="nav-item">
-                    <a href="/" class="nav-link active"><i class="fe fe-bar-chart"></i> Home</a>
+                    <a href="/" class="nav-link active"><i class="fe fe-bar-chart"></i> Portfolio</a>
                   </li>
-                  <li class="nav-item">
+                  <!--<li class="nav-item"> //TODO
                     <a href="/settings" class="nav-link"><i class="fe fe-settings"></i> Settings</a>
-                  </li>
+                  </li>-->
                 </ul>
               </div>
             </div>
@@ -83,11 +83,7 @@
 
                   $(document).ready(() => {
 
-                    let symbols = "{{ symbols }}".replace(/\&\#39;/g, "").replace(/[\[\]]/g, "").split(", ");
-
-                    for(let symb of symbols) {
-                      queryPrediction(symb);
-                    }
+                    window.symbols = "{{ symbols }}".replace(/\&\#39;/g, "").replace(/[\[\]]/g, "").split(", ");
 
                     let chart = c3.generate({
                       bindto: '#chart-overall-portfolio',
@@ -160,7 +156,6 @@
           </div>
         </div>
 
-
         <div class="my-3 my-md-5">
           <div class="container">
             <div class="row row-cards row-deck">
@@ -173,7 +168,7 @@
                           <th>Stock</th>
                           <th>Sector</th>
                           <th>Status</th>
-                          <th>Data</th>
+                          <th>Model</th>
                           <th class="text-center">Prediction</th>
                         </tr>
                       </thead>
@@ -203,7 +198,8 @@
                             </div>
                           </td>
                           <td id="{{ stock.symbol }}-data">
-                            <div>--</div>
+                            <small class="text-muted">Click to</small>
+                            <div onclick="queryPrediction('{{ stock.symbol }}')">Predict</div>
                           </td>
                           <td  id="{{ stock.symbol }}-circle" class="text-center">
                             <div class="mx-auto chart-circle chart-circle-xs" data-value="0" data-thickness="2" data-color="grey">

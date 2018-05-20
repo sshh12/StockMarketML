@@ -6,10 +6,11 @@ socket.addEventListener('open', (event) => {
 
 socket.addEventListener('message', (event) => {
     let msg = JSON.parse(event.data);
+    console.log(msg);
     if(msg.status == "loading") {
       $(`#${msg.stock}-data`).html(`<div class=\"small text-muted\">Please wait...</div><div>Analyzing</div`)
     } else if(msg.status == "complete") {
-      $(`#${msg.stock}-data`).html(`<div class=\"small text-muted\">${msg.numheadlines} Headlines Analyzed</div><div>Just Now</div`)
+      $(`#${msg.stock}-data`).html(`<div class=\"small text-muted\" onclick="alert('${msg.rawinput}')">See Raw Data</div><div>${msg.numheadlines} Headlines (${msg.time.toFixed(1)}s)</div>`)
       let pred = msg.prediction;
       if(pred[0] > pred[1]) {
         $(`#${msg.stock}-circle`).html(`<div class="mx-auto chart-circle chart-circle-xs" data-value="${pred[0]}" data-thickness="3" data-color="green"><div class="chart-circle-value">${ (pred[0] * 100).toFixed(0) }%</div></div>`)
@@ -29,7 +30,6 @@ function updateCircles() {
     require(['circle-progress'], function() {
       $('.chart-circle').each(function() {
         let $this = $(this);
-
         $this.circleProgress({
           fill: {
             color: tabler.colors[$this.attr('data-color')] || tabler.colors.blue

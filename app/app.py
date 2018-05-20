@@ -62,11 +62,12 @@ def prediction_socket(ws):
         else:
             send(ws, {'status': 'error'})
 
-
-
 if __name__ == "__main__":
-    app.debug = True # todo remove
+
     from gevent import pywsgi
     from geventwebsocket.handler import WebSocketHandler
     server = pywsgi.WSGIServer(('', 5000), app, handler_class=WebSocketHandler)
+
+    print("http://localhost:5000/")
+
     server.serve_forever()

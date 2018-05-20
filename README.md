@@ -10,7 +10,9 @@ Using the magic of machine learning to predict the trends of the stock market.
 
 ## App
 
-Applying the Model ```#WIP```
+Applying the Model
+
+![app screenshot](https://user-images.githubusercontent.com/6625384/40280636-7ac6908a-5c1c-11e8-9d96-ededc88cb233.png)
 
 ## Lab 3
 
@@ -21,6 +23,8 @@ This script gathers headlines/media data from various sources.
 ##### MultiHeadlineTickForcasting
 
 Creates and trains a model to predict stock prices based on multiple headlines and historical tick data.
+
+![lab 3 model](https://raw.githubusercontent.com/sshh12/StockMarketML/master/lab3/model.png)
 
 ## Lab 2
 

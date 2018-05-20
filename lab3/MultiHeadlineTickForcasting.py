@@ -36,14 +36,14 @@ from gensim.models.doc2vec import Doc2Vec, TaggedDocument
 # Options
 
 stocks      = ['AMD', 'INTC', 'AAPL', 'AMZN', 'MSFT', 'GOOG']
-all_sources = ['reddit', 'reuters', 'twitter', 'seekingalpha', 'fool', 'wsj', 'thestreet']
+all_sources = ['reuters', 'seekingalpha', 'fool', 'wsj', 'thestreet']
 
 model_type  = 'multiheadlineclf'
 
 doc2vec_options = dict(
     size=300, 
     window=10, 
-    min_count=5, 
+    min_count=5,
     workers=10,
     alpha=0.025, 
     min_alpha=0.025, 
@@ -53,11 +53,11 @@ doc2vec_options = dict(
 
 keras_options = dict(
     epochs=200, 
-    batch_size=32,
+    batch_size=64,
     verbose=0
 )
 
-tick_window = 20
+tick_window = 18
 doc_query_days = 6
 combined_emb_size = 5 + doc2vec_options['size']
 
@@ -134,9 +134,9 @@ def make_doc_embeddings(query_range=(None, '1776-07-04', '3000-01-01'), use_extr
                 
                 event_date = datetime.strptime(date, '%Y-%m-%d')
                 
-                cur.execute("SELECT date, source, rawcontent FROM headlines WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date ASC", 
+                cur.execute("SELECT date, source, content FROM headlines WHERE stock=? AND date BETWEEN ? AND ? ORDER BY date ASC", 
                             [stock, add_time(event_date, -doc_query_days), date])
-                headlines = [(date, source, clean(content), (event_date - datetime.strptime(date, '%Y-%m-%d')).days) 
+                headlines = [(date, source, clean2(content), (event_date - datetime.strptime(date, '%Y-%m-%d')).days) 
                                  for (date, source, content) in cur.fetchall() if content]
                 
                 if len(headlines) == 0:
@@ -348,30 +348,25 @@ def get_model():
     
     model_input = Input(shape=(tick_window, combined_emb_size), name="Input")
     
-    conv = Conv1D(filters=64, kernel_size=5, padding='same')(model_input)
-    conv = Activation('selu')(conv)
-    conv = MaxPooling1D(pool_size=2)(conv)
-    conv = Dropout(0.5)(conv)
+    rnn = LSTM(400, return_sequences=False)(model_input)
+    rnn = Dropout(0.2)(rnn)
     
-    rnn = LSTM(200, return_sequences=False)(conv)
-    rnn = Dropout(0.5)(rnn)
-    
-    dense = Dense(200)(rnn)
+    dense = Dense(400)(rnn)
     dense = Activation('selu')(dense)
     dense = BatchNormalization()(dense)
-    dense = Dropout(0.5)(dense)
+    dense = Dropout(0.2)(dense)
     
-    dense = Dense(200)(rnn)
+    dense = Dense(400)(rnn)
     dense = Activation('selu')(dense)
     dense = BatchNormalization()(dense)
-    dense = Dropout(0.5)(dense)
+    dense = Dropout(0.2)(dense)
     
     dense = Dense(2)(dense)
     pred_output = Activation('softmax')(dense)
     
     model = Model(inputs=model_input, outputs=pred_output)
     
-    model.compile(optimizer=Nadam(), loss='mse', metrics=['acc'])
+    model.compile(optimizer=Adam(lr=0.008), loss='mse', metrics=['acc'])
     
     return model
 
@@ -397,8 +392,8 @@ if __name__ == "__main__":
 
 # TRAIN MODEL
 
-if __name__ == "__main__":  
-
+if __name__ == "__main__": 
+ 
     ## Create Model ##
     
     model = get_model()
@@ -439,7 +434,7 @@ if __name__ == "__main__":
 
 # In[14]:
 
-# AoC
+# [TEST] AoC
 
 if __name__ == "__main__":
 
@@ -453,7 +448,7 @@ if __name__ == "__main__":
         
         print("ROC", roc_auc_score(actualY, predictY))
         
-        print(confusion_matrix(testY[:, 0] > .7, predictY[:, 0] > .7))
+        print(confusion_matrix(testY[:, 0] > .5, predictY[:, 0] > .5))
         
     except NameError:
         
@@ -463,7 +458,7 @@ if __name__ == "__main__":
 
 # In[15]:
 
-# Predict (TEST)
+# [TEST] Predict
 
 def predict(stock, model=None, vec_model=None, current_date=None, predict_date=None):
     
